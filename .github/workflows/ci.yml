@@ -1,4 +1,4 @@
-name: "CCF App Template CI"
+name: "CCF KVS CI"
 
 on:
   push:
@@ -19,4 +19,4 @@ jobs:
         run: mkdir -p build && cd build && CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja .. && ninja
 
       - name: Build container
-        run: docker build -t ccf-app-template .
+        run: docker build -t ccf-kvs .

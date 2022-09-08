@@ -44,7 +44,7 @@ Python environment successfully setup
 [12:00:00.000] Started CCF network with the following nodes:
 [12:00:00.000]   Node [0] = https://127.0.0.1:8000
 [12:00:00.000] You can now issue business transactions to the ./libccf_kvs.virtual.so application
-[12:00:00.000] Keys and certificates have been copied to the common folder: .../ccf_kvs_template/build/workspace/sandbox_common
+[12:00:00.000] Keys and certificates have been copied to the common folder: .../ccf-kvs/build/workspace/sandbox_common
 [12:00:00.000] See https://microsoft.github.io/CCF/main/use_apps/issue_commands.html for more information
 [12:00:00.000] Press Ctrl+C to shutdown the network
 ```
@@ -65,8 +65,8 @@ $ curl https://127.0.0.1:8000/app/log?id=1 --cacert ./workspace/sandbox_common/s
 Alternatively, it is possible to build a runtime image of this application via docker:
 
 ```bash
-$ docker build -t ccf-app-template .
-$ docker run --device /dev/sgx_enclave:/dev/sgx_enclave --device /dev/sgx_provision:/dev/sgx_provision -v /dev/sgx:/dev/sgx ccf-app-template
+$ docker build -t ccf-kvs .
+$ docker run --device /dev/sgx_enclave:/dev/sgx_enclave --device /dev/sgx_provision:/dev/sgx_provision -v /dev/sgx:/dev/sgx ccf-kvs
 ...
 2022-01-01T12:00:00.000000Z -0.000 0   [info ] ../src/node/node_state.h:1790        | Network TLS connections now accepted
 # It is then possible to interact with the service
