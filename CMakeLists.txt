@@ -9,6 +9,8 @@ if(NOT TARGET ccf)
   find_package(ccf REQUIRED)
 endif()
 
+add_subdirectory(3rdparty)
+
 add_ccf_app(ccf_kvs SRCS src/app/app.cpp)
 
 # Generate an ephemeral signing key
