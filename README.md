@@ -72,6 +72,19 @@ $ docker run --device /dev/sgx_enclave:/dev/sgx_enclave --device /dev/sgx_provis
 # It is then possible to interact with the service
 ```
 
-## Code Tour
+## etcd
 
-To get a guided tour of the sample application, checkout this repository in VSCode and use the [CodeTour extension](https://marketplace.visualstudio.com/items?itemName=vsls-contrib.codetour).
+First, download `etcdctl` ([see etcd client](https://github.com/etcd-io/etcd/releases/tag/v3.4.20)).
+
+```bash
+$ /opt/ccf/bin/sandbox.sh -p ./libccf_kvs.virtual.so
+...
+
+# In another terminal
+$ etcdctl --endpoints=127.0.0.1:8000 --insecure-transport=false --insecure-skip-tls-verify=true put key value
+OK
+
+$ etcdctl --endpoints=127.0.0.1:8000 --insecure-transport=false --insecure-skip-tls-verify=true get key
+key
+value
+```
