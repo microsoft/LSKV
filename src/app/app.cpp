@@ -34,10 +34,8 @@ namespace app
     AppHandlers(ccfapp::AbstractNodeContext& context) :
       ccf::UserEndpointRegistry(context)
     {
-      openapi_info.title = "CCF Sample C++ App";
-      openapi_info.description =
-        "This minimal CCF C++ application aims to be "
-        "used as a template for CCF developers.";
+      openapi_info.title = "CCF Sample C++ Key-Value Store";
+      openapi_info.description = "Sample Key-Value store built on CCF";
       openapi_info.document_version = "0.0.1";
 
       auto write = [this](auto& ctx, nlohmann::json&& params) {
