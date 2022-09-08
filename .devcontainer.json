@@ -1,0 +1,10 @@
+{
+  "name": "Development Container for CCF C++ Apps",
+  "context": "..",
+  "image": "mcr.microsoft.com/ccf/app/dev:lts-devcontainer",
+  "runArgs": [],
+  "extensions": [
+    "ms-vscode.cpptools",
+    "vsls-contrib.codetour"
+  ]
+}
