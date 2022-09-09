@@ -13,8 +13,7 @@ build-virtual:
 
 .PHONY: run-virtual
 run-virtual: build-virtual
-	# TODO: fix this PYTHON_PACKAGE_PATH, it shouldn't be needed
-	PYTHON_PACKAGE_PATH=../CCF/python $(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/libccf_kvs.virtual.so
+	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/libccf_kvs.virtual.so
 
 .PHONY: clean
 clean:
