@@ -8,7 +8,7 @@ CXX="/opt/oe_lvi/clang++-10"
 build-virtual:
 	mkdir -p $(BUILD)
 	cd $(BUILD)
-	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=virtual -GNinja ..
+	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja ..
 	cd $(BUILD) && ninja
 
 .PHONY: run-virtual
