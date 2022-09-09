@@ -5,6 +5,8 @@
 #include "ccf/common_auth_policies.h"
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
+#include "etcd.pb.h"
+#include "grpc.h"
 
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
@@ -12,8 +14,9 @@
 namespace app
 {
   // Key-value store types
-  using Map = kv::Map<size_t, std::string>;
-  static constexpr auto RECORDS = "records";
+  using Map = kv::Map<std::string, std::string>; // TODO: Use
+                                                 // kv::untyped::Map?
+  static constexpr auto RECORDS = "public:records";
 
   // API types
   struct Write
@@ -38,73 +41,61 @@ namespace app
       openapi_info.description = "Sample Key-Value store built on CCF";
       openapi_info.document_version = "0.0.1";
 
-      auto write = [this](auto& ctx, nlohmann::json&& params) {
-        const auto parsed_query =
-          http::parse_query(ctx.rpc_ctx->get_request_query());
-
-        std::string error_reason;
-        size_t id = 0;
-        if (!http::get_query_value(parsed_query, "id", id, error_reason))
-        {
-          return ccf::make_error(
-            HTTP_STATUS_BAD_REQUEST,
-            ccf::errors::InvalidQueryParameterValue,
-            std::move(error_reason));
-        }
-
-        const auto in = params.get<Write::In>();
-        if (in.msg.empty())
-        {
-          return ccf::make_error(
-            HTTP_STATUS_BAD_REQUEST,
-            ccf::errors::InvalidInput,
-            "Cannot record an empty log message.");
-        }
+      auto write = [this](auto& ctx, etcdserverpb::PutRequest&& payload) {
+        etcdserverpb::PutResponse put_response;
+        CCF_APP_DEBUG(
+          "Put = [{}]{}:[{}]{}",
+          payload.key().size(),
+          payload.key(),
+          payload.value().size(),
+          payload.value());
 
         auto records_handle = ctx.tx.template rw<Map>(RECORDS);
-        records_handle->put(id, in.msg);
-        return ccf::make_success();
+        records_handle->put(payload.key(), payload.value());
+        ctx.rpc_ctx->set_response_status(HTTP_STATUS_OK);
+
+        return ccf::grpc::make_success(put_response);
       };
 
       make_endpoint(
-        "/log", HTTP_POST, ccf::json_adapter(write), ccf::no_auth_required)
-        .set_auto_schema<Write::In, void>()
-        .add_query_parameter<size_t>("id")
+        "/etcdserverpb.KV/Put",
+        HTTP_POST,
+        ccf::grpc_adapter<etcdserverpb::PutRequest, etcdserverpb::PutResponse>(
+          write),
+        ccf::no_auth_required)
         .install();
 
-      auto read = [this](auto& ctx, nlohmann::json&& params) {
-        const auto parsed_query =
-          http::parse_query(ctx.rpc_ctx->get_request_query());
-
-        std::string error_reason;
-        size_t id = 0;
-        if (!http::get_query_value(parsed_query, "id", id, error_reason))
-        {
-          return ccf::make_error(
-            HTTP_STATUS_BAD_REQUEST,
-            ccf::errors::InvalidQueryParameterValue,
-            std::move(error_reason));
-        }
+      auto read = [this](auto& ctx, etcdserverpb::RangeRequest&& payload)
+        -> ccf::grpc::GrpcAdapterResponse<etcdserverpb::RangeResponse> {
+        etcdserverpb::RangeResponse range_response;
 
         auto records_handle = ctx.tx.template ro<Map>(RECORDS);
-        auto msg = records_handle->get(id);
-        if (!msg.has_value())
+        auto value = records_handle->get(payload.key());
+        if (!value.has_value())
         {
-          return ccf::make_error(
-            HTTP_STATUS_NOT_FOUND,
-            ccf::errors::ResourceNotFound,
-            fmt::format("Cannot find record for id \"{}\".", id));
+          ctx.rpc_ctx->set_response_status(HTTP_STATUS_NOT_FOUND);
+          range_response.set_count(0);
+          return ccf::grpc::make_error(
+            GRPC_STATUS_NOT_FOUND,
+            fmt::format("Key {} not found", payload.key()));
         }
-        return ccf::make_success(msg.value());
+
+        auto* kv = range_response.add_kvs();
+        kv->set_key(payload.key());
+        kv->set_value(value.value());
+
+        range_response.set_count(1);
+
+        return ccf::grpc::make_success(range_response);
       };
 
       make_read_only_endpoint(
-        "/log",
-        HTTP_GET,
-        ccf::json_read_only_adapter(read),
+        "/etcdserverpb.KV/Range",
+        HTTP_POST,
+        ccf::grpc_read_only_adapter<
+          etcdserverpb::RangeRequest,
+          etcdserverpb::RangeResponse>(read),
         ccf::no_auth_required)
-        .set_auto_schema<void, void>()
-        .add_query_parameter<size_t>("id")
         .install();
     }
   };
