@@ -18,19 +18,6 @@ namespace app
                                                  // kv::untyped::Map?
   static constexpr auto RECORDS = "public:records";
 
-  // API types
-  struct Write
-  {
-    struct In
-    {
-      std::string msg;
-    };
-
-    using Out = void;
-  };
-  DECLARE_JSON_TYPE(Write::In);
-  DECLARE_JSON_REQUIRED_FIELDS(Write::In, msg);
-
   class AppHandlers : public ccf::UserEndpointRegistry
   {
   public:
