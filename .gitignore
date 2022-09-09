@@ -1,2 +1,5 @@
 build/**
 *.deb
+/.venv_ccf_sandbox/
+/workspace/
+/.cache/
