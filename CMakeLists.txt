@@ -9,7 +9,13 @@ if(NOT TARGET ccf)
   find_package(ccf REQUIRED)
 endif()
 
-add_ccf_app(ccf_kvs SRCS src/app/app.cpp)
+add_subdirectory(3rdparty)
+add_subdirectory(proto)
+
+add_ccf_app(ccf_kvs SRCS src/app/app.cpp
+  INCLUDE_DIRS "${CMAKE_BINARY_DIR}/proto"
+  LINK_LIBS_ENCLAVE etcd.enclave status.enclave protobuf.enclave
+  LINK_LIBS_VIRTUAL etcd.virtual status.virtual protobuf.virtual)
 
 # Generate an ephemeral signing key
 add_custom_command(

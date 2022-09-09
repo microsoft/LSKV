@@ -1,12 +1,12 @@
 # Build
-FROM mcr.microsoft.com/ccf/app/dev:2.0.7-sgx as builder
+FROM mcr.microsoft.com/ccf/app/dev:3.0.0-dev3-sgx as builder
 COPY . /src
 RUN mkdir -p /build/
 WORKDIR /build/
 RUN CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja /src && ninja
 
 # Run
-FROM mcr.microsoft.com/ccf/app/run:2.0.7-sgx
+FROM mcr.microsoft.com/ccf/app/dev:3.0.0-dev3-sgx
 
 COPY --from=builder /build/libccf_kvs.enclave.so.signed /app/
 COPY --from=builder /opt/ccf/bin/*.js /app/
