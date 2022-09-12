@@ -63,23 +63,48 @@ namespace app
 
         auto records_handle = ctx.tx.template ro<Map>(RECORDS);
         auto key = payload.key();
-        auto value_option = records_handle->get(ccf::ByteVector(key.begin(), key.end()));
-        if (!value_option.has_value())
-        {
-          ctx.rpc_ctx->set_response_status(HTTP_STATUS_NOT_FOUND);
-          range_response.set_count(0);
-          return ccf::grpc::make_error(
-            GRPC_STATUS_NOT_FOUND,
-            fmt::format("Key {} not found", payload.key()));
+        auto range_end = payload.range_end();
+        if (range_end.size() == 0) {
+          // empty range end so just query for a single key
+          auto value_option = records_handle->get(ccf::ByteVector(key.begin(), key.end()));
+          if (!value_option.has_value())
+          {
+            ctx.rpc_ctx->set_response_status(HTTP_STATUS_NOT_FOUND);
+            range_response.set_count(0);
+            return ccf::grpc::make_error(
+              GRPC_STATUS_NOT_FOUND,
+              fmt::format("Key {} not found", payload.key()));
+          }
+
+          auto* kv = range_response.add_kvs();
+          kv->set_key(payload.key());
+          auto value_bytes = value_option.value();
+          auto value = std::string(value_bytes.begin(), value_bytes.end());
+          kv->set_value(value);
+
+          range_response.set_count(1);
+        } else {
+          // range end is non-empty so perform a range scan
+          auto start = payload.key();
+          auto start_bytes = ccf::ByteVector(start.begin(), start.end());
+          auto end = payload.range_end();
+          auto end_bytes = ccf::ByteVector(end.begin(), end.end());
+          auto count = 0;
+
+          records_handle->range([&](auto& key_bytes, auto& value_bytes) {
+            CCF_APP_INFO("range over key {} value {} with ({}, {})", start, end, key_bytes, value_bytes);
+            count++;
+
+            // add the kv to the response
+            auto* kv = range_response.add_kvs();
+            auto key = std::string(key_bytes.begin(), key_bytes.end());
+            kv->set_key(key);
+            auto value = std::string(value_bytes.begin(), value_bytes.end());
+            kv->set_value(value);
+          }, start_bytes, end_bytes);
+
+          range_response.set_count(count);
         }
-
-        auto* kv = range_response.add_kvs();
-        kv->set_key(payload.key());
-        auto value_bytes = value_option.value();
-        auto value = std::string(value_bytes.begin(), value_bytes.end());
-        kv->set_value(value);
-
-        range_response.set_count(1);
 
         return ccf::grpc::make_success(range_response);
       };
