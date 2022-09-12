@@ -13,7 +13,7 @@ add_subdirectory(3rdparty)
 add_subdirectory(proto)
 
 add_ccf_app(ccf_kvs SRCS src/app/app.cpp
-  INCLUDE_DIRS "${CMAKE_BINARY_DIR}/proto"
+  INCLUDE_DIRS "${CMAKE_BINARY_DIR}/proto" "/opt/ccf/include/ccf/_private"
   LINK_LIBS_ENCLAVE etcd.enclave status.enclave protobuf.enclave
   LINK_LIBS_VIRTUAL etcd.virtual status.virtual protobuf.virtual)
 

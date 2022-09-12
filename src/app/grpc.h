@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 #pragma once
 
-#include "ccf/_private/ds/serialized.h" // TODO: Private header
+#include "ds/serialized.h" // TODO: Private header
 #include "grpc_status.h"
 
 #include <arpa/inet.h>
