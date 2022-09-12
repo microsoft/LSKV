@@ -64,7 +64,7 @@ namespace app
         auto records_handle = ctx.tx.template ro<Map>(RECORDS);
         auto key = payload.key();
         auto range_end = payload.range_end();
-        if (range_end.size() == 0) {
+        if (range_end.empty()) {
           // empty range end so just query for a single key
           auto value_option = records_handle->get(ccf::ByteVector(key.begin(), key.end()));
           if (!value_option.has_value())
