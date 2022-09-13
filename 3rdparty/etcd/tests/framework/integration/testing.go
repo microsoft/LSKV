@@ -106,11 +106,7 @@ func BeforeTest(t testutil.TB, opts ...TestOption) {
 	grpc_logger.Set(zapgrpc.NewLogger(zaptest.NewLogger(t).Named("grpc")))
 	insideTestContext = true
 
-	// TODO: with a quicker sandbox we should be able to use tempdirs
-	// the CCF sandbox currently takes a long time to pip install dependencies making it not suitable for multiple separate creations.
-	// We should be able to pass it a path to a dir so that it shares the installed environment.
-	// Since CCF doesn't use the persisted state this tempdir wouldn't do much anyway though.
-	// os.Chdir(t.TempDir())
+	os.Chdir(t.TempDir())
 }
 
 func assertInTestContext(t testutil.TB) {
