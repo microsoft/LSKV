@@ -12,7 +12,7 @@ Install CCF and its dependencies:
 $ wget https://github.com/microsoft/CCF/releases/download/ccf-3.0.0-dev3/ccf_3.0.0_dev3_amd64.deb
 $ sudo dpkg -i ccf_3.0.0_dev3_amd64.deb # Install CCF under /opt/ccf
 $ cat /opt/ccf/share/VERSION_LONG
-ccf-2.0.0
+ccf-3.0.0-dev3
 $ /opt/ccf/getting_started/setup_vm/run.sh /opt/ccf/getting_started/setup_vm/app-dev.yml  # Install dependencies
 ```
 
