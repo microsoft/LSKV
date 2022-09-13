@@ -35,6 +35,8 @@ libccf_kvs.virtual.so # Virtual application (i.e. insecure!)
 
 ## Test
 
+### Manual
+
 ```bash
 $ /opt/ccf/bin/sandbox.sh -p ./libccf_kvs.virtual.so
 Setting up Python environment...
@@ -50,6 +52,14 @@ Python environment successfully setup
 ```
 
 Or, for an SGX-enabled application: `$ /opt/ccf/bin/sandbox.sh -p ./libccf_kvs.enclave.so.signed -e release`
+
+### Etcd integration
+
+To run some etcd integration tests:
+
+```sh
+3rdparty/etcd/tests/ccf-kvs.sh
+```
 
 ## Docker
 
