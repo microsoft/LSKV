@@ -18,6 +18,23 @@ jobs:
       - name: Build app
         run: mkdir -p build && cd build && CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja .. && ninja
 
+  test-virtual:
+    runs-on: ubuntu-20.04
+    container: mcr.microsoft.com/ccf/app/dev:3.0.0-dev3-sgx
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Build app
+        run: make build-virtual
+
+      - name: Install go
+        run: curl -L -o go1.19.1.linux-amd64.tar.gz https://go.dev/dl/go1.19.1.linux-amd64.tar.gz && tar -C /usr/local -xzf go1.19.1.linux-amd64.tar.gz
+
+      - name: Test app
+        run: export PATH=$PATH:/usr/local/go/bin && make test-virtual
+
   build-docker:
     runs-on: ubuntu-20.04
     container: mcr.microsoft.com/ccf/app/dev:lts-devcontainer
