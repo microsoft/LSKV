@@ -2,8 +2,8 @@
 
 parallelism=1
 
-test_dir=./3rdparty/etcd/tests
-ccf_kvs_dir=./.
+test_dir=$(realpath ./3rdparty/etcd/tests)
+ccf_kvs_dir=$(realpath ./.)
 
 echo "changing dir to $test_dir"
 cd $test_dir
