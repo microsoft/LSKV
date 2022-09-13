@@ -15,6 +15,10 @@ build-virtual:
 run-virtual: build-virtual
 	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/libccf_kvs.virtual.so --http2
 
+.PHONY: test-virtual
+test-virtual: build-virtual
+	3rdparty/etcd/tests/ccf-kvs.sh
+
 .PHONY: clean
 clean:
 	rm -rf $(BUILD)
