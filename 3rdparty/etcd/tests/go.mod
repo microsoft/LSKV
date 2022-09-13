@@ -2,6 +2,18 @@ module go.etcd.io/etcd/tests/v3
 
 go 1.17
 
+replace (
+	go.etcd.io/etcd/api/v3 => ../api
+	go.etcd.io/etcd/client/pkg/v3 => ../client/pkg
+	go.etcd.io/etcd/client/v2 => ../client/v2
+	go.etcd.io/etcd/client/v3 => ../client/v3
+	go.etcd.io/etcd/etcdctl/v3 => ../etcdctl
+	go.etcd.io/etcd/etcdutl/v3 => ../etcdutl
+	go.etcd.io/etcd/pkg/v3 => ../pkg
+	go.etcd.io/etcd/raft/v3 => ../raft
+	go.etcd.io/etcd/server/v3 => ../server
+)
+
 require (
 	github.com/coreos/go-semver v0.3.0
 	github.com/dustin/go-humanize v1.0.0
@@ -16,15 +28,15 @@ require (
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.2
-	go.etcd.io/etcd/api/v3 v3.6.0-alpha.0.0.20220909103023-b886bbc89f31
-	go.etcd.io/etcd/client/pkg/v3 v3.6.0-alpha.0.0.20220909103023-b886bbc89f31
-	go.etcd.io/etcd/client/v2 v2.306.0-alpha.0.0.20220909103023-b886bbc89f31
-	go.etcd.io/etcd/client/v3 v3.6.0-alpha.0.0.20220909103023-b886bbc89f31
-	go.etcd.io/etcd/etcdctl/v3 v3.6.0-alpha.0.0.20220909103023-b886bbc89f31
-	go.etcd.io/etcd/etcdutl/v3 v3.6.0-alpha.0.0.20220909103023-b886bbc89f31
-	go.etcd.io/etcd/pkg/v3 v3.6.0-alpha.0.0.20220909103023-b886bbc89f31
-	go.etcd.io/etcd/raft/v3 v3.6.0-alpha.0.0.20220909103023-b886bbc89f31
-	go.etcd.io/etcd/server/v3 v3.6.0-alpha.0.0.20220909103023-b886bbc89f31
+	go.etcd.io/etcd/api/v3 v3.6.0-alpha.0
+	go.etcd.io/etcd/client/pkg/v3 v3.6.0-alpha.0
+	go.etcd.io/etcd/client/v2 v2.306.0-alpha.0
+	go.etcd.io/etcd/client/v3 v3.6.0-alpha.0
+	go.etcd.io/etcd/etcdctl/v3 v3.6.0-alpha.0
+	go.etcd.io/etcd/etcdutl/v3 v3.6.0-alpha.0
+	go.etcd.io/etcd/pkg/v3 v3.6.0-alpha.0
+	go.etcd.io/etcd/raft/v3 v3.6.0-alpha.0
+	go.etcd.io/etcd/server/v3 v3.6.0-alpha.0
 	go.uber.org/zap v1.21.0
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f

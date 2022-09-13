@@ -43,28 +43,23 @@ func (e integrationRunner) BeforeTest(t testing.TB) {
 }
 
 func (e integrationRunner) NewCluster(ctx context.Context, t testing.TB, cfg config.ClusterConfig) Cluster {
-	// var err error
-
-	if cfg.ClusterSize != 1 {
-		t.Fatalf("only support single node clusters")
+	var err error
+	integrationCfg := integration.ClusterConfig{
+		Size:                       cfg.ClusterSize,
+		QuotaBackendBytes:          cfg.QuotaBackendBytes,
+		DisableStrictReconfigCheck: cfg.DisableStrictReconfigCheck,
+		SnapshotCount:              uint64(cfg.SnapshotCount),
 	}
-
-	// integrationCfg := integration.ClusterConfig{
-	// Size:                       cfg.ClusterSize,
-	// QuotaBackendBytes:          cfg.QuotaBackendBytes,
-	// DisableStrictReconfigCheck: cfg.DisableStrictReconfigCheck,
-	// SnapshotCount:              uint64(cfg.SnapshotCount),
-	// }
-	// integrationCfg.ClientTLS, err = tlsInfo(t, cfg.ClientTLS)
-	// if err != nil {
-	// t.Fatalf("ClientTLS: %s", err)
-	// }
-	// integrationCfg.PeerTLS, err = tlsInfo(t, cfg.PeerTLS)
-	// if err != nil {
-	// t.Fatalf("PeerTLS: %s", err)
-	// }
+	integrationCfg.ClientTLS, err = tlsInfo(t, cfg.ClientTLS)
+	if err != nil {
+		t.Fatalf("ClientTLS: %s", err)
+	}
+	integrationCfg.PeerTLS, err = tlsInfo(t, cfg.PeerTLS)
+	if err != nil {
+		t.Fatalf("PeerTLS: %s", err)
+	}
 	return &integrationCluster{
-		Cluster: integration.NewCcfCluster(t, ctx),
+		Cluster: integration.NewCluster(t, &integrationCfg),
 		t:       t,
 		ctx:     ctx,
 	}
@@ -88,25 +83,21 @@ func tlsInfo(t testing.TB, cfg config.TLSConfig) (*transport.TLSInfo, error) {
 }
 
 type integrationCluster struct {
-	Cluster *integration.CcfCluster
-	t       testing.TB
-	ctx     context.Context
+	*integration.Cluster
+	t   testing.TB
+	ctx context.Context
 }
 
 func (c *integrationCluster) Members() (ms []Member) {
-	for _, m := range c.Cluster.Members() {
+	for _, m := range c.Cluster.Members {
 		ms = append(ms, integrationMember{Member: m, t: c.t})
 	}
 	return ms
 }
 
-func (c *integrationCluster) WaitLeader(t testing.TB) int {
-	return c.Cluster.WaitLeader(t)
-}
-
 type integrationMember struct {
-	Member integration.CcfMember
-	t      testing.TB
+	*integration.Member
+	t testing.TB
 }
 
 func (m integrationMember) Client() Client {
@@ -122,12 +113,12 @@ func (m integrationMember) Stop() {
 }
 
 func (c *integrationCluster) Close() error {
-	err := c.Cluster.Close()
-	return err
+	c.Terminate(c.t)
+	return nil
 }
 
 func (c *integrationCluster) Client() Client {
-	cc, err := c.Cluster.Client()
+	cc, err := c.ClusterClient()
 	if err != nil {
 		c.t.Fatal(err)
 	}

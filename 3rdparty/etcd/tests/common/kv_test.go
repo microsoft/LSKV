@@ -25,13 +25,11 @@ import (
 	"go.etcd.io/etcd/tests/v3/framework/testutils"
 )
 
-const timeout = time.Minute
-
 func TestKVPut(t *testing.T) {
 	testRunner.BeforeTest(t)
 	for _, tc := range clusterTestCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			clus := testRunner.NewCluster(ctx, t, tc.config)
 			defer clus.Close()
@@ -65,7 +63,7 @@ func TestKVGet(t *testing.T) {
 	testRunner.BeforeTest(t)
 	for _, tc := range clusterTestCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			clus := testRunner.NewCluster(ctx, t, tc.config)
 			defer clus.Close()
@@ -108,13 +106,13 @@ func TestKVGet(t *testing.T) {
 					{begin: "", options: config.GetOptions{Prefix: true, Order: clientv3.SortDescend, SortBy: clientv3.SortByCreateRevision}, wkv: reversedKvs},
 					{begin: "", options: config.GetOptions{Prefix: true, Order: clientv3.SortDescend, SortBy: clientv3.SortByKey}, wkv: reversedKvs},
 				}
-				for i, tt := range tests {
+				for _, tt := range tests {
 					resp, err := cc.Get(ctx, tt.begin, tt.options)
 					if err != nil {
 						t.Fatalf("count not get key %q, err: %s", tt.begin, err)
 					}
 					kvs := testutils.KeysFromGetResponse(resp)
-					assert.Equal(t, tt.wkv, kvs, "failed test case %d", i)
+					assert.Equal(t, tt.wkv, kvs)
 				}
 			})
 		})
@@ -125,7 +123,7 @@ func TestKVDelete(t *testing.T) {
 	testRunner.BeforeTest(t)
 	for _, tc := range clusterTestCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			clus := testRunner.NewCluster(ctx, t, tc.config)
 			defer clus.Close()
@@ -178,7 +176,7 @@ func TestKVDelete(t *testing.T) {
 						wantKeys:    kvs,
 					},
 				}
-				for j, tt := range tests {
+				for _, tt := range tests {
 					for i := range kvs {
 						if err := cc.Put(ctx, kvs[i], "bar", config.PutOptions{}); err != nil {
 							t.Fatalf("count not put key %q, err: %s", kvs[i], err)
@@ -188,13 +186,13 @@ func TestKVDelete(t *testing.T) {
 					if err != nil {
 						t.Fatalf("count not get key %q, err: %s", tt.deleteKey, err)
 					}
-					assert.Equal(t, tt.wantDeleted, int(del.Deleted), "failed test case %d", j)
+					assert.Equal(t, tt.wantDeleted, int(del.Deleted))
 					get, err := cc.Get(ctx, "", config.GetOptions{Prefix: true})
 					if err != nil {
 						t.Fatalf("count not get key, err: %s", err)
 					}
 					kvs := testutils.KeysFromGetResponse(get)
-					assert.Equal(t, tt.wantKeys, kvs, "failed test case %d", j)
+					assert.Equal(t, tt.wantKeys, kvs)
 				}
 			})
 		})
@@ -221,7 +219,7 @@ func TestKVGetNoQuorum(t *testing.T) {
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			clus := testRunner.NewCluster(ctx, t, config.ClusterConfig{ClusterSize: 3})
 			defer clus.Close()

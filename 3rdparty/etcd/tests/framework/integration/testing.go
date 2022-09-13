@@ -15,7 +15,6 @@
 package integration
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -82,8 +81,7 @@ func BeforeTest(t testutil.TB, opts ...TestOption) {
 	}
 
 	if options.goLeakDetection {
-		fmt.Println("set to run with goLeakDetection but ignoring")
-		// testutil.RegisterLeakDetection(t)
+		testutil.RegisterLeakDetection(t)
 	}
 
 	previousWD, err := os.Getwd()
