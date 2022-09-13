@@ -51,15 +51,6 @@ Python environment successfully setup
 
 Or, for an SGX-enabled application: `$ /opt/ccf/bin/sandbox.sh -p ./libccf_kvs.enclave.so.signed -e release`
 
-In another terminal:
-
-```bash
-$ cd ccf_kvs/build
-$ curl -X POST https://127.0.0.1:8000/app/log?id=1 --cacert ./workspace/sandbox_common/service_cert.pem -H "Content-Type: application/json" --data '{"msg": "hello world"}'
-$ curl https://127.0.0.1:8000/app/log?id=1 --cacert ./workspace/sandbox_common/service_cert.pem
-"hello world"
-```
-
 ## Docker
 
 Alternatively, it is possible to build a runtime image of this application via docker:
