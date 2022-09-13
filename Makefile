@@ -16,8 +16,16 @@ run-virtual: build-virtual
 	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/libccf_kvs.virtual.so --http2
 
 .PHONY: test-virtual
-test-virtual: build-virtual
+test-virtual: build-virtual patch
 	./integration-tests.sh -v
+
+.PHONY: patch
+patch:
+	git apply patches/*
+
+.PHONY: unpatch
+unpatch:
+	git apply --reverse patches/*
 
 .PHONY: clean
 clean:
