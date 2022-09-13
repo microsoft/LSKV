@@ -21,7 +21,7 @@ test-virtual: build-virtual patch
 
 .PHONY: patch
 patch:
-	git apply patches/*
+	git apply --check patches/* && git apply patches/* || true
 
 .PHONY: unpatch
 unpatch:
