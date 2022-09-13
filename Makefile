@@ -17,7 +17,7 @@ run-virtual: build-virtual
 
 .PHONY: test-virtual
 test-virtual: build-virtual
-	./integration-tests.sh
+	./integration-tests.sh -v
 
 .PHONY: clean
 clean:
