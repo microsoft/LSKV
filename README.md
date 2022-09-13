@@ -58,7 +58,7 @@ Or, for an SGX-enabled application: `$ /opt/ccf/bin/sandbox.sh -p ./libccf_kvs.e
 To run some etcd integration tests:
 
 ```sh
-3rdparty/etcd/tests/ccf-kvs.sh
+./integration-tests.sh
 ```
 
 ## Docker

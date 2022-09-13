@@ -17,7 +17,7 @@ run-virtual: build-virtual
 
 .PHONY: test-virtual
 test-virtual: build-virtual
-	3rdparty/etcd/tests/ccf-kvs.sh
+	./integration-tests.sh
 
 .PHONY: clean
 clean:
