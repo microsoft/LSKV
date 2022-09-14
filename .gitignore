@@ -1,5 +1,6 @@
 build/**
 *.deb
 /.venv_ccf_sandbox/
-/workspace/
+workspace/
 /.cache/
+.venv_ccf_sandbox/

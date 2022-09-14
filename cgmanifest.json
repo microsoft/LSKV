@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json.schemastore.org/component-detection-manifest.json",
+  "Registrations": [
+    {
+      "component": {
+        "type": "git",
+        "git": {
+          "repositoryUrl": "https://github.com/protocolbuffers/protobuf",
+          "commitHash": "ab840345966d0fa8e7100d771c92a73bfbadd25c"
+        }
+      }
+    },
+    {
+      "component": {
+        "type": "git",
+        "git": {
+          "repositoryUrl": "https://github.com/etcd-io/etcd",
+          "commitHash": "b886bbc89f31d7ac59bdfbb3d14a4263dae85a1b"
+        }
+      }
+    }
+  ],
+  "Version": 1
+}
