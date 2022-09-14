@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+#define VERBOSE_LOGGING
+
 #include "ccf/app_interface.h"
 #include "ccf/common_auth_policies.h"
 #include "ccf/http_query.h"
@@ -58,7 +60,7 @@ namespace app
       etcdserverpb::RangeRequest&& payload)
     {
       etcdserverpb::RangeResponse range_response;
-      CCF_APP_INFO(
+      CCF_APP_DEBUG(
         "Range = [{}]{}:[{}]{}",
         payload.key().size(),
         payload.key(),
@@ -166,7 +168,7 @@ namespace app
 
         records_handle->range(
           [&](auto& key_bytes, auto& value_bytes) {
-            CCF_APP_INFO(
+            CCF_APP_DEBUG(
               "range over key {} value {} with ({}, {})",
               start,
               end,
@@ -194,7 +196,7 @@ namespace app
       ccf::endpoints::EndpointContext& ctx, etcdserverpb::PutRequest&& payload)
     {
       etcdserverpb::PutResponse put_response;
-      CCF_APP_INFO(
+      CCF_APP_DEBUG(
         "Put = [{}]{}:[{}]{}",
         payload.key().size(),
         payload.key(),
