@@ -34,6 +34,7 @@ jobs:
 
       - name: Test app
         run: export PATH=$PATH:/usr/local/go/bin && make test-virtual
+        continue-on-error: true
 
   build-docker:
     runs-on: ubuntu-20.04
