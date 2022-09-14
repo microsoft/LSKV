@@ -16,16 +16,15 @@ run-virtual: build-virtual
 	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/libccf_kvs.virtual.so --http2
 
 .PHONY: test-virtual
-test-virtual: build-virtual patch
+test-virtual: build-virtual patched-etcd
 	./integration-tests.sh -v
 
-.PHONY: patch
-patch:
-	git apply --check patches/* && git apply patches/* || true
-
-.PHONY: unpatch
-unpatch:
-	git apply --reverse patches/*
+.PHONY: patched-etcd
+patched-etcd:
+	rm -rf $(BUILD)/3rdparty/etcd
+	mkdir -p $(BUILD)/3rdparty
+	cp -r 3rdparty/etcd $(BUILD)/3rdparty/.
+	git apply --directory=$(BUILD) patches/*
 
 .PHONY: clean
 clean:
