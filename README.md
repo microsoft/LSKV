@@ -65,17 +65,16 @@ $ docker run --device /dev/sgx_enclave:/dev/sgx_enclave --device /dev/sgx_provis
 
 ## etcd
 
-First, download `etcdctl` ([see etcd client](https://github.com/etcd-io/etcd/releases/tag/v3.4.20)).
-
 ```bash
+# run the datastore from the project root
 $ /opt/ccf/bin/sandbox.sh -p build/libccf_kvs.virtual.so --http2
 ...
 
-# In another terminal
-$ etcdctl --endpoints=127.0.0.1:8000 --insecure-transport=false --insecure-skip-tls-verify=true put key value
+# In another terminal, from the project root
+$ ./etcdctl.sh put key value
 OK
 
-$ etcdctl --endpoints=127.0.0.1:8000 --insecure-transport=false --insecure-skip-tls-verify=true get key
+$ ./etcdctl.sh get key
 key
 value
 ```
