@@ -66,11 +66,11 @@ $ docker run --device /dev/sgx_enclave:/dev/sgx_enclave --device /dev/sgx_provis
 ## etcd
 
 ```bash
-# run the datastore
+# run the datastore from the project root
 $ /opt/ccf/bin/sandbox.sh -p build/libccf_kvs.virtual.so --http2
 ...
 
-# In another terminal
+# In another terminal, from the project root
 $ ./etcdctl.sh put key value
 OK
 
