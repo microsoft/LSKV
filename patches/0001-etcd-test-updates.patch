@@ -5,7 +5,7 @@ index 23e387bd..ac3d553c 100644
 @@ -25,11 +25,13 @@ import (
  	"go.etcd.io/etcd/tests/v3/framework/testutils"
  )
-
+ 
 +const timeout = time.Minute
 +
  func TestKVPut(t *testing.T) {
@@ -90,7 +90,7 @@ index d03f120e..014cfc99 100644
 --- a/3rdparty/etcd/tests/common/main_test.go
 +++ b/3rdparty/etcd/tests/common/main_test.go
 @@ -23,26 +23,27 @@ import (
-
+ 
  var testRunner = framework.UnitTestRunner
  var clusterTestCases = []testCase{
 -	{
@@ -131,7 +131,7 @@ index d03f120e..014cfc99 100644
 +	// 	config: config.ClusterConfig{ClusterSize: 1, ClientTLS: config.AutoTLS},
 +	// },
  }
-
+ 
  func TestMain(m *testing.M) {
 diff --git a/3rdparty/etcd/tests/framework/integration.go b/3rdparty/etcd/tests/framework/integration.go
 index 92602ac6..84f6229d 100644
@@ -139,7 +139,7 @@ index 92602ac6..84f6229d 100644
 +++ b/3rdparty/etcd/tests/framework/integration.go
 @@ -43,23 +43,27 @@ func (e integrationRunner) BeforeTest(t testing.TB) {
  }
-
+ 
  func (e integrationRunner) NewCluster(ctx context.Context, t testing.TB, cfg config.ClusterConfig) Cluster {
 -	var err error
 -	integrationCfg := integration.ClusterConfig{
@@ -182,7 +182,7 @@ index 92602ac6..84f6229d 100644
  	}
 @@ -83,21 +87,25 @@ func tlsInfo(t testing.TB, cfg config.TLSConfig) (*transport.TLSInfo, error) {
  }
-
+ 
  type integrationCluster struct {
 -	*integration.Cluster
 -	t   testing.TB
@@ -191,7 +191,7 @@ index 92602ac6..84f6229d 100644
 +	t       testing.TB
 +	ctx     context.Context
  }
-
+ 
  func (c *integrationCluster) Members() (ms []Member) {
 -	for _, m := range c.Cluster.Members {
 +	for _, m := range c.Cluster.Members() {
@@ -199,7 +199,7 @@ index 92602ac6..84f6229d 100644
  	}
  	return ms
  }
-
+ 
 +func (c *integrationCluster) WaitLeader(t testing.TB) int {
 +	return c.Cluster.WaitLeader(t)
 +}
@@ -210,18 +210,18 @@ index 92602ac6..84f6229d 100644
 +	Member *integration.CcfMember
 +	t      testing.TB
  }
-
+ 
  func (m integrationMember) Client() Client {
 @@ -113,12 +121,12 @@ func (m integrationMember) Stop() {
  }
-
+ 
  func (c *integrationCluster) Close() error {
 -	c.Terminate(c.t)
 -	return nil
 +	err := c.Cluster.Close()
 +	return err
  }
-
+ 
  func (c *integrationCluster) Client() Client {
 -	cc, err := c.ClusterClient()
 +	cc, err := c.Cluster.Client()
@@ -367,12 +367,12 @@ index 00000000..7db42bb9
 +	// TODO
 +}
 diff --git a/3rdparty/etcd/tests/framework/integration/testing.go b/3rdparty/etcd/tests/framework/integration/testing.go
-index 4c5c76c3..7df887e6 100644
+index 4c5c76c3..9d0d2e80 100644
 --- a/3rdparty/etcd/tests/framework/integration/testing.go
 +++ b/3rdparty/etcd/tests/framework/integration/testing.go
 @@ -15,6 +15,7 @@
  package integration
-
+ 
  import (
 +	"fmt"
  	"os"
@@ -380,22 +380,31 @@ index 4c5c76c3..7df887e6 100644
  	"testing"
 @@ -81,7 +82,8 @@ func BeforeTest(t testutil.TB, opts ...TestOption) {
  	}
-
+ 
  	if options.goLeakDetection {
 -		testutil.RegisterLeakDetection(t)
 +		fmt.Println("set to run with goLeakDetection but ignoring")
 +		// testutil.RegisterLeakDetection(t)
  	}
-
+ 
  	previousWD, err := os.Getwd()
+@@ -103,8 +105,6 @@ func BeforeTest(t testutil.TB, opts ...TestOption) {
+ 
+ 	grpc_logger.Set(zapgrpc.NewLogger(zaptest.NewLogger(t).Named("grpc")))
+ 	insideTestContext = true
+-
+-	os.Chdir(t.TempDir())
+ }
+ 
+ func assertInTestContext(t testutil.TB) {
 diff --git a/3rdparty/etcd/tests/go.mod b/3rdparty/etcd/tests/go.mod
 index 0ce05f47..c3b749a7 100644
 --- a/3rdparty/etcd/tests/go.mod
 +++ b/3rdparty/etcd/tests/go.mod
 @@ -2,18 +2,6 @@ module go.etcd.io/etcd/tests/v3
-
+ 
  go 1.17
-
+ 
 -replace (
 -	go.etcd.io/etcd/api/v3 => ../api
 -	go.etcd.io/etcd/client/pkg/v3 => ../client/pkg
