@@ -2,7 +2,9 @@
 
 parallelism=1
 
-test_dir=$(realpath ./3rdparty/etcd/tests)
+build_dir=build
+
+test_dir=$(realpath $build_dir/3rdparty/etcd/tests)
 ccf_kvs_dir=$(realpath ./.)
 
 echo "changing dir to $test_dir"
