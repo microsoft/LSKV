@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+#define VERBOSE_LOGGING
+
 #include "ccf/app_interface.h"
 #include "ccf/common_auth_policies.h"
 #include "ccf/http_query.h"
@@ -41,6 +43,16 @@ namespace app
       make_grpc<etcdserverpb::PutRequest, etcdserverpb::PutResponse>(
         etcdserverpb, kv, "Put", this->put, ccf::no_auth_required)
         .install();
+
+      make_grpc<
+        etcdserverpb::DeleteRangeRequest,
+        etcdserverpb::DeleteRangeResponse>(
+        etcdserverpb,
+        kv,
+        "DeleteRange",
+        this->delete_range,
+        ccf::no_auth_required)
+        .install();
     }
 
     static ccf::grpc::GrpcAdapterResponse<etcdserverpb::RangeResponse> range(
@@ -48,7 +60,7 @@ namespace app
       etcdserverpb::RangeRequest&& payload)
     {
       etcdserverpb::RangeResponse range_response;
-      CCF_APP_INFO(
+      CCF_APP_DEBUG(
         "Range = [{}]{}:[{}]{}",
         payload.key().size(),
         payload.key(),
@@ -156,7 +168,7 @@ namespace app
 
         records_handle->range(
           [&](auto& key_bytes, auto& value_bytes) {
-            CCF_APP_INFO(
+            CCF_APP_DEBUG(
               "range over key {} value {} with ({}, {})",
               start,
               end,
@@ -184,7 +196,7 @@ namespace app
       ccf::endpoints::EndpointContext& ctx, etcdserverpb::PutRequest&& payload)
     {
       etcdserverpb::PutResponse put_response;
-      CCF_APP_INFO(
+      CCF_APP_DEBUG(
         "Put = [{}]{}:[{}]{}",
         payload.key().size(),
         payload.key(),
@@ -225,6 +237,101 @@ namespace app
       ctx.rpc_ctx->set_response_status(HTTP_STATUS_OK);
 
       return ccf::grpc::make_success(put_response);
+    }
+
+    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::DeleteRangeResponse>
+    delete_range(
+      ccf::endpoints::EndpointContext& ctx,
+      etcdserverpb::DeleteRangeRequest&& payload)
+    {
+      CCF_APP_DEBUG(
+        "DeleteRange = [{}]{} -> [{}]{} prevkv:{}",
+        payload.key().size(),
+        payload.key(),
+        payload.range_end().size(),
+        payload.range_end(),
+        payload.prev_kv());
+      etcdserverpb::DeleteRangeResponse delete_range_response;
+
+      auto records_handle = ctx.tx.template rw<Map>(RECORDS);
+      auto key = payload.key();
+
+      if (payload.range_end().empty())
+      {
+        // just delete a single key
+
+        // try to get the current value, if there isn't one then skip,
+        // otherwise remove it and maybe plug the old value in to the
+        // response.
+
+        auto old_option =
+          records_handle->get(ccf::ByteVector(key.begin(), key.end()));
+        if (old_option.has_value())
+        {
+          records_handle->remove(ccf::ByteVector(key.begin(), key.end()));
+          delete_range_response.set_deleted(1);
+
+          if (payload.prev_kv())
+          {
+            auto* prev_kv = delete_range_response.add_prev_kvs();
+            prev_kv->set_key(payload.key());
+            auto old_value = old_option.value();
+            auto old = std::string(old_value.begin(), old_value.end());
+            prev_kv->set_value(old);
+          }
+        }
+      }
+      else
+      {
+        // operating over a range
+        // find the keys to delete and remove them after collecting them
+
+        auto deleted = 0;
+
+        auto start = payload.key();
+        auto start_bytes = ccf::ByteVector(start.begin(), start.end());
+        auto end = payload.range_end();
+
+        // If range_end is '\0', the range is all keys greater than or equal
+        // to the key argument.
+        if (end == std::string(1, '\0'))
+        {
+          CCF_APP_DEBUG("found empty end, making it work with range");
+          // TODO(#23): should change the range to make sure we get all keys
+          // greater than the start but this works for enough cases now
+          end = std::string(16, '\255');
+        }
+
+        auto end_bytes = ccf::ByteVector(end.begin(), end.end());
+
+        CCF_APP_DEBUG(
+          "calling range for deletion with [{}]{} -> [{}]{}",
+          start_bytes.size(),
+          start_bytes,
+          end_bytes.size(),
+          end_bytes);
+        records_handle->range(
+          [&](auto& key_bytes, auto& value_bytes) {
+            records_handle->remove(key_bytes);
+            deleted++;
+
+            if (payload.prev_kv())
+            {
+              auto* prev_kv = delete_range_response.add_prev_kvs();
+              auto key = std::string(key_bytes.begin(), key_bytes.end());
+
+              prev_kv->set_key(key);
+              auto old = std::string(value_bytes.begin(), value_bytes.end());
+              prev_kv->set_value(old);
+            }
+          },
+          start_bytes,
+          end_bytes);
+
+        delete_range_response.set_deleted(deleted);
+      }
+
+      return ccf::grpc::make_success(delete_range_response);
     }
 
     template <typename In, typename Out>
