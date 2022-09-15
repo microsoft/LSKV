@@ -1,0 +1,20 @@
+name: "Format and License Checks"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    container: ccfmsrc.azurecr.io/ccf/ci/sgx:oe-0.18.2-protoc
+
+    steps:
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - run: ./scripts/ci-checks.sh
