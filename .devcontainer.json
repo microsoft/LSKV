@@ -3,5 +3,5 @@
   "context": "..",
   "image": "mcr.microsoft.com/ccf/app/dev:3.0.0-dev3-sgx",
   "runArgs": [],
-  "extensions": ["ms-vscode.cpptools", "vsls-contrib.codetour"]
+  "extensions": ["ms-vscode.cpptools"]
 }
