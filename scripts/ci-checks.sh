@@ -26,26 +26,6 @@ echo "-- TODOs"
 "$SCRIPT_DIR"/check-todo.sh include src
 
 echo "$CHECK_DELIMITER"
-echo "-- Public includes"
-# Enforce that no private headers are included from public header files
-violations=$(find "$ROOT_DIR/include/ccf" -type f -print0 | xargs --null grep -e "#include \"" | grep -v "#include \"ccf" | sort)
-if [[ -n "$violations" ]]; then
-  echo "Public headers include private implementation files:"
-  echo "$violations"
-  exit 1
-else
-  echo "No public header violations"
-fi
-
-echo "$CHECK_DELIMITER"
-echo "-- Release notes"
-if [ $FIX -ne 0 ]; then
-  python3 "$SCRIPT_DIR"/extract-release-notes.py -f
-else
-  python3 "$SCRIPT_DIR"/extract-release-notes.py
-fi
-
-echo "$CHECK_DELIMITER"
 echo "-- C/C++/Proto format"
 if [ $FIX -ne 0 ]; then
   "$SCRIPT_DIR"/check-format.sh -f include src samples
@@ -59,13 +39,8 @@ npm install --loglevel=error --no-save prettier 1>/dev/null
 if [ $FIX -ne 0 ]; then
   git ls-files | grep -e '\.ts$' -e '\.js$' -e '\.md$' -e '\.yaml$' -e '\.yml$' -e '\.json$' | xargs npx prettier --write
 else
-  git ls-files | grep -e '\.ts$' -e '\.js$' -e '\.md$' -e '\.yaml$' -e '\.yml$' -e '\.json$' | xargs npx prettier --check
+  git ls-files -- . ':!:3rdparty/' | grep -e '\.ts$' -e '\.js$' -e '\.md$' -e '\.yaml$' -e '\.yml$' -e '\.json$' | xargs npx prettier --check
 fi
-
-echo "$CHECK_DELIMITER"
-echo "-- OpenAPI"
-npm install --loglevel=error --no-save @apidevtools/swagger-cli 1>/dev/null
-find doc/schemas/*.json -exec npx swagger-cli validate {} \;
 
 echo "$CHECK_DELIMITER"
 echo "-- Copyright notice headers"
@@ -94,19 +69,7 @@ pip install -U wheel black pylint mypy 1>/dev/null
 echo "$CHECK_DELIMITER"
 echo "-- Python format"
 if [ $FIX -ne 0 ]; then
-  git ls-files tests/ python/ scripts/ .cmake-format.py | grep -e '\.py$' | xargs black
+  git ls-files scripts/ | grep -e '\.py$' | xargs black
 else
-  git ls-files tests/ python/ scripts/ .cmake-format.py | grep -e '\.py$' | xargs black --check
+  git ls-files scripts/ | grep -e '\.py$' | xargs black --check
 fi
-
-# Install test dependencies before linting
-pip install -U -r tests/requirements.txt 1>/dev/null
-pip install -U -r python/requirements.txt 1>/dev/null
-
-echo "$CHECK_DELIMITER"
-echo "-- Python lint"
-git ls-files tests/ python/ | grep -e '\.py$' | xargs python -m pylint
-
-echo "$CHECK_DELIMITER"
-echo "-- Python types"
-git ls-files python/ | grep -e '\.py$' | xargs mypy
