@@ -133,6 +133,36 @@ index d03f120e..014cfc99 100644
  }
  
  func TestMain(m *testing.M) {
+diff --git a/3rdparty/etcd/tests/common/txn_test.go b/3rdparty/etcd/tests/common/txn_test.go
+index 890c0f73..eeeba24d 100644
+--- a/3rdparty/etcd/tests/common/txn_test.go
++++ b/3rdparty/etcd/tests/common/txn_test.go
+@@ -18,7 +18,6 @@ import (
+ 	"context"
+ 	"fmt"
+ 	"testing"
+-	"time"
+ 
+ 	"github.com/stretchr/testify/assert"
+ 	pb "go.etcd.io/etcd/api/v3/etcdserverpb"
+@@ -56,7 +55,7 @@ func TestTxnSucc(t *testing.T) {
+ 	}
+ 	for _, cfg := range clusterTestCases {
+ 		t.Run(cfg.name, func(t *testing.T) {
+-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+ 			defer cancel()
+ 			clus := testRunner.NewCluster(ctx, t, cfg.config)
+ 			defer clus.Close()
+@@ -100,7 +99,7 @@ func TestTxnFail(t *testing.T) {
+ 	}
+ 	for _, cfg := range clusterTestCases {
+ 		t.Run(cfg.name, func(t *testing.T) {
+-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+ 			defer cancel()
+ 			clus := testRunner.NewCluster(ctx, t, cfg.config)
+ 			defer clus.Close()
 diff --git a/3rdparty/etcd/tests/framework/integration.go b/3rdparty/etcd/tests/framework/integration.go
 index 92602ac6..84f6229d 100644
 --- a/3rdparty/etcd/tests/framework/integration.go
