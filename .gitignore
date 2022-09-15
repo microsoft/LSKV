@@ -4,3 +4,8 @@ build/**
 workspace/
 /.cache/
 .venv_ccf_sandbox/
+
+/scripts/env/
+node_modules/
+bin/
+.vscode/
