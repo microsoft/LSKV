@@ -1,13 +1,13 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 
 #include "ccf/app_interface.h"
 #include "ccf/common_auth_policies.h"
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
 #include "etcd.pb.h"
-#include "grpc.h"
-#include "kv/untyped_map.h" // TODO: private header
+#include "grpc.h" // TODO(#25): use grpc from ccf
+#include "kv/untyped_map.h" // TODO(#22): private header
 
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>

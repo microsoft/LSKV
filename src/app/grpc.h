@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 #pragma once
 
-#include "ds/serialized.h" // TODO: Private header
+#include "ds/serialized.h"
 #include "grpc_status.h"
 
 #include <arpa/inet.h>

@@ -1,4 +1,6 @@
 #!/usr/bin/env sh
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
 
 set -e
 
@@ -27,6 +29,6 @@ fi
 
 workspace_common=workspace/sandbox_common
 
-cmd="$bindir/etcdctl --endpoints=https://127.0.0.1:8000 --cacert=$workspace_common/service_cert.pem --cert=$workspace_common/user0_cert.pem --key=$workspace_common/user0_privk.pem $@"
-echo $cmd
+cmd="$bindir/etcdctl --endpoints=https://127.0.0.1:8000 --cacert=$workspace_common/service_cert.pem --cert=$workspace_common/user0_cert.pem --key=$workspace_common/user0_privk.pem $*"
+echo "$cmd"
 $cmd
