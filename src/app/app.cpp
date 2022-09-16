@@ -325,7 +325,7 @@ namespace app
 
         auto& start = payload.key();
         auto start_bytes = ccf::ByteVector(start.begin(), start.end());
-        auto& end = payload.range_end();
+        auto end = payload.range_end();
 
         // If range_end is '\0', the range is all keys greater than or equal
         // to the key argument.
