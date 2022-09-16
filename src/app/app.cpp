@@ -77,8 +77,7 @@ namespace app
       }
       auto val = VSerialiser::from_serialised(res.value());
 
-      auto& val_ref = val;
-      hydrate_value(key, val_ref);
+      hydrate_value(key, val);
 
       return val;
     }
@@ -90,8 +89,7 @@ namespace app
         [&](auto& key, auto& value) {
           auto k = KSerialiser::from_serialised(key);
           auto v = VSerialiser::from_serialised(value);
-          auto& v_ref = v;
-          hydrate_value(k, v_ref);
+          hydrate_value(k, v);
           fn(k, v);
         },
         KSerialiser::to_serialised(from),
