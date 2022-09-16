@@ -31,19 +31,17 @@ namespace app
     // the version of this key, reset on delete and incremented every update.
     uint64_t version;
 
-    Value()
-    {
-      value = "";
-      create_revision = 0;
-      mod_revision = 0;
-      version = 1;
-    }
     Value(std::string v)
     {
       value = v;
       create_revision = 0;
       mod_revision = 0;
       version = 1;
+    }
+
+    Value()
+    {
+      Value("");
     }
   };
   DECLARE_JSON_TYPE(Value);
