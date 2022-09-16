@@ -33,9 +33,26 @@ namespace app
     uint64_t create_revision;
     // the latest modification of this entry (0 in the serialised field).
     uint64_t mod_revision;
+    // the version of this key, reset on delete and incremented every update.
+    uint64_t version;
+
+    Value()
+    {
+      value = "";
+      create_revision = 0;
+      mod_revision = 0;
+      version = 1;
+    }
+    Value(std::string v)
+    {
+      value = v;
+      create_revision = 0;
+      mod_revision = 0;
+      version = 1;
+    }
   };
   DECLARE_JSON_TYPE(Value);
-  DECLARE_JSON_REQUIRED_FIELDS(Value, value, create_revision);
+  DECLARE_JSON_REQUIRED_FIELDS(Value, value, create_revision, version);
 
   static constexpr auto RECORDS = "public:records";
 
@@ -170,6 +187,7 @@ namespace app
         kv->set_value(value.value);
         kv->set_create_revision(value.create_revision);
         kv->set_mod_revision(value.mod_revision);
+        kv->set_version(value.version);
 
         range_response.set_count(1);
       }
@@ -201,6 +219,7 @@ namespace app
             kv->set_value(value.value);
             kv->set_create_revision(value.create_revision);
             kv->set_mod_revision(value.mod_revision);
+            kv->set_version(value.version);
           },
           start_bytes,
           end_bytes);
@@ -248,7 +267,7 @@ namespace app
       }
 
       auto records_handle = ctx.tx.template rw<Map>(RECORDS);
-      put_value(records_handle, payload.key(), Value{payload.value(), 0, 0});
+      put_value(records_handle, payload.key(), Value(payload.value()));
       ctx.rpc_ctx->set_response_status(HTTP_STATUS_OK);
 
       return ccf::grpc::make_success(put_response);
@@ -293,6 +312,7 @@ namespace app
             prev_kv->set_value(old_value.value);
             prev_kv->set_create_revision(old_value.create_revision);
             prev_kv->set_mod_revision(old_value.mod_revision);
+            prev_kv->set_version(old_value.version);
           }
         }
       }
@@ -342,6 +362,7 @@ namespace app
               prev_kv->set_value(old.value);
               prev_kv->set_create_revision(old.create_revision);
               prev_kv->set_mod_revision(old.mod_revision);
+              prev_kv->set_version(old.version);
             }
           },
           start_bytes,
@@ -393,19 +414,19 @@ namespace app
 
       auto version_opt = handle->get_version_of_previous_write(
         ccf::ByteVector(key.begin(), key.end()));
-      uint64_t version = 0;
+      uint64_t revision = 0;
       if (version_opt.has_value())
       {
-        version = version_opt.value();
+        revision = version_opt.value();
       }
 
       // if this was the first insert then we need to get the creation revision.
       if (v.create_revision == 0)
       {
-        v.create_revision = version;
+        v.create_revision = revision;
       }
 
-      v.mod_revision = version;
+      v.mod_revision = revision;
 
       return std::make_optional(v);
     }
@@ -433,7 +454,10 @@ namespace app
           // otherwise just copy it to the new value so that we don't lose it
           value.create_revision = old_val.create_revision;
         }
+
+        value.version = old_val.version + 1;
       }
+
       const nlohmann::json j = value;
       auto value_bytes = j.dump();
       handle->put(
