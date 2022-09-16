@@ -64,6 +64,10 @@ namespace app
     {
       inner_map = ctx.tx.template rw<KVStore::MT>(RECORDS);
     }
+    KVStore(ccf::endpoints::ReadOnlyEndpointContext& ctx)
+    {
+      inner_map = ctx.tx.template ro<KVStore::MT>(RECORDS);
+    }
 
     std::optional<V> get(const K& key)
     {
@@ -173,7 +177,7 @@ namespace app
       const auto etcdserverpb = "etcdserverpb";
       const auto kv = "KV";
 
-      make_grpc<etcdserverpb::RangeRequest, etcdserverpb::RangeResponse>(
+      make_grpc_ro<etcdserverpb::RangeRequest, etcdserverpb::RangeResponse>(
         etcdserverpb, kv, "Range", this->range, ccf::no_auth_required)
         .install();
 
@@ -193,7 +197,7 @@ namespace app
     }
 
     static ccf::grpc::GrpcAdapterResponse<etcdserverpb::RangeResponse> range(
-      ccf::endpoints::EndpointContext& ctx,
+      ccf::endpoints::ReadOnlyEndpointContext& ctx,
       etcdserverpb::RangeRequest&& payload)
     {
       etcdserverpb::RangeResponse range_response;
