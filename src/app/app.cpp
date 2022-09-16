@@ -64,15 +64,15 @@ namespace app
 
     /// @brief Constructs a KVStore
     /// @param ctx
-    KVStore(ccf::endpoints::EndpointContext& ctx)
+    KVStore(kv::Tx& tx)
     {
-      inner_map = ctx.tx.template rw<KVStore::MT>(RECORDS);
+      inner_map = tx.template rw<KVStore::MT>(RECORDS);
     }
     /// @brief Constructs a KVStore
     /// @param ctx
-    KVStore(ccf::endpoints::ReadOnlyEndpointContext& ctx)
+    KVStore(kv::ReadOnlyTx& tx)
     {
-      inner_map = ctx.tx.template ro<KVStore::MT>(RECORDS);
+      inner_map = tx.template ro<KVStore::MT>(RECORDS);
     }
 
     /// @brief get retrieves the value stored for the given key. It hydrates the
@@ -301,7 +301,7 @@ namespace app
             payload.max_create_revision()));
       }
 
-      auto records_map = KVStore(ctx);
+      auto records_map = KVStore(ctx.tx);
       auto& key = payload.key();
       auto& range_end = payload.range_end();
       if (range_end.empty())
@@ -391,7 +391,7 @@ namespace app
           fmt::format("ignore lease not yet supported"));
       }
 
-      auto records_map = KVStore(ctx);
+      auto records_map = KVStore(ctx.tx);
       records_map.put(payload.key(), Value(payload.value()));
       ctx.rpc_ctx->set_response_status(HTTP_STATUS_OK);
 
@@ -412,7 +412,7 @@ namespace app
         payload.prev_kv());
       etcdserverpb::DeleteRangeResponse delete_range_response;
 
-      auto records_map = KVStore(ctx);
+      auto records_map = KVStore(ctx.tx);
       auto& key = payload.key();
 
       if (payload.range_end().empty())
