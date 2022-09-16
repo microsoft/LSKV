@@ -414,11 +414,7 @@ namespace app
 
       auto version_opt = handle->get_version_of_previous_write(
         ccf::ByteVector(key.begin(), key.end()));
-      uint64_t revision = 0;
-      if (version_opt.has_value())
-      {
-        revision = version_opt.value();
-      }
+      uint64_t revision = version_opt.value_or(0);
 
       // if this was the first insert then we need to get the creation revision.
       if (v.create_revision == 0)
@@ -428,7 +424,7 @@ namespace app
 
       v.mod_revision = revision;
 
-      return std::make_optional(v);
+      return v;
     }
 
     static std::optional<Value> put_value(
