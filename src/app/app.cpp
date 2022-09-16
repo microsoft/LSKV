@@ -11,6 +11,8 @@
 #include "grpc.h" // TODO(#25): use grpc from ccf
 #include "kv/untyped_map.h" // TODO(#22): private header
 
+#include <nlohmann/json.hpp>
+
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
 
@@ -20,6 +22,16 @@ namespace app
 
   // Use untyped map so we can access the range API.
   using Map = kv::untyped::Map;
+
+  using json = nlohmann::json;
+
+  struct Value
+  {
+    std::string value;
+    uint64_t create_revision;
+  };
+  DECLARE_JSON_TYPE(Value);
+  DECLARE_JSON_REQUIRED_FIELDS(Value, value, create_revision);
 
   static constexpr auto RECORDS = "public:records";
 
@@ -138,8 +150,7 @@ namespace app
       if (range_end.empty())
       {
         // empty range end so just query for a single key
-        auto value_option =
-          records_handle->get(ccf::ByteVector(key.begin(), key.end()));
+        auto value_option = get_value(records_handle, key);
         if (!value_option.has_value())
         {
           ctx.rpc_ctx->set_response_status(HTTP_STATUS_NOT_FOUND);
@@ -151,9 +162,9 @@ namespace app
 
         auto* kv = range_response.add_kvs();
         kv->set_key(payload.key());
-        auto value_bytes = value_option.value();
-        auto value = std::string(value_bytes.begin(), value_bytes.end());
-        kv->set_value(value);
+        auto value = value_option.value();
+        kv->set_value(value.value);
+        kv->set_create_revision(value.create_revision);
 
         range_response.set_count(1);
       }
@@ -180,8 +191,10 @@ namespace app
             auto* kv = range_response.add_kvs();
             auto key = std::string(key_bytes.begin(), key_bytes.end());
             kv->set_key(key);
-            auto value = std::string(value_bytes.begin(), value_bytes.end());
-            kv->set_value(value);
+            const json j = json::parse(value_bytes.begin(), value_bytes.end());
+            const auto value = j.get<Value>();
+            kv->set_value(value.value);
+            kv->set_create_revision(value.create_revision);
           },
           start_bytes,
           end_bytes);
@@ -229,11 +242,7 @@ namespace app
       }
 
       auto records_handle = ctx.tx.template rw<Map>(RECORDS);
-      auto key = payload.key();
-      auto value = payload.value();
-      records_handle->put(
-        ccf::ByteVector(key.begin(), key.end()),
-        ccf::ByteVector(value.begin(), value.end()));
+      put_value(records_handle, payload.key(), Value{payload.value(), 0});
       ctx.rpc_ctx->set_response_status(HTTP_STATUS_OK);
 
       return ccf::grpc::make_success(put_response);
@@ -264,8 +273,7 @@ namespace app
         // otherwise remove it and maybe plug the old value in to the
         // response.
 
-        auto old_option =
-          records_handle->get(ccf::ByteVector(key.begin(), key.end()));
+        auto old_option = get_value(records_handle, key);
         if (old_option.has_value())
         {
           records_handle->remove(ccf::ByteVector(key.begin(), key.end()));
@@ -276,8 +284,8 @@ namespace app
             auto* prev_kv = delete_range_response.add_prev_kvs();
             prev_kv->set_key(payload.key());
             auto old_value = old_option.value();
-            auto old = std::string(old_value.begin(), old_value.end());
-            prev_kv->set_value(old);
+            prev_kv->set_value(old_value.value);
+            prev_kv->set_create_revision(old_value.create_revision);
           }
         }
       }
@@ -321,8 +329,11 @@ namespace app
               auto key = std::string(key_bytes.begin(), key_bytes.end());
 
               prev_kv->set_key(key);
-              auto old = std::string(value_bytes.begin(), value_bytes.end());
-              prev_kv->set_value(old);
+              const json j =
+                json::parse(value_bytes.begin(), value_bytes.end());
+              const auto old = j.get<Value>();
+              prev_kv->set_value(old.value);
+              prev_kv->set_create_revision(old.create_revision);
             }
           },
           start_bytes,
@@ -358,8 +369,67 @@ namespace app
       auto path = fmt::format("/{}.{}/{}", package, service, method);
       return make_endpoint(path, HTTP_POST, ccf::grpc_adapter(f), ap);
     }
-  };
 
+    static std::optional<Value> get_value(
+      kv::untyped::MapHandle* handle, const std::string key)
+    {
+      // get the value out and deserialise it
+      auto res = handle->get(ccf::ByteVector(key.begin(), key.end()));
+      if (!res.has_value())
+      {
+        return std::nullopt;
+      }
+      auto val = res.value();
+      const auto j = json::parse(val.begin(), val.end());
+      auto v = j.get<Value>();
+
+      // if this was the first insert then we need to get the creation revision.
+      if (v.create_revision == 0)
+      {
+        auto old_create = handle->get_version_of_previous_write(
+          ccf::ByteVector(key.begin(), key.end()));
+        if (old_create.has_value())
+        {
+          v.create_revision = old_create.value();
+        }
+      }
+
+      return std::make_optional(v);
+    }
+
+    static std::optional<Value> put_value(
+      kv::untyped::MapHandle* handle, const std::string key, Value value)
+    {
+      const auto old = get_value(handle, key);
+      if (old.has_value())
+      {
+        const auto old_val = old.value();
+        if (old_val.create_revision == 0)
+        {
+          // first put after creation of this key so set the revision
+          auto version_opt = handle->get_version_of_previous_write(
+            ccf::ByteVector(key.begin(), key.end()));
+          if (version_opt.has_value())
+          {
+            // can set the creation revision
+            value.create_revision = version_opt.value();
+          }
+        }
+        else
+        {
+          // otherwise just copy it to the new value so that we don't lose it
+          value.create_revision = old_val.create_revision;
+        }
+      }
+      const nlohmann::json j = value;
+      auto value_bytes = j.dump();
+      handle->put(
+        ccf::ByteVector(key.begin(), key.end()),
+        ccf::ByteVector(value_bytes.begin(), value_bytes.end()));
+
+      return old;
+    }
+  };
 } // namespace app
 
 namespace ccfapp
