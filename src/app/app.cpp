@@ -166,8 +166,8 @@ namespace app
       }
 
       auto records_handle = ctx.tx.template ro<Map>(RECORDS);
-      auto key = payload.key();
-      auto range_end = payload.range_end();
+      auto& key = payload.key();
+      auto& range_end = payload.range_end();
       if (range_end.empty())
       {
         // empty range end so just query for a single key
@@ -194,9 +194,9 @@ namespace app
       else
       {
         // range end is non-empty so perform a range scan
-        auto start = payload.key();
+        auto& start = payload.key();
         auto start_bytes = ccf::ByteVector(start.begin(), start.end());
-        auto end = payload.range_end();
+        auto& end = payload.range_end();
         auto end_bytes = ccf::ByteVector(end.begin(), end.end());
         auto count = 0;
 
@@ -288,7 +288,7 @@ namespace app
       etcdserverpb::DeleteRangeResponse delete_range_response;
 
       auto records_handle = ctx.tx.template rw<Map>(RECORDS);
-      auto key = payload.key();
+      auto& key = payload.key();
 
       if (payload.range_end().empty())
       {
@@ -323,9 +323,9 @@ namespace app
 
         auto deleted = 0;
 
-        auto start = payload.key();
+        auto& start = payload.key();
         auto start_bytes = ccf::ByteVector(start.begin(), start.end());
-        auto end = payload.range_end();
+        auto& end = payload.range_end();
 
         // If range_end is '\0', the range is all keys greater than or equal
         // to the key argument.
@@ -458,7 +458,7 @@ namespace app
         value.version = old_val.version + 1;
       }
 
-      const nlohmann::json j = value;
+      const json j = value;
       auto value_bytes = j.dump();
       handle->put(
         ccf::ByteVector(key.begin(), key.end()),
