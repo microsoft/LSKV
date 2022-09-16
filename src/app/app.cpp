@@ -60,9 +60,9 @@ namespace app
     // Use untyped map so we can access the range API.
     using MT = kv::untyped::Map;
 
-    KVStore(MT::Handle* handle)
+    KVStore(ccf::endpoints::EndpointContext& ctx)
     {
-      inner_map = handle;
+      inner_map = ctx.tx.template rw<KVStore::MT>(RECORDS);
     }
 
     std::optional<V> get(const K& key)
@@ -269,7 +269,7 @@ namespace app
             payload.max_create_revision()));
       }
 
-      auto records_map = get_map(ctx);
+      auto records_map = KVStore(ctx);
       auto& key = payload.key();
       auto& range_end = payload.range_end();
       if (range_end.empty())
@@ -359,7 +359,7 @@ namespace app
           fmt::format("ignore lease not yet supported"));
       }
 
-      auto records_map = get_map(ctx);
+      auto records_map = KVStore(ctx);
       records_map.put(payload.key(), Value(payload.value()));
       ctx.rpc_ctx->set_response_status(HTTP_STATUS_OK);
 
@@ -380,7 +380,7 @@ namespace app
         payload.prev_kv());
       etcdserverpb::DeleteRangeResponse delete_range_response;
 
-      auto records_map = get_map(ctx);
+      auto records_map = KVStore(ctx);
       auto& key = payload.key();
 
       if (payload.range_end().empty())
@@ -457,12 +457,6 @@ namespace app
       }
 
       return ccf::grpc::make_success(delete_range_response);
-    }
-
-    static KVStore get_map(ccf::endpoints::EndpointContext& ctx)
-    {
-      auto records_handle = ctx.tx.template rw<KVStore::MT>(RECORDS);
-      return KVStore(records_handle);
     }
 
     template <typename In, typename Out>
