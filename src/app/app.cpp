@@ -77,17 +77,8 @@ namespace app
       }
       auto val = VSerialiser::from_serialised(res.value());
 
-      auto version_opt = inner_map->get_version_of_previous_write(
-        KSerialiser::to_serialised(key));
-      uint64_t revision = version_opt.value_or(0);
-
-      // if this was the first insert then we need to get the creation revision.
-      if (val.create_revision == 0)
-      {
-        val.create_revision = revision;
-      }
-
-      val.mod_revision = revision;
+      auto& val_ref = val;
+      hydrate_value(key, val_ref);
 
       return val;
     }
@@ -99,6 +90,8 @@ namespace app
         [&](auto& key, auto& value) {
           auto k = KSerialiser::from_serialised(key);
           auto v = VSerialiser::from_serialised(value);
+          auto& v_ref = v;
+          hydrate_value(k, v_ref);
           fn(k, v);
         },
         KSerialiser::to_serialised(from),
@@ -154,6 +147,21 @@ namespace app
 
   private:
     MT::Handle* inner_map;
+
+    void hydrate_value(const K& key, V& value)
+    {
+      auto version_opt = inner_map->get_version_of_previous_write(
+        KSerialiser::to_serialised(key));
+      uint64_t revision = version_opt.value_or(0);
+
+      // if this was the first insert then we need to get the creation revision.
+      if (value.create_revision == 0)
+      {
+        value.create_revision = revision;
+      }
+
+      value.mod_revision = revision;
+    }
   };
 
   class AppHandlers : public ccf::UserEndpointRegistry
