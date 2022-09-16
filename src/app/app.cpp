@@ -46,6 +46,10 @@ namespace app
         this->delete_range,
         ccf::no_auth_required)
         .install();
+
+      make_grpc<etcdserverpb::TxnRequest, etcdserverpb::TxnResponse>(
+        etcdserverpb, kv, "Txn", this->txn, ccf::no_auth_required)
+        .install();
     }
 
     static ccf::grpc::GrpcAdapterResponse<etcdserverpb::RangeResponse> range(
@@ -313,6 +317,20 @@ namespace app
       }
 
       return ccf::grpc::make_success(delete_range_response);
+    }
+
+    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::TxnResponse> txn(
+      ccf::endpoints::EndpointContext& ctx, etcdserverpb::TxnRequest&& payload)
+    {
+      CCF_APP_DEBUG(
+        "Txn = compare:{} success:{} failure:{}",
+        payload.compare().size(),
+        payload.success().size(),
+        payload.failure().size());
+
+      etcdserverpb::TxnResponse txn_response;
+
+      return ccf::grpc::make_success(txn_response);
     }
 
     template <typename In, typename Out>
