@@ -18,11 +18,6 @@
 
 namespace app
 {
-  // Key-value store types
-
-  // Use untyped map so we can access the range API.
-  using Map = kv::untyped::Map;
-
   using json = nlohmann::json;
 
   struct Value
@@ -56,6 +51,111 @@ namespace app
 
   static constexpr auto RECORDS = "public:records";
 
+  class KVStore
+  {
+  public:
+    using K = std::string;
+    using V = Value;
+    using KSerialiser = kv::serialisers::BlitSerialiser<K>;
+    using VSerialiser = kv::serialisers::JsonSerialiser<V>;
+
+    // Use untyped map so we can access the range API.
+    using MT = kv::untyped::Map;
+
+    KVStore(MT::Handle* handle)
+    {
+      inner_map = handle;
+    }
+
+    std::optional<V> get(const K& key)
+    {
+      // get the value out and deserialise it
+      auto res = inner_map->get(KSerialiser::to_serialised(key));
+      if (!res.has_value())
+      {
+        return std::nullopt;
+      }
+      auto val = VSerialiser::from_serialised(res.value());
+
+      auto version_opt = inner_map->get_version_of_previous_write(
+        KSerialiser::to_serialised(key));
+      uint64_t revision = version_opt.value_or(0);
+
+      // if this was the first insert then we need to get the creation revision.
+      if (val.create_revision == 0)
+      {
+        val.create_revision = revision;
+      }
+
+      val.mod_revision = revision;
+
+      return val;
+    }
+
+    void range(
+      const std::function<void(K&, V&)>& fn, const K& from, const K& to)
+    {
+      inner_map->range(
+        [&](auto& key, auto& value) {
+          auto k = KSerialiser::from_serialised(key);
+          auto v = VSerialiser::from_serialised(value);
+          fn(k, v);
+        },
+        KSerialiser::to_serialised(from),
+        KSerialiser::to_serialised(to));
+    }
+
+    std::optional<V> put(K key, V value)
+    {
+      const auto old = this->get(key);
+      if (old.has_value())
+      {
+        const auto old_val = old.value();
+        if (old_val.create_revision == 0)
+        {
+          // first put after creation of this key so set the revision
+          auto version_opt = inner_map->get_version_of_previous_write(
+            KSerialiser::to_serialised(key));
+          if (version_opt.has_value())
+          {
+            // can set the creation revision
+            value.create_revision = version_opt.value();
+          }
+        }
+        else
+        {
+          // otherwise just copy it to the new value so that we don't lose it
+          value.create_revision = old_val.create_revision;
+        }
+
+        value.version = old_val.version + 1;
+      }
+
+      inner_map->put(
+        KSerialiser::to_serialised(key), VSerialiser::to_serialised(value));
+
+      return old;
+    }
+
+    std::optional<V> remove(const K& key)
+    {
+      auto k = KSerialiser::to_serialised(key);
+      auto old = inner_map->get(k);
+      inner_map->remove(k);
+      if (old.has_value())
+      {
+        return VSerialiser::from_serialised(old.value());
+      }
+      else
+      {
+        return std::nullopt;
+      }
+    }
+
+  private:
+    MT::Handle* inner_map;
+  };
+
   class AppHandlers : public ccf::UserEndpointRegistry
   {
   public:
@@ -69,7 +169,7 @@ namespace app
       const auto etcdserverpb = "etcdserverpb";
       const auto kv = "KV";
 
-      make_grpc_ro<etcdserverpb::RangeRequest, etcdserverpb::RangeResponse>(
+      make_grpc<etcdserverpb::RangeRequest, etcdserverpb::RangeResponse>(
         etcdserverpb, kv, "Range", this->range, ccf::no_auth_required)
         .install();
 
@@ -89,7 +189,7 @@ namespace app
     }
 
     static ccf::grpc::GrpcAdapterResponse<etcdserverpb::RangeResponse> range(
-      ccf::endpoints::ReadOnlyEndpointContext& ctx,
+      ccf::endpoints::EndpointContext& ctx,
       etcdserverpb::RangeRequest&& payload)
     {
       etcdserverpb::RangeResponse range_response;
@@ -165,13 +265,13 @@ namespace app
             payload.max_create_revision()));
       }
 
-      auto records_handle = ctx.tx.template ro<Map>(RECORDS);
+      auto records_map = get_map(ctx);
       auto& key = payload.key();
       auto& range_end = payload.range_end();
       if (range_end.empty())
       {
         // empty range end so just query for a single key
-        auto value_option = get_value(records_handle, key);
+        auto value_option = records_map.get(key);
         if (!value_option.has_value())
         {
           ctx.rpc_ctx->set_response_status(HTTP_STATUS_NOT_FOUND);
@@ -195,34 +295,23 @@ namespace app
       {
         // range end is non-empty so perform a range scan
         auto& start = payload.key();
-        auto start_bytes = ccf::ByteVector(start.begin(), start.end());
         auto& end = payload.range_end();
-        auto end_bytes = ccf::ByteVector(end.begin(), end.end());
         auto count = 0;
 
-        records_handle->range(
-          [&](auto& key_bytes, auto& value_bytes) {
-            CCF_APP_DEBUG(
-              "range over key {} value {} with ({}, {})",
-              start,
-              end,
-              key_bytes,
-              value_bytes);
+        records_map.range(
+          [&](auto& key, auto& value) {
             count++;
 
             // add the kv to the response
             auto* kv = range_response.add_kvs();
-            auto key = std::string(key_bytes.begin(), key_bytes.end());
             kv->set_key(key);
-            const json j = json::parse(value_bytes.begin(), value_bytes.end());
-            const auto value = j.get<Value>();
             kv->set_value(value.value);
             kv->set_create_revision(value.create_revision);
             kv->set_mod_revision(value.mod_revision);
             kv->set_version(value.version);
           },
-          start_bytes,
-          end_bytes);
+          start,
+          end);
 
         range_response.set_count(count);
       }
@@ -266,8 +355,8 @@ namespace app
           fmt::format("ignore lease not yet supported"));
       }
 
-      auto records_handle = ctx.tx.template rw<Map>(RECORDS);
-      put_value(records_handle, payload.key(), Value(payload.value()));
+      auto records_map = get_map(ctx);
+      records_map.put(payload.key(), Value(payload.value()));
       ctx.rpc_ctx->set_response_status(HTTP_STATUS_OK);
 
       return ccf::grpc::make_success(put_response);
@@ -287,7 +376,7 @@ namespace app
         payload.prev_kv());
       etcdserverpb::DeleteRangeResponse delete_range_response;
 
-      auto records_handle = ctx.tx.template rw<Map>(RECORDS);
+      auto records_map = get_map(ctx);
       auto& key = payload.key();
 
       if (payload.range_end().empty())
@@ -298,10 +387,10 @@ namespace app
         // otherwise remove it and maybe plug the old value in to the
         // response.
 
-        auto old_option = get_value(records_handle, key);
+        auto old_option = records_map.get(key);
         if (old_option.has_value())
         {
-          records_handle->remove(ccf::ByteVector(key.begin(), key.end()));
+          records_map.remove(key);
           delete_range_response.set_deleted(1);
 
           if (payload.prev_kv())
@@ -324,7 +413,6 @@ namespace app
         auto deleted = 0;
 
         auto& start = payload.key();
-        auto start_bytes = ccf::ByteVector(start.begin(), start.end());
         auto end = payload.range_end();
 
         // If range_end is '\0', the range is all keys greater than or equal
@@ -337,41 +425,41 @@ namespace app
           end = std::string(16, '\255');
         }
 
-        auto end_bytes = ccf::ByteVector(end.begin(), end.end());
-
         CCF_APP_DEBUG(
           "calling range for deletion with [{}]{} -> [{}]{}",
-          start_bytes.size(),
-          start_bytes,
-          end_bytes.size(),
-          end_bytes);
-        records_handle->range(
-          [&](auto& key_bytes, auto& value_bytes) {
-            records_handle->remove(key_bytes);
+          start.size(),
+          start,
+          end.size(),
+          end);
+        records_map.range(
+          [&](auto& key, auto& old) {
+            records_map.remove(key);
             deleted++;
 
             if (payload.prev_kv())
             {
               auto* prev_kv = delete_range_response.add_prev_kvs();
-              auto key = std::string(key_bytes.begin(), key_bytes.end());
 
               prev_kv->set_key(key);
-              const json j =
-                json::parse(value_bytes.begin(), value_bytes.end());
-              const auto old = j.get<Value>();
               prev_kv->set_value(old.value);
               prev_kv->set_create_revision(old.create_revision);
               prev_kv->set_mod_revision(old.mod_revision);
               prev_kv->set_version(old.version);
             }
           },
-          start_bytes,
-          end_bytes);
+          start,
+          end);
 
         delete_range_response.set_deleted(deleted);
       }
 
       return ccf::grpc::make_success(delete_range_response);
+    }
+
+    static KVStore get_map(ccf::endpoints::EndpointContext& ctx)
+    {
+      auto records_handle = ctx.tx.template rw<KVStore::MT>(RECORDS);
+      return KVStore(records_handle);
     }
 
     template <typename In, typename Out>
@@ -398,71 +486,8 @@ namespace app
       auto path = fmt::format("/{}.{}/{}", package, service, method);
       return make_endpoint(path, HTTP_POST, ccf::grpc_adapter(f), ap);
     }
-
-    static std::optional<Value> get_value(
-      kv::untyped::MapHandle* handle, const std::string key)
-    {
-      // get the value out and deserialise it
-      auto res = handle->get(ccf::ByteVector(key.begin(), key.end()));
-      if (!res.has_value())
-      {
-        return std::nullopt;
-      }
-      auto val = res.value();
-      const auto j = json::parse(val.begin(), val.end());
-      auto v = j.get<Value>();
-
-      auto version_opt = handle->get_version_of_previous_write(
-        ccf::ByteVector(key.begin(), key.end()));
-      uint64_t revision = version_opt.value_or(0);
-
-      // if this was the first insert then we need to get the creation revision.
-      if (v.create_revision == 0)
-      {
-        v.create_revision = revision;
-      }
-
-      v.mod_revision = revision;
-
-      return v;
-    }
-
-    static std::optional<Value> put_value(
-      kv::untyped::MapHandle* handle, const std::string key, Value value)
-    {
-      const auto old = get_value(handle, key);
-      if (old.has_value())
-      {
-        const auto old_val = old.value();
-        if (old_val.create_revision == 0)
-        {
-          // first put after creation of this key so set the revision
-          auto version_opt = handle->get_version_of_previous_write(
-            ccf::ByteVector(key.begin(), key.end()));
-          if (version_opt.has_value())
-          {
-            // can set the creation revision
-            value.create_revision = version_opt.value();
-          }
-        }
-        else
-        {
-          // otherwise just copy it to the new value so that we don't lose it
-          value.create_revision = old_val.create_revision;
-        }
-
-        value.version = old_val.version + 1;
-      }
-
-      const json j = value;
-      auto value_bytes = j.dump();
-      handle->put(
-        ccf::ByteVector(key.begin(), key.end()),
-        ccf::ByteVector(value_bytes.begin(), value_bytes.end()));
-
-      return old;
-    }
   };
+
 } // namespace app
 
 namespace ccfapp
