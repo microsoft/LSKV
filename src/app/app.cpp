@@ -29,7 +29,7 @@ namespace app
       const auto etcdserverpb = "etcdserverpb";
       const auto kv = "KV";
 
-      make_grpc_ro<etcdserverpb::RangeRequest, etcdserverpb::RangeResponse>(
+      make_grpc<etcdserverpb::RangeRequest, etcdserverpb::RangeResponse>(
         etcdserverpb, kv, "Range", this->range, ccf::no_auth_required)
         .install();
 
@@ -53,7 +53,7 @@ namespace app
     }
 
     static ccf::grpc::GrpcAdapterResponse<etcdserverpb::RangeResponse> range(
-      ccf::endpoints::ReadOnlyEndpointContext& ctx,
+      ccf::endpoints::EndpointContext& ctx,
       etcdserverpb::RangeRequest&& payload)
     {
       etcdserverpb::RangeResponse range_response;
@@ -328,7 +328,104 @@ namespace app
         payload.success().size(),
         payload.failure().size());
 
+      bool success = true;
+      auto records_handle = ctx.tx.template ro<Map>(RECORDS);
+      // evaluate each comparison in the transaction and report the success
+      for (auto cmp : payload.compare())
+      {
+        CCF_APP_DEBUG(
+          "Cmp = [{}]{}:[{}]{}",
+          cmp.key().size(),
+          cmp.key(),
+          cmp.range_end().size(),
+          cmp.range_end());
+
+        if (!cmp.range_end().empty())
+        {
+          return ccf::grpc::make_error<etcdserverpb::TxnResponse>(
+            GRPC_STATUS_FAILED_PRECONDITION,
+            fmt::format("range_end in comparison not yet supported"));
+        }
+
+        // fetch the key from the store
+        auto key = cmp.key();
+        auto value_option =
+          records_handle->get(ccf::ByteVector(key.begin(), key.end()));
+        if (!value_option.has_value())
+        {
+          return ccf::grpc::make_error<etcdserverpb::TxnResponse>(
+            GRPC_STATUS_INVALID_ARGUMENT,
+            fmt::format("key in comparison not found: {}", key));
+        }
+
+        // got the key to check against, now do the check
+        bool outcome = false;
+        if (
+          cmp.target() == etcdserverpb::Compare_CompareTarget_VALUE &&
+          cmp.has_value())
+        {
+          auto val = value_option.value();
+          auto val_string = std::string(val.begin(), val.end());
+          auto target_val = cmp.value();
+          auto result = cmp.result();
+          if (result == etcdserverpb::Compare_CompareResult_EQUAL)
+          {
+            outcome = val_string == target_val;
+          }
+          else if (result == etcdserverpb::Compare_CompareResult_GREATER)
+          {
+            outcome = val_string > target_val;
+          }
+          else
+          {
+            return ccf::grpc::make_error<etcdserverpb::TxnResponse>(
+              GRPC_STATUS_INVALID_ARGUMENT,
+              fmt::format("unknown result in comparison: {}", result));
+          }
+        }
+        else
+        {
+          return ccf::grpc::make_error<etcdserverpb::TxnResponse>(
+            GRPC_STATUS_INVALID_ARGUMENT,
+            fmt::format("unknown target in comparison: {}", cmp.target()));
+        }
+
+        success = success && outcome;
+      }
+
       etcdserverpb::TxnResponse txn_response;
+
+      txn_response.set_succeeded(success);
+      google::protobuf::RepeatedPtrField<etcdserverpb::RequestOp> requests;
+      if (success)
+      {
+        requests = payload.success();
+      }
+      else
+      {
+        requests = payload.failure();
+      }
+
+      for (auto req : requests)
+      {
+        if (req.has_request_range())
+        {
+          auto range_request = req.request_range();
+          auto range_response = range(ctx, std::move(range_request));
+          auto success_response = std::get_if<
+            ccf::grpc::SuccessResponse<etcdserverpb::RangeResponse>>(
+            &range_response);
+          if (success_response == nullptr)
+          {
+            auto failure_response =
+              std::get<ccf::grpc::ErrorResponse>(range_response);
+            // TODO: return error
+          }
+          auto* resp = txn_response.add_responses();
+          auto* range_resp = resp->mutable_response_range();
+          *range_resp = success_response->body;
+        }
+      }
 
       return ccf::grpc::make_success(txn_response);
     }
