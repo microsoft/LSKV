@@ -395,10 +395,9 @@ namespace app
         // otherwise remove it and maybe plug the old value in to the
         // response.
 
-        auto old_option = records_map.get(key);
+        auto old_option = records_map.remove(key);
         if (old_option.has_value())
         {
-          records_map.remove(key);
           delete_range_response.set_deleted(1);
 
           if (payload.prev_kv())
