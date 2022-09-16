@@ -27,8 +27,12 @@ namespace app
 
   struct Value
   {
+    // the actual value that the client wants written.
     std::string value;
+    // the revision that this entry was created (since the last delete).
     uint64_t create_revision;
+    // the latest modification of this entry (0 in the serialised field).
+    uint64_t mod_revision;
   };
   DECLARE_JSON_TYPE(Value);
   DECLARE_JSON_REQUIRED_FIELDS(Value, value, create_revision);
@@ -165,6 +169,7 @@ namespace app
         auto value = value_option.value();
         kv->set_value(value.value);
         kv->set_create_revision(value.create_revision);
+        kv->set_mod_revision(value.mod_revision);
 
         range_response.set_count(1);
       }
@@ -195,6 +200,7 @@ namespace app
             const auto value = j.get<Value>();
             kv->set_value(value.value);
             kv->set_create_revision(value.create_revision);
+            kv->set_mod_revision(value.mod_revision);
           },
           start_bytes,
           end_bytes);
@@ -242,7 +248,7 @@ namespace app
       }
 
       auto records_handle = ctx.tx.template rw<Map>(RECORDS);
-      put_value(records_handle, payload.key(), Value{payload.value(), 0});
+      put_value(records_handle, payload.key(), Value{payload.value(), 0, 0});
       ctx.rpc_ctx->set_response_status(HTTP_STATUS_OK);
 
       return ccf::grpc::make_success(put_response);
@@ -286,6 +292,7 @@ namespace app
             auto old_value = old_option.value();
             prev_kv->set_value(old_value.value);
             prev_kv->set_create_revision(old_value.create_revision);
+            prev_kv->set_mod_revision(old_value.mod_revision);
           }
         }
       }
@@ -334,6 +341,7 @@ namespace app
               const auto old = j.get<Value>();
               prev_kv->set_value(old.value);
               prev_kv->set_create_revision(old.create_revision);
+              prev_kv->set_mod_revision(old.mod_revision);
             }
           },
           start_bytes,
@@ -383,16 +391,21 @@ namespace app
       const auto j = json::parse(val.begin(), val.end());
       auto v = j.get<Value>();
 
+      auto version_opt = handle->get_version_of_previous_write(
+        ccf::ByteVector(key.begin(), key.end()));
+      uint64_t version = 0;
+      if (version_opt.has_value())
+      {
+        version = version_opt.value();
+      }
+
       // if this was the first insert then we need to get the creation revision.
       if (v.create_revision == 0)
       {
-        auto old_create = handle->get_version_of_previous_write(
-          ccf::ByteVector(key.begin(), key.end()));
-        if (old_create.has_value())
-        {
-          v.create_revision = old_create.value();
-        }
+        v.create_revision = version;
       }
+
+      v.mod_revision = version;
 
       return std::make_optional(v);
     }
