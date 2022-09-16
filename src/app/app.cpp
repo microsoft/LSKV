@@ -49,6 +49,8 @@ namespace app
 
   static constexpr auto RECORDS = "public:records";
 
+  /// @brief KVStore is a wrapper around a CCF map that handles serialisation as
+  /// well as ensuring values have proper revisions when returned.
   class KVStore
   {
   public:
@@ -60,15 +62,24 @@ namespace app
     // Use untyped map so we can access the range API.
     using MT = kv::untyped::Map;
 
+    /// @brief Constructs a KVStore
+    /// @param ctx
     KVStore(ccf::endpoints::EndpointContext& ctx)
     {
       inner_map = ctx.tx.template rw<KVStore::MT>(RECORDS);
     }
+    /// @brief Constructs a KVStore
+    /// @param ctx
     KVStore(ccf::endpoints::ReadOnlyEndpointContext& ctx)
     {
       inner_map = ctx.tx.template ro<KVStore::MT>(RECORDS);
     }
 
+    /// @brief get retrieves the value stored for the given key. It hydrates the
+    /// value with up-to-date information as values may not store all
+    /// information about revisions.
+    /// @param key the key to get.
+    /// @return The value, if present.
     std::optional<V> get(const K& key)
     {
       // get the value out and deserialise it
@@ -98,6 +109,16 @@ namespace app
         KSerialiser::to_serialised(to));
     }
 
+    /// @brief Associate a value with a key in the store, replacing existing
+    /// entries for that key.
+    ///
+    /// When an entry doesn't exist already this simply writes the data in.
+    ///
+    /// When an entry does exist already this gets the old value, and uses the
+    /// data to build the new version and, if not set, a create revision.
+    /// @param key where to insert
+    /// @param value data to insert
+    /// @return the old value associated with the key, if present.
     std::optional<V> put(K key, V value)
     {
       const auto old = this->get(key);
@@ -130,6 +151,9 @@ namespace app
       return old;
     }
 
+    /// @brief remove data associated with the key from the store.
+    /// @param key
+    /// @return the old value, if present in the store.
     std::optional<V> remove(const K& key)
     {
       auto k = KSerialiser::to_serialised(key);
@@ -150,16 +174,20 @@ namespace app
 
     void hydrate_value(const K& key, V& value)
     {
+      // the version of the write to this key is our revision
       auto version_opt = inner_map->get_version_of_previous_write(
         KSerialiser::to_serialised(key));
+      // if there is no version (somehow) then just default it
+      // this shouldn't be nullopt though.
       uint64_t revision = version_opt.value_or(0);
 
-      // if this was the first insert then we need to get the creation revision.
+      // if this was the first insert then we need to set the creation revision.
       if (value.create_revision == 0)
       {
         value.create_revision = revision;
       }
 
+      // and always set the mod_revision
       value.mod_revision = revision;
     }
   };
