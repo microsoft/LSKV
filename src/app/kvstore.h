@@ -6,7 +6,6 @@
 
 namespace app::store
 {
-
   struct Value
   {
     // the actual value that the client wants written.
