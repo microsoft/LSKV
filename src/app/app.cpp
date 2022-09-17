@@ -9,20 +9,13 @@
 #include "ccf/json_handler.h"
 #include "etcd.pb.h"
 #include "grpc.h" // TODO(#25): use grpc from ccf
-#include "kv/untyped_map.h" // TODO(#22): private header
+#include "kvstore.h"
 
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
 
 namespace app
 {
-  // Key-value store types
-
-  // Use untyped map so we can access the range API.
-  using Map = kv::untyped::Map;
-
-  static constexpr auto RECORDS = "public:records";
-
   class AppHandlers : public ccf::UserEndpointRegistry
   {
   public:
@@ -132,14 +125,13 @@ namespace app
             payload.max_create_revision()));
       }
 
-      auto records_handle = ctx.tx.template ro<Map>(RECORDS);
-      auto key = payload.key();
-      auto range_end = payload.range_end();
+      auto records_map = store::KVStore(ctx.tx);
+      auto& key = payload.key();
+      auto& range_end = payload.range_end();
       if (range_end.empty())
       {
         // empty range end so just query for a single key
-        auto value_option =
-          records_handle->get(ccf::ByteVector(key.begin(), key.end()));
+        auto value_option = records_map.get(key);
         if (!value_option.has_value())
         {
           ctx.rpc_ctx->set_response_status(HTTP_STATUS_NOT_FOUND);
@@ -151,40 +143,35 @@ namespace app
 
         auto* kv = range_response.add_kvs();
         kv->set_key(payload.key());
-        auto value_bytes = value_option.value();
-        auto value = std::string(value_bytes.begin(), value_bytes.end());
-        kv->set_value(value);
+        auto value = value_option.value();
+        kv->set_value(value.value);
+        kv->set_create_revision(value.create_revision);
+        kv->set_mod_revision(value.mod_revision);
+        kv->set_version(value.version);
 
         range_response.set_count(1);
       }
       else
       {
         // range end is non-empty so perform a range scan
-        auto start = payload.key();
-        auto start_bytes = ccf::ByteVector(start.begin(), start.end());
-        auto end = payload.range_end();
-        auto end_bytes = ccf::ByteVector(end.begin(), end.end());
+        auto& start = payload.key();
+        auto& end = payload.range_end();
         auto count = 0;
 
-        records_handle->range(
-          [&](auto& key_bytes, auto& value_bytes) {
-            CCF_APP_DEBUG(
-              "range over key {} value {} with ({}, {})",
-              start,
-              end,
-              key_bytes,
-              value_bytes);
+        records_map.range(
+          [&](auto& key, auto& value) {
             count++;
 
             // add the kv to the response
             auto* kv = range_response.add_kvs();
-            auto key = std::string(key_bytes.begin(), key_bytes.end());
             kv->set_key(key);
-            auto value = std::string(value_bytes.begin(), value_bytes.end());
-            kv->set_value(value);
+            kv->set_value(value.value);
+            kv->set_create_revision(value.create_revision);
+            kv->set_mod_revision(value.mod_revision);
+            kv->set_version(value.version);
           },
-          start_bytes,
-          end_bytes);
+          start,
+          end);
 
         range_response.set_count(count);
       }
@@ -228,12 +215,8 @@ namespace app
           fmt::format("ignore lease not yet supported"));
       }
 
-      auto records_handle = ctx.tx.template rw<Map>(RECORDS);
-      auto key = payload.key();
-      auto value = payload.value();
-      records_handle->put(
-        ccf::ByteVector(key.begin(), key.end()),
-        ccf::ByteVector(value.begin(), value.end()));
+      auto records_map = store::KVStore(ctx.tx);
+      records_map.put(payload.key(), store::Value(payload.value()));
       ctx.rpc_ctx->set_response_status(HTTP_STATUS_OK);
 
       return ccf::grpc::make_success(put_response);
@@ -253,8 +236,8 @@ namespace app
         payload.prev_kv());
       etcdserverpb::DeleteRangeResponse delete_range_response;
 
-      auto records_handle = ctx.tx.template rw<Map>(RECORDS);
-      auto key = payload.key();
+      auto records_map = store::KVStore(ctx.tx);
+      auto& key = payload.key();
 
       if (payload.range_end().empty())
       {
@@ -264,11 +247,9 @@ namespace app
         // otherwise remove it and maybe plug the old value in to the
         // response.
 
-        auto old_option =
-          records_handle->get(ccf::ByteVector(key.begin(), key.end()));
+        auto old_option = records_map.remove(key);
         if (old_option.has_value())
         {
-          records_handle->remove(ccf::ByteVector(key.begin(), key.end()));
           delete_range_response.set_deleted(1);
 
           if (payload.prev_kv())
@@ -276,8 +257,10 @@ namespace app
             auto* prev_kv = delete_range_response.add_prev_kvs();
             prev_kv->set_key(payload.key());
             auto old_value = old_option.value();
-            auto old = std::string(old_value.begin(), old_value.end());
-            prev_kv->set_value(old);
+            prev_kv->set_value(old_value.value);
+            prev_kv->set_create_revision(old_value.create_revision);
+            prev_kv->set_mod_revision(old_value.mod_revision);
+            prev_kv->set_version(old_value.version);
           }
         }
       }
@@ -288,8 +271,7 @@ namespace app
 
         auto deleted = 0;
 
-        auto start = payload.key();
-        auto start_bytes = ccf::ByteVector(start.begin(), start.end());
+        auto& start = payload.key();
         auto end = payload.range_end();
 
         // If range_end is '\0', the range is all keys greater than or equal
@@ -302,31 +284,30 @@ namespace app
           end = std::string(16, '\255');
         }
 
-        auto end_bytes = ccf::ByteVector(end.begin(), end.end());
-
         CCF_APP_DEBUG(
           "calling range for deletion with [{}]{} -> [{}]{}",
-          start_bytes.size(),
-          start_bytes,
-          end_bytes.size(),
-          end_bytes);
-        records_handle->range(
-          [&](auto& key_bytes, auto& value_bytes) {
-            records_handle->remove(key_bytes);
+          start.size(),
+          start,
+          end.size(),
+          end);
+        records_map.range(
+          [&](auto& key, auto& old) {
+            records_map.remove(key);
             deleted++;
 
             if (payload.prev_kv())
             {
               auto* prev_kv = delete_range_response.add_prev_kvs();
-              auto key = std::string(key_bytes.begin(), key_bytes.end());
 
               prev_kv->set_key(key);
-              auto old = std::string(value_bytes.begin(), value_bytes.end());
-              prev_kv->set_value(old);
+              prev_kv->set_value(old.value);
+              prev_kv->set_create_revision(old.create_revision);
+              prev_kv->set_mod_revision(old.mod_revision);
+              prev_kv->set_version(old.version);
             }
           },
-          start_bytes,
-          end_bytes);
+          start,
+          end);
 
         delete_range_response.set_deleted(deleted);
       }
