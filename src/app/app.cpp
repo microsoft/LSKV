@@ -426,20 +426,67 @@ namespace app
       {
         if (req.has_request_range())
         {
-          auto range_request = req.request_range();
-          auto range_response = range(ctx, std::move(range_request));
+          auto request = req.request_range();
+          auto response = range(ctx, std::move(request));
           auto success_response = std::get_if<
-            ccf::grpc::SuccessResponse<etcdserverpb::RangeResponse>>(
-            &range_response);
+            ccf::grpc::SuccessResponse<etcdserverpb::RangeResponse>>(&response);
           if (success_response == nullptr)
           {
-            auto failure_response =
-              std::get<ccf::grpc::ErrorResponse>(range_response);
-            // TODO: return error
+            return std::get<ccf::grpc::ErrorResponse>(response);
           }
-          auto* resp = txn_response.add_responses();
-          auto* range_resp = resp->mutable_response_range();
-          *range_resp = success_response->body;
+          auto* resp_op = txn_response.add_responses();
+          auto* resp = resp_op->mutable_response_range();
+          *resp = success_response->body;
+        }
+        else if (req.has_request_put())
+        {
+          auto request = req.request_put();
+          auto response = put(ctx, std::move(request));
+          auto success_response =
+            std::get_if<ccf::grpc::SuccessResponse<etcdserverpb::PutResponse>>(
+              &response);
+          if (success_response == nullptr)
+          {
+            return std::get<ccf::grpc::ErrorResponse>(response);
+          }
+          auto* resp_op = txn_response.add_responses();
+          auto* resp = resp_op->mutable_response_put();
+          *resp = success_response->body;
+        }
+        else if (req.has_request_delete_range())
+        {
+          auto request = req.request_delete_range();
+          auto response = delete_range(ctx, std::move(request));
+          auto success_response = std::get_if<
+            ccf::grpc::SuccessResponse<etcdserverpb::DeleteRangeResponse>>(
+            &response);
+          if (success_response == nullptr)
+          {
+            return std::get<ccf::grpc::ErrorResponse>(response);
+          }
+          auto* resp_op = txn_response.add_responses();
+          auto* resp = resp_op->mutable_response_delete_range();
+          *resp = success_response->body;
+        }
+        else if (req.has_request_txn())
+        {
+          auto request = req.request_txn();
+          auto response = txn(ctx, std::move(request));
+          auto success_response =
+            std::get_if<ccf::grpc::SuccessResponse<etcdserverpb::TxnResponse>>(
+              &response);
+          if (success_response == nullptr)
+          {
+            return std::get<ccf::grpc::ErrorResponse>(response);
+          }
+          auto* resp_op = txn_response.add_responses();
+          auto* resp = resp_op->mutable_response_txn();
+          *resp = success_response->body;
+        }
+        else
+        {
+          return ccf::grpc::make_error<etcdserverpb::TxnResponse>(
+            GRPC_STATUS_INVALID_ARGUMENT, "unknown request op");
         }
       }
 
