@@ -335,7 +335,7 @@ namespace app
       bool success = true;
       auto records_map = store::KVStore(ctx.tx);
       // evaluate each comparison in the transaction and report the success
-      for (auto cmp : payload.compare())
+      for (auto const& cmp : payload.compare())
       {
         CCF_APP_DEBUG(
           "Cmp = [{}]{}:[{}]{}",
@@ -346,7 +346,7 @@ namespace app
 
         if (!cmp.range_end().empty())
         {
-          return ccf::grpc::make_error<etcdserverpb::TxnResponse>(
+          return ccf::grpc::make_error(
             GRPC_STATUS_FAILED_PRECONDITION,
             fmt::format("range_end in comparison not yet supported"));
         }
@@ -422,7 +422,7 @@ namespace app
         requests = payload.failure();
       }
 
-      for (auto req : requests)
+      for (auto const& req : requests)
       {
         if (req.has_request_range())
         {
