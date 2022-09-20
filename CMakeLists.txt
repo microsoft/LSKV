@@ -19,7 +19,7 @@ add_ccf_app(
   src/app/kvstore.cpp
   INCLUDE_DIRS
   "${CMAKE_BINARY_DIR}/proto"
-  "/opt/ccf/include/ccf/_private"
+  "${CCF_DIR}/include/ccf/_private"
   LINK_LIBS_ENCLAVE
   etcd.enclave
   status.enclave
