@@ -329,7 +329,7 @@ namespace app
         payload.failure().size());
 
       bool success = true;
-      auto records_handle = ctx.tx.template ro<Map>(RECORDS);
+      auto records_map = store::KVStore(ctx.tx);
       // evaluate each comparison in the transaction and report the success
       for (auto cmp : payload.compare())
       {
@@ -349,39 +349,48 @@ namespace app
 
         // fetch the key from the store
         auto key = cmp.key();
-        auto value_option =
-          records_handle->get(ccf::ByteVector(key.begin(), key.end()));
+        auto value_option = records_map.get(key);
         if (!value_option.has_value())
         {
           return ccf::grpc::make_error<etcdserverpb::TxnResponse>(
             GRPC_STATUS_INVALID_ARGUMENT,
             fmt::format("key in comparison not found: {}", key));
         }
+        auto value = value_option.value();
 
         // got the key to check against, now do the check
-        bool outcome = false;
+        std::optional<bool> outcome = std::nullopt;
         if (
           cmp.target() == etcdserverpb::Compare_CompareTarget_VALUE &&
           cmp.has_value())
         {
-          auto val = value_option.value();
-          auto val_string = std::string(val.begin(), val.end());
-          auto target_val = cmp.value();
-          auto result = cmp.result();
-          if (result == etcdserverpb::Compare_CompareResult_EQUAL)
-          {
-            outcome = val_string == target_val;
-          }
-          else if (result == etcdserverpb::Compare_CompareResult_GREATER)
-          {
-            outcome = val_string > target_val;
-          }
-          else
-          {
-            return ccf::grpc::make_error<etcdserverpb::TxnResponse>(
-              GRPC_STATUS_INVALID_ARGUMENT,
-              fmt::format("unknown result in comparison: {}", result));
-          }
+          outcome = txn_compare(cmp.result(), value.value, cmp.value());
+        }
+        else if (
+          cmp.target() == etcdserverpb::Compare_CompareTarget_VERSION &&
+          cmp.has_version())
+        {
+          outcome = txn_compare(cmp.result(), value.version, cmp.version());
+        }
+        else if (
+          cmp.target() == etcdserverpb::Compare_CompareTarget_CREATE &&
+          cmp.has_create_revision())
+        {
+          outcome = txn_compare(
+            cmp.result(), value.create_revision, cmp.create_revision());
+        }
+        else if (
+          cmp.target() == etcdserverpb::Compare_CompareTarget_MOD &&
+          cmp.has_mod_revision())
+        {
+          outcome =
+            txn_compare(cmp.result(), value.mod_revision, cmp.mod_revision());
+        }
+        else if (
+          cmp.target() == etcdserverpb::Compare_CompareTarget_LEASE &&
+          cmp.has_lease())
+        {
+          outcome = txn_compare(cmp.result(), value.lease, cmp.lease());
         }
         else
         {
@@ -390,7 +399,14 @@ namespace app
             fmt::format("unknown target in comparison: {}", cmp.target()));
         }
 
-        success = success && outcome;
+        if (!outcome.has_value())
+        {
+          return ccf::grpc::make_error<etcdserverpb::TxnResponse>(
+            GRPC_STATUS_INVALID_ARGUMENT,
+            fmt::format("unknown result in comparison: {}", cmp.result()));
+        }
+
+        success = success && outcome.value();
       }
 
       etcdserverpb::TxnResponse txn_response;
@@ -453,6 +469,43 @@ namespace app
     {
       auto path = fmt::format("/{}.{}/{}", package, service, method);
       return make_endpoint(path, HTTP_POST, ccf::grpc_adapter(f), ap);
+    }
+
+    /// @brief Compare a stored value with the given target using the result
+    /// operator.
+    /// @tparam T the type of the values to compare
+    /// @param result the method to compare them with
+    /// @param stored the stored value to compare
+    /// @param target the given value to use in comparison
+    /// @return nullopt if the result is invalid, true if the result is valid
+    /// and the comparison succeeds, false if the result is valid and the
+    /// comparison fails
+    template <typename T>
+    static std::optional<bool> txn_compare(
+      etcdserverpb::Compare_CompareResult result,
+      const T stored,
+      const T target)
+    {
+      if (result == etcdserverpb::Compare_CompareResult_EQUAL)
+      {
+        return stored == target;
+      }
+      else if (result == etcdserverpb::Compare_CompareResult_GREATER)
+      {
+        return stored > target;
+      }
+      else if (result == etcdserverpb::Compare_CompareResult_LESS)
+      {
+        return stored < target;
+      }
+      else if (result == etcdserverpb::Compare_CompareResult_NOT_EQUAL)
+      {
+        return stored != target;
+      }
+      else
+      {
+        return std::nullopt;
+      }
     }
   };
 
