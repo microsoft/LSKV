@@ -575,9 +575,14 @@ namespace app
     void fill_header(etcdserverpb::ResponseHeader* header)
     {
       // TODO(#7)
+      // get public:ccf.gov map, get the service.info value (json) and get the
+      // cert member
+      // then work out a way to hash it (take the first bytes?) and use as
+      // cluster_id
       header->set_cluster_id(0);
-      // TODO(#8)
-      header->set_member_id(0);
+      ccf::NodeId member_id;
+      get_id_for_this_node_v1(member_id);
+      header->set_member_id(member_id);
       ccf::View view;
       ccf::SeqNo seqno;
       get_last_committed_txid_v1(view, seqno);
