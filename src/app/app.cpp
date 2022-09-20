@@ -40,18 +40,26 @@ namespace app
         etcdserverpb, kv, "Range", range, ccf::no_auth_required)
         .install();
 
+      auto put = [this](
+                   ccf::endpoints::EndpointContext& ctx,
+                   etcdserverpb::PutRequest&& payload) {
+        return this->put(ctx, std::move(payload));
+      };
+
       make_grpc<etcdserverpb::PutRequest, etcdserverpb::PutResponse>(
-        etcdserverpb, kv, "Put", this->put, ccf::no_auth_required)
+        etcdserverpb, kv, "Put", put, ccf::no_auth_required)
         .install();
+
+      auto delete_range = [this](
+                            ccf::endpoints::EndpointContext& ctx,
+                            etcdserverpb::DeleteRangeRequest&& payload) {
+        return this->delete_range(ctx, std::move(payload));
+      };
 
       make_grpc<
         etcdserverpb::DeleteRangeRequest,
         etcdserverpb::DeleteRangeResponse>(
-        etcdserverpb,
-        kv,
-        "DeleteRange",
-        this->delete_range,
-        ccf::no_auth_required)
+        etcdserverpb, kv, "DeleteRange", delete_range, ccf::no_auth_required)
         .install();
 
       make_grpc<etcdserverpb::TxnRequest, etcdserverpb::TxnResponse>(
@@ -184,10 +192,13 @@ namespace app
         range_response.set_count(count);
       }
 
+      auto* header = range_response.mutable_header();
+      fill_header(header);
+
       return ccf::grpc::make_success(range_response);
     }
 
-    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::PutResponse> put(
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::PutResponse> put(
       ccf::endpoints::EndpointContext& ctx, etcdserverpb::PutRequest&& payload)
     {
       etcdserverpb::PutResponse put_response;
@@ -227,10 +238,13 @@ namespace app
       records_map.put(payload.key(), store::Value(payload.value()));
       ctx.rpc_ctx->set_response_status(HTTP_STATUS_OK);
 
+      auto* header = put_response.mutable_header();
+      fill_header(header);
+
       return ccf::grpc::make_success(put_response);
     }
 
-    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::DeleteRangeResponse>
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::DeleteRangeResponse>
     delete_range(
       ccf::endpoints::EndpointContext& ctx,
       etcdserverpb::DeleteRangeRequest&& payload)
@@ -319,6 +333,9 @@ namespace app
 
         delete_range_response.set_deleted(deleted);
       }
+
+      auto* header = delete_range_response.mutable_header();
+      fill_header(header);
 
       return ccf::grpc::make_success(delete_range_response);
     }
@@ -553,6 +570,19 @@ namespace app
       {
         return std::nullopt;
       }
+    }
+
+    void fill_header(etcdserverpb::ResponseHeader* header)
+    {
+      // TODO(#7)
+      header->set_cluster_id(0);
+      // TODO(#8)
+      header->set_member_id(0);
+      ccf::View view;
+      ccf::SeqNo seqno;
+      get_last_committed_txid_v1(view, seqno);
+      header->set_revision(seqno);
+      header->set_raft_term(view);
     }
   };
 
