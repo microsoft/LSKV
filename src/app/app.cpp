@@ -29,8 +29,15 @@ namespace app
       const auto etcdserverpb = "etcdserverpb";
       const auto kv = "KV";
 
-      make_grpc<etcdserverpb::RangeRequest, etcdserverpb::RangeResponse>(
-        etcdserverpb, kv, "Range", this->range, ccf::no_auth_required)
+      auto range = [this](
+                     ccf::endpoints::ReadOnlyEndpointContext& ctx,
+                     etcdserverpb::RangeRequest&& payload) {
+        auto kvs = store::KVStore(ctx.tx);
+        return this->range(kvs, std::move(payload));
+      };
+
+      make_grpc_ro<etcdserverpb::RangeRequest, etcdserverpb::RangeResponse>(
+        etcdserverpb, kv, "Range", range, ccf::no_auth_required)
         .install();
 
       make_grpc<etcdserverpb::PutRequest, etcdserverpb::PutResponse>(
@@ -53,8 +60,7 @@ namespace app
     }
 
     static ccf::grpc::GrpcAdapterResponse<etcdserverpb::RangeResponse> range(
-      ccf::endpoints::EndpointContext& ctx,
-      etcdserverpb::RangeRequest&& payload)
+      store::KVStore records_map, etcdserverpb::RangeRequest&& payload)
     {
       etcdserverpb::RangeResponse range_response;
       CCF_APP_DEBUG(
@@ -129,7 +135,6 @@ namespace app
             payload.max_create_revision()));
       }
 
-      auto records_map = store::KVStore(ctx.tx);
       auto& key = payload.key();
       auto& range_end = payload.range_end();
       if (range_end.empty())
@@ -422,7 +427,7 @@ namespace app
         if (req.has_request_range())
         {
           auto request = req.request_range();
-          auto response = range(ctx, std::move(request));
+          auto response = range(records_map, std::move(request));
           auto success_response = std::get_if<
             ccf::grpc::SuccessResponse<etcdserverpb::RangeResponse>>(&response);
           if (success_response == nullptr)
