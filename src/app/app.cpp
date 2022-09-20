@@ -138,11 +138,10 @@ namespace app
         auto value_option = records_map.get(key);
         if (!value_option.has_value())
         {
-          ctx.rpc_ctx->set_response_status(HTTP_STATUS_NOT_FOUND);
+          // no values so send the response with an empty list and a count of 0
+          // rather than an error
           range_response.set_count(0);
-          return ccf::grpc::make_error<etcdserverpb::RangeResponse>(
-            GRPC_STATUS_NOT_FOUND,
-            fmt::format("Key {} not found", payload.key()));
+          return ccf::grpc::make_success(range_response);
         }
 
         auto* kv = range_response.add_kvs();
