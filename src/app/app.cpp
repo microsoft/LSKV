@@ -349,13 +349,9 @@ namespace app
         // fetch the key from the store
         auto key = cmp.key();
         auto value_option = records_map.get(key);
-        if (!value_option.has_value())
-        {
-          return ccf::grpc::make_error<etcdserverpb::TxnResponse>(
-            GRPC_STATUS_INVALID_ARGUMENT,
-            fmt::format("key in comparison not found: {}", key));
-        }
-        auto value = value_option.value();
+        // get the value if there was one, otherwise use a default entry to
+        // compare against
+        auto value = value_option.value_or(store::Value());
 
         // got the key to check against, now do the check
         std::optional<bool> outcome = std::nullopt;
