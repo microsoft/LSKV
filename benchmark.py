@@ -3,6 +3,7 @@
 # Licensed under the MIT License.
 
 from subprocess import Popen
+import shutil
 import time
 import logging
 import socket
@@ -125,9 +126,10 @@ def run_benchmark(store, bench_cmd: List[str]):
 
 def main():
     bench_dir = "bench"
+
     # make the bench directory
-    if not os.path.exists(bench_dir):
-        os.mkdir(bench_dir)
+    shutil.rmtree(bench_dir)
+    os.makedirs(bench_dir)
 
     # todo: write a kv into the store for the range query benchmark
     bench_cmds = [["put"], ["range", "key"]]
@@ -136,7 +138,7 @@ def main():
 
         d = os.path.join(bench_dir, "_".join(bench_cmd))
         if not os.path.exists(d):
-            os.mkdir(d)
+            os.makedirs(d)
 
         run_benchmark(EtcdStore(d), bench_cmd)
 
