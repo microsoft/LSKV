@@ -9,6 +9,19 @@
 
 namespace app::store
 {
+  struct HexString
+  {
+    // The encoded string.
+    std::string value;
+
+    // Construct a hexstring from a plain byte string
+    HexString(std::string);
+    // Construct an empty hex string.
+    HexString();
+    // Unencode a hexstring
+    std::string decode();
+  };
+
   struct Value
   {
     // the actual value that the client wants written stored as a list of bytes
