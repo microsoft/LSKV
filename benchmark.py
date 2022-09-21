@@ -137,9 +137,9 @@ def main():
         logging.info(f"benching with extra args {bench_cmd}")
 
         d = os.path.join(bench_dir, "_".join(bench_cmd))
-        if not os.path.exists(d):
-            os.makedirs(d)
+        os.makedirs(d)
 
+        bench_cmd = ["--csv-file", os.path.join(d, "timings.csv")] + bench_cmd
         run_benchmark(EtcdStore(d), bench_cmd)
 
         run_benchmark(CCFKVSStore(d), bench_cmd)
