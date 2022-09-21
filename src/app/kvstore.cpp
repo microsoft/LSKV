@@ -5,6 +5,7 @@
 
 #include "ccf/app_interface.h"
 #include "ccf/common_auth_policies.h"
+#include "ccf/ds/hex.h"
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
 #include "kv/untyped_map.h" // TODO(#22): private header
