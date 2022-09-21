@@ -1,5 +1,5 @@
 diff --git a/3rdparty/etcd/pkg/report/report.go b/3rdparty/etcd/pkg/report/report.go
-index 36d09b9d..d89757a5 100644
+index 36d09b9d..e4a26242 100644
 --- a/3rdparty/etcd/pkg/report/report.go
 +++ b/3rdparty/etcd/pkg/report/report.go
 @@ -19,6 +19,7 @@ package report
@@ -10,14 +10,87 @@ index 36d09b9d..d89757a5 100644
  	"sort"
  	"strings"
  	"time"
-@@ -180,6 +181,7 @@ func (r *report) processResult(res *Result) {
+@@ -44,6 +45,8 @@ type report struct {
+ 
+ 	stats Stats
+ 	sps   *secondPoints
++
++	csvFile *os.File
+ }
+ 
+ // Stats exposes results raw data.
+@@ -79,19 +82,29 @@ type Report interface {
+ 	Stats() <-chan Stats
+ }
+ 
+-func NewReport(precision string) Report { return newReport(precision) }
++func NewReport(precision string, csvFile string) Report { return newReport(precision, csvFile) }
+ 
+-func newReport(precision string) *report {
++func newReport(precision string, csvFile string) *report {
+ 	r := &report{
+ 		results:   make(chan Result, 16),
+ 		precision: precision,
+ 	}
+ 	r.stats.ErrorDist = make(map[string]int)
++
++	if csvFile != "" {
++		f, err := os.Create(csvFile)
++		if err != nil {
++			panic(err)
++		}
++		r.csvFile = f
++		fmt.Fprintln(r.csvFile, "start_micros,end_micros")
++	}
++
+ 	return r
+ }
+ 
+-func NewReportSample(precision string) Report {
+-	r := NewReport(precision).(*report)
++func NewReportSample(precision string, csvFile string) Report {
++	r := NewReport(precision, csvFile).(*report)
+ 	r.sps = newSecondPoints()
+ 	return r
+ }
+@@ -161,8 +174,8 @@ func (r *report) sec2str(sec float64) string { return fmt.Sprintf(r.precision+"
+ 
+ type reportRate struct{ *report }
+ 
+-func NewReportRate(precision string) Report {
+-	return &reportRate{NewReport(precision).(*report)}
++func NewReportRate(precision string, csvFile string) Report {
++	return &reportRate{NewReport(precision, csvFile).(*report)}
+ }
+ 
+ func (r *reportRate) String() string {
+@@ -180,6 +193,9 @@ func (r *report) processResult(res *Result) {
  	if r.sps != nil {
  		r.sps.Add(res.Start, dur)
  	}
-+	fmt.Fprintf(os.Stderr, "%v,%v\n", res.Start.UnixMicro(), res.End.UnixMicro())
++	if r.csvFile != nil {
++		fmt.Fprintf(r.csvFile, "%v,%v\n", res.Start.UnixMicro(), res.End.UnixMicro())
++	}
  }
-
+ 
  func (r *report) processResults() {
+diff --git a/3rdparty/etcd/pkg/report/weighted.go b/3rdparty/etcd/pkg/report/weighted.go
+index 411214f6..4b5b48f3 100644
+--- a/3rdparty/etcd/pkg/report/weighted.go
++++ b/3rdparty/etcd/pkg/report/weighted.go
+@@ -30,10 +30,10 @@ type weightedReport struct {
+ 
+ // NewWeightedReport returns a report that includes
+ // both weighted and unweighted statistics.
+-func NewWeightedReport(r Report, precision string) Report {
++func NewWeightedReport(r Report, precision string, csvFile string) Report {
+ 	return &weightedReport{
+ 		baseReport: r,
+-		report:     newReport(precision),
++		report:     newReport(precision, csvFile),
+ 		results:    make(chan Result, 16),
+ 	}
+ }
 diff --git a/3rdparty/etcd/tests/common/kv_test.go b/3rdparty/etcd/tests/common/kv_test.go
 index 23e387bd..ac3d553c 100644
 --- a/3rdparty/etcd/tests/common/kv_test.go
@@ -25,7 +98,7 @@ index 23e387bd..ac3d553c 100644
 @@ -25,11 +25,13 @@ import (
  	"go.etcd.io/etcd/tests/v3/framework/testutils"
  )
-
+ 
 +const timeout = time.Minute
 +
  func TestKVPut(t *testing.T) {
@@ -110,7 +183,7 @@ index d03f120e..014cfc99 100644
 --- a/3rdparty/etcd/tests/common/main_test.go
 +++ b/3rdparty/etcd/tests/common/main_test.go
 @@ -23,26 +23,27 @@ import (
-
+ 
  var testRunner = framework.UnitTestRunner
  var clusterTestCases = []testCase{
 -	{
@@ -151,7 +224,7 @@ index d03f120e..014cfc99 100644
 +	// 	config: config.ClusterConfig{ClusterSize: 1, ClientTLS: config.AutoTLS},
 +	// },
  }
-
+ 
  func TestMain(m *testing.M) {
 diff --git a/3rdparty/etcd/tests/common/txn_test.go b/3rdparty/etcd/tests/common/txn_test.go
 index 890c0f73..eeeba24d 100644
@@ -189,7 +262,7 @@ index 92602ac6..84f6229d 100644
 +++ b/3rdparty/etcd/tests/framework/integration.go
 @@ -43,23 +43,27 @@ func (e integrationRunner) BeforeTest(t testing.TB) {
  }
-
+ 
  func (e integrationRunner) NewCluster(ctx context.Context, t testing.TB, cfg config.ClusterConfig) Cluster {
 -	var err error
 -	integrationCfg := integration.ClusterConfig{
@@ -232,7 +305,7 @@ index 92602ac6..84f6229d 100644
  	}
 @@ -83,21 +87,25 @@ func tlsInfo(t testing.TB, cfg config.TLSConfig) (*transport.TLSInfo, error) {
  }
-
+ 
  type integrationCluster struct {
 -	*integration.Cluster
 -	t   testing.TB
@@ -241,7 +314,7 @@ index 92602ac6..84f6229d 100644
 +	t       testing.TB
 +	ctx     context.Context
  }
-
+ 
  func (c *integrationCluster) Members() (ms []Member) {
 -	for _, m := range c.Cluster.Members {
 +	for _, m := range c.Cluster.Members() {
@@ -249,7 +322,7 @@ index 92602ac6..84f6229d 100644
  	}
  	return ms
  }
-
+ 
 +func (c *integrationCluster) WaitLeader(t testing.TB) int {
 +	return c.Cluster.WaitLeader(t)
 +}
@@ -260,18 +333,18 @@ index 92602ac6..84f6229d 100644
 +	Member *integration.CcfMember
 +	t      testing.TB
  }
-
+ 
  func (m integrationMember) Client() Client {
 @@ -113,12 +121,12 @@ func (m integrationMember) Stop() {
  }
-
+ 
  func (c *integrationCluster) Close() error {
 -	c.Terminate(c.t)
 -	return nil
 +	err := c.Cluster.Close()
 +	return err
  }
-
+ 
  func (c *integrationCluster) Client() Client {
 -	cc, err := c.ClusterClient()
 +	cc, err := c.Cluster.Client()
@@ -422,7 +495,7 @@ index 4c5c76c3..9d0d2e80 100644
 +++ b/3rdparty/etcd/tests/framework/integration/testing.go
 @@ -15,6 +15,7 @@
  package integration
-
+ 
  import (
 +	"fmt"
  	"os"
@@ -430,31 +503,31 @@ index 4c5c76c3..9d0d2e80 100644
  	"testing"
 @@ -81,7 +82,8 @@ func BeforeTest(t testutil.TB, opts ...TestOption) {
  	}
-
+ 
  	if options.goLeakDetection {
 -		testutil.RegisterLeakDetection(t)
 +		fmt.Println("set to run with goLeakDetection but ignoring")
 +		// testutil.RegisterLeakDetection(t)
  	}
-
+ 
  	previousWD, err := os.Getwd()
 @@ -103,8 +105,6 @@ func BeforeTest(t testutil.TB, opts ...TestOption) {
-
+ 
  	grpc_logger.Set(zapgrpc.NewLogger(zaptest.NewLogger(t).Named("grpc")))
  	insideTestContext = true
 -
 -	os.Chdir(t.TempDir())
  }
-
+ 
  func assertInTestContext(t testutil.TB) {
 diff --git a/3rdparty/etcd/tests/go.mod b/3rdparty/etcd/tests/go.mod
 index 0ce05f47..c3b749a7 100644
 --- a/3rdparty/etcd/tests/go.mod
 +++ b/3rdparty/etcd/tests/go.mod
 @@ -2,18 +2,6 @@ module go.etcd.io/etcd/tests/v3
-
+ 
  go 1.17
-
+ 
 -replace (
 -	go.etcd.io/etcd/api/v3 => ../api
 -	go.etcd.io/etcd/client/pkg/v3 => ../client/pkg
@@ -655,7 +728,7 @@ index 7208fd35..d7a28b1a 100644
 @@ -27,7 +27,6 @@ import (
  	v3 "go.etcd.io/etcd/client/v3"
  	"go.etcd.io/etcd/pkg/v3/report"
-
+ 
 -	"github.com/cheggaaa/pb/v3"
  	"github.com/dustin/go-humanize"
  	"github.com/spf13/cobra"
@@ -663,7 +736,7 @@ index 7208fd35..d7a28b1a 100644
 @@ -85,9 +84,6 @@ func putFunc(cmd *cobra.Command, args []string) {
  	clients := mustCreateClients(totalClients, totalConns)
  	k, v := make([]byte, keySize), string(mustRandBytes(valSize))
-
+ 
 -	bar = pb.New(putTotal)
 -	bar.Start()
 -
@@ -684,7 +757,7 @@ index 7208fd35..d7a28b1a 100644
  	close(r.Results())
 -	bar.Finish()
  	fmt.Println(<-rc)
-
+ 
  	if checkHashkv {
 diff --git a/3rdparty/etcd/tools/benchmark/cmd/range.go b/3rdparty/etcd/tools/benchmark/cmd/range.go
 index 23000683..bfadc01e 100644
@@ -693,7 +766,7 @@ index 23000683..bfadc01e 100644
 @@ -24,7 +24,6 @@ import (
  	v3 "go.etcd.io/etcd/client/v3"
  	"go.etcd.io/etcd/pkg/v3/report"
-
+ 
 -	"github.com/cheggaaa/pb/v3"
  	"github.com/spf13/cobra"
  	"golang.org/x/time/rate"
@@ -701,7 +774,7 @@ index 23000683..bfadc01e 100644
 @@ -79,9 +78,6 @@ func rangeFunc(cmd *cobra.Command, args []string) {
  	requests := make(chan v3.Op, totalClients)
  	clients := mustCreateClients(totalClients, totalConns)
-
+ 
 -	bar = pb.New(rangeTotal)
 -	bar.Start()
 -
@@ -723,6 +796,26 @@ index 23000683..bfadc01e 100644
 -	bar.Finish()
  	fmt.Printf("%s", <-rc)
  }
+diff --git a/3rdparty/etcd/tools/benchmark/cmd/root.go b/3rdparty/etcd/tools/benchmark/cmd/root.go
+index 0a22e031..26438dd3 100644
+--- a/3rdparty/etcd/tools/benchmark/cmd/root.go
++++ b/3rdparty/etcd/tools/benchmark/cmd/root.go
+@@ -55,6 +55,8 @@ var (
+ 
+ 	targetLeader     bool
+ 	autoSyncInterval time.Duration
++
++	csvFile string
+ )
+ 
+ func init() {
+@@ -73,4 +75,6 @@ func init() {
+ 
+ 	RootCmd.PersistentFlags().BoolVar(&targetLeader, "target-leader", false, "connect only to the leader node")
+ 	RootCmd.PersistentFlags().DurationVar(&autoSyncInterval, "auto-sync-interval", time.Duration(0), "AutoSyncInterval is the interval to update endpoints with its latest members")
++
++	RootCmd.PersistentFlags().StringVar(&csvFile, "csv-file", "timings.csv", "File to write csv data out to.")
+ }
 diff --git a/3rdparty/etcd/tools/benchmark/cmd/txn_put.go b/3rdparty/etcd/tools/benchmark/cmd/txn_put.go
 index bea02f7a..50c40f3a 100644
 --- a/3rdparty/etcd/tools/benchmark/cmd/txn_put.go
@@ -730,7 +823,7 @@ index bea02f7a..50c40f3a 100644
 @@ -25,7 +25,6 @@ import (
  	v3 "go.etcd.io/etcd/client/v3"
  	"go.etcd.io/etcd/pkg/v3/report"
-
+ 
 -	"github.com/cheggaaa/pb/v3"
  	"github.com/spf13/cobra"
  	"golang.org/x/time/rate"
@@ -738,7 +831,7 @@ index bea02f7a..50c40f3a 100644
 @@ -75,9 +74,6 @@ func txnPutFunc(cmd *cobra.Command, args []string) {
  	clients := mustCreateClients(totalClients, totalConns)
  	k, v := make([]byte, keySize), string(mustRandBytes(valSize))
-
+ 
 -	bar = pb.New(txnPutTotal)
 -	bar.Start()
 -
@@ -759,4 +852,30 @@ index bea02f7a..50c40f3a 100644
  	close(r.Results())
 -	bar.Finish()
  	fmt.Println(<-rc)
+ }
+diff --git a/3rdparty/etcd/tools/benchmark/cmd/util.go b/3rdparty/etcd/tools/benchmark/cmd/util.go
+index ab644b3d..ca976e9c 100644
+--- a/3rdparty/etcd/tools/benchmark/cmd/util.go
++++ b/3rdparty/etcd/tools/benchmark/cmd/util.go
+@@ -163,9 +163,9 @@ func newReport() report.Report {
+ 		p = "%g"
+ 	}
+ 	if sample {
+-		return report.NewReportSample(p)
++		return report.NewReportSample(p, csvFile)
+ 	}
+-	return report.NewReport(p)
++	return report.NewReport(p, csvFile)
+ }
+ 
+ func newWeightedReport() report.Report {
+@@ -174,7 +174,7 @@ func newWeightedReport() report.Report {
+ 		p = "%g"
+ 	}
+ 	if sample {
+-		return report.NewReportSample(p)
++		return report.NewReportSample(p, csvFile)
+ 	}
+-	return report.NewWeightedReport(report.NewReport(p), p)
++	return report.NewWeightedReport(report.NewReport(p, csvFile), p, csvFile)
  }
