@@ -26,6 +26,10 @@ patched-etcd:
 	cp -r 3rdparty/etcd $(BUILD)/3rdparty/.
 	git apply --directory=$(BUILD) patches/*
 
+bin/benchmark: patched-etcd
+	cd $(BUILD)/3rdparty/etcd && go build ./tools/benchmark
+	mv $(BUILD)/3rdparty/etcd/benchmark bin/benchmark
+
 .PHONY: clean
 clean:
 	rm -rf $(BUILD)
