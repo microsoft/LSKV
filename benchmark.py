@@ -77,6 +77,10 @@ class EtcdStore(Store):
     def bench(self, bench_cmd: List[str]):
         with open(os.path.join(self.bench_dir, "etcd_bench.out"), "w") as out:
             with open(os.path.join(self.bench_dir, "etcd_bench.err"), "w") as err:
+                bench_cmd = [
+                    "--csv-file",
+                    os.path.join(self.bench_dir, "etcd_timings.csv"),
+                ] + bench_cmd
                 p = Popen(ETCD_BENCH_CMD + bench_cmd, stdout=out, stderr=err)
                 p.wait()
 
@@ -103,6 +107,10 @@ class CCFKVSStore(Store):
     def bench(self, bench_cmd: List[str]):
         with open(os.path.join(self.bench_dir, "ccf_kvs_bench.out"), "w") as out:
             with open(os.path.join(self.bench_dir, "ccf_kvs_bench.err"), "w") as err:
+                bench_cmd = [
+                    "--csv-file",
+                    os.path.join(self.bench_dir, "ccf_kvs_timings.csv"),
+                ] + bench_cmd
                 p = Popen(CCF_KVS_BENCH_CMD + bench_cmd, stdout=out, stderr=err)
                 p.wait()
 
@@ -139,7 +147,6 @@ def main():
         d = os.path.join(bench_dir, "_".join(bench_cmd))
         os.makedirs(d)
 
-        bench_cmd = ["--csv-file", os.path.join(d, "timings.csv")] + bench_cmd
         run_benchmark(EtcdStore(d), bench_cmd)
 
         run_benchmark(CCFKVSStore(d), bench_cmd)
