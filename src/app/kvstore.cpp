@@ -15,7 +15,7 @@ namespace app::store
 {
   using json = nlohmann::json;
 
-  static constexpr auto RECORDS = "public:records";
+  static constexpr auto RECORDS = "records";
 
   Value::Value(std::string v)
   {
