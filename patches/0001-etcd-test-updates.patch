@@ -1,25 +1,29 @@
 diff --git a/3rdparty/etcd/pkg/report/report.go b/3rdparty/etcd/pkg/report/report.go
-index 36d09b9d..e4a26242 100644
+index 36d09b9d..7db5a1d8 100644
 --- a/3rdparty/etcd/pkg/report/report.go
 +++ b/3rdparty/etcd/pkg/report/report.go
-@@ -19,6 +19,7 @@ package report
+@@ -17,8 +17,10 @@
+ package report
+ 
  import (
++	"bufio"
  	"fmt"
  	"math"
 +	"os"
  	"sort"
  	"strings"
  	"time"
-@@ -44,6 +45,8 @@ type report struct {
+@@ -44,6 +46,9 @@ type report struct {
  
  	stats Stats
  	sps   *secondPoints
 +
-+	csvFile *os.File
++	csvFile   *os.File
++	csvBuffer *bufio.Writer
  }
  
  // Stats exposes results raw data.
-@@ -79,19 +82,29 @@ type Report interface {
+@@ -79,19 +84,31 @@ type Report interface {
  	Stats() <-chan Stats
  }
  
@@ -39,7 +43,9 @@ index 36d09b9d..e4a26242 100644
 +		if err != nil {
 +			panic(err)
 +		}
++		b := bufio.NewWriter(f)
 +		r.csvFile = f
++		r.csvBuffer = b
 +		fmt.Fprintln(r.csvFile, "start_micros,end_micros")
 +	}
 +
@@ -53,7 +59,20 @@ index 36d09b9d..e4a26242 100644
  	r.sps = newSecondPoints()
  	return r
  }
-@@ -161,8 +174,8 @@ func (r *report) sec2str(sec float64) string { return fmt.Sprintf(r.precision+"
+@@ -101,6 +118,12 @@ func (r *report) Results() chan<- Result { return r.results }
+ func (r *report) Run() <-chan string {
+ 	donec := make(chan string, 1)
+ 	go func() {
++		if r.csvFile != nil {
++			defer func() {
++				r.csvBuffer.Flush()
++				r.csvFile.Close()
++			}()
++		}
+ 		defer close(donec)
+ 		r.processResults()
+ 		donec <- r.String()
+@@ -161,8 +184,8 @@ func (r *report) sec2str(sec float64) string { return fmt.Sprintf(r.precision+"
  
  type reportRate struct{ *report }
  
@@ -64,12 +83,13 @@ index 36d09b9d..e4a26242 100644
  }
  
  func (r *reportRate) String() string {
-@@ -180,6 +193,9 @@ func (r *report) processResult(res *Result) {
+@@ -180,6 +203,10 @@ func (r *report) processResult(res *Result) {
  	if r.sps != nil {
  		r.sps.Add(res.Start, dur)
  	}
-+	if r.csvFile != nil {
-+		fmt.Fprintf(r.csvFile, "%v,%v\n", res.Start.UnixMicro(), res.End.UnixMicro())
++	if r.csvBuffer != nil {
++		r.csvBuffer.WriteString(fmt.Sprintf("%v,%v\n", res.Start.UnixMicro(), res.End.UnixMicro()))
++
 +	}
  }
  
