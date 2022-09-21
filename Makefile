@@ -13,7 +13,7 @@ build-virtual:
 
 .PHONY: run-virtual
 run-virtual: build-virtual
-	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/libccf_kvs.virtual.so --http2
+	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/libccf_kvs.virtual.so --http2 --verbose
 
 .PHONY: test-virtual
 test-virtual: build-virtual patched-etcd
