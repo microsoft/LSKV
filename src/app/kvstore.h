@@ -9,10 +9,24 @@
 
 namespace app::store
 {
+  struct HexString
+  {
+    // The encoded string.
+    std::string value;
+
+    // Construct a hexstring from a plain byte string
+    HexString(std::string);
+    // Construct an empty hex string.
+    HexString();
+    // Unencode a hexstring
+    std::string decode();
+  };
+
   struct Value
   {
-    // the actual value that the client wants written.
-    std::string value;
+    // the actual value that the client wants written, encoded to hex to make it
+    // valid utf-8 (for the json serialiser).
+    HexString value;
     // the revision that this entry was created (since the last delete).
     int64_t create_revision;
     // the latest modification of this entry (0 in the serialised field).
