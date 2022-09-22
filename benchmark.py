@@ -109,6 +109,8 @@ class CCFKVSStore(Store):
                     "/opt/ccf/bin/sandbox.sh",
                     "-p",
                     "build/libccf_kvs.virtual.so",
+                    "--node",
+                    f"local://127.0.0.1:{self.port}",
                     "--verbose",
                     "--http2",
                 ]
