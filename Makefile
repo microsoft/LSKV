@@ -32,6 +32,7 @@ patched-etcd:
 
 bin/benchmark: patched-etcd
 	cd $(BUILD)/3rdparty/etcd && go build -buildvcs=false ./tools/benchmark
+	mkdir -p $(BUILD)
 	mv $(BUILD)/3rdparty/etcd/benchmark bin/benchmark
 
 bin/etcd:
