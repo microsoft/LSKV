@@ -12,3 +12,5 @@ bin/
 
 /bench/
 default.etcd/
+
+/.venv/
