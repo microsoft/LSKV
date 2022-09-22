@@ -12,24 +12,8 @@ from typing import List
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
 
-ETCD = "etcd"
-CCF_KVS = "ccf_kvs"
 
-ETCD_BENCH_CMD = ["bin/benchmark", "--endpoints", "http://127.0.0.1:8000"]
-CCF_KVS_BENCH_CMD = [
-    "bin/benchmark",
-    "--endpoints",
-    "https://127.0.0.1:8000",
-    "--cacert",
-    "workspace/sandbox_common/service_cert.pem",
-    "--cert",
-    "workspace/sandbox_common/user0_cert.pem",
-    "--key",
-    "workspace/sandbox_common/user0_privk.pem",
-]
-
-
-def wait_for_port(port=8000):
+def wait_for_port(port):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     i = 0
     while True:
@@ -43,14 +27,18 @@ def wait_for_port(port=8000):
 
 
 class Store:
-    def __init__(self, bench_dir: str):
+    def __init__(self, bench_dir: str, port: int):
         self.bench_dir = bench_dir
+        self.port = port
 
     def spawn(self) -> Popen:
         raise Exception("unimplemented")
 
     def bench(self, _bench_cmd: List[str]):
         raise Exception("unimplemented")
+
+    def wait(self):
+        wait_for_port(self.port)
 
     def name(self):
         raise Exception("unimplemented")
@@ -59,7 +47,7 @@ class Store:
 class EtcdStore(Store):
     def spawn(self) -> Popen:
         logging.info(f"spawning {self.name()}")
-        client_urls = "http://127.0.0.1:8000"
+        client_urls = f"http://127.0.0.1:{self.port}"
         with open(os.path.join(self.bench_dir, "etcd.out"), "w") as out:
             with open(os.path.join(self.bench_dir, "etcd.err"), "w") as err:
                 return Popen(
@@ -81,7 +69,12 @@ class EtcdStore(Store):
                     "--csv-file",
                     os.path.join(self.bench_dir, "etcd_timings.csv"),
                 ] + bench_cmd
-                p = Popen(ETCD_BENCH_CMD + bench_cmd, stdout=out, stderr=err)
+                bench = [
+                    "bin/benchmark",
+                    "--endpoints",
+                    f"http://127.0.0.1:{self.port}",
+                ] + bench_cmd
+                p = Popen(bench, stdout=out, stderr=err)
                 p.wait()
 
     def name(self) -> str:
@@ -111,7 +104,18 @@ class CCFKVSStore(Store):
                     "--csv-file",
                     os.path.join(self.bench_dir, "ccf_kvs_timings.csv"),
                 ] + bench_cmd
-                p = Popen(CCF_KVS_BENCH_CMD + bench_cmd, stdout=out, stderr=err)
+                bench = [
+                    "bin/benchmark",
+                    "--endpoints",
+                    f"https://127.0.0.1:{self.port}",
+                    "--cacert",
+                    "workspace/sandbox_common/service_cert.pem",
+                    "--cert",
+                    "workspace/sandbox_common/user0_cert.pem",
+                    "--key",
+                    "workspace/sandbox_common/user0_privk.pem",
+                ] + bench_cmd
+                p = Popen(bench, stdout=out, stderr=err)
                 p.wait()
 
     def name(self) -> str:
@@ -121,7 +125,7 @@ class CCFKVSStore(Store):
 def run_benchmark(store, bench_cmd: List[str]):
     proc = store.spawn()
 
-    wait_for_port()
+    store.wait()
 
     logging.info(f"starting benchmark for {store.name()}")
     store.bench(bench_cmd)
@@ -134,12 +138,13 @@ def run_benchmark(store, bench_cmd: List[str]):
 
 def main():
     bench_dir = "bench"
+    port = 8000
 
     # make the bench directory
     shutil.rmtree(bench_dir)
     os.makedirs(bench_dir)
 
-    # todo: write a kv into the store for the range query benchmark
+    # TODO(#40): write a kv into the store for the range query benchmark
     bench_cmds = [["put"], ["range", "key"]]
     for bench_cmd in bench_cmds:
         logging.info(f"benching with extra args {bench_cmd}")
@@ -147,9 +152,9 @@ def main():
         d = os.path.join(bench_dir, "_".join(bench_cmd))
         os.makedirs(d)
 
-        run_benchmark(EtcdStore(d), bench_cmd)
+        run_benchmark(EtcdStore(d, port), bench_cmd)
 
-        run_benchmark(CCFKVSStore(d), bench_cmd)
+        run_benchmark(CCFKVSStore(d, port), bench_cmd)
 
 
 if __name__ == "__main__":
