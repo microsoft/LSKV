@@ -52,6 +52,15 @@ benchmark: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual
 	. .venv/bin/activate && pip3 install -r requirements.txt
 	. .venv/bin/activate && ./benchmark.py
 
+$(BIN_DIR)/cfssl:
+	mkdir -p $(BIN_DIR)
+	curl -s -L -o $(BIN_DIR)/cfssl https://pkg.cfssl.org/R1.2/cfssl_linux-amd64
+	curl -s -L -o $(BIN_DIR)/cfssljson https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64
+	chmod +x $(BIN_DIR)/cfssl
+	chmod +x $(BIN_DIR)/cfssljson
+
+$(BIN_DIR)/cfssljson: $(BIN_DIR)/cfssl
+
 .PHONY: clean
 clean:
 	rm -rf $(BUILD)
