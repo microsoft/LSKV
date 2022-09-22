@@ -50,17 +50,15 @@ class EtcdStore(Store):
         client_urls = f"http://127.0.0.1:{self.port}"
         with open(os.path.join(self.bench_dir, "etcd.out"), "w") as out:
             with open(os.path.join(self.bench_dir, "etcd.err"), "w") as err:
-                return Popen(
-                    [
-                        "bin/etcd",
-                        "--listen-client-urls",
-                        client_urls,
-                        "--advertise-client-urls",
-                        client_urls,
-                    ],
-                    stdout=out,
-                    stderr=err,
-                )
+                # TODO(#41): enable tls connection for etcd
+                etcd_cmd = [
+                    "bin/etcd",
+                    "--listen-client-urls",
+                    client_urls,
+                    "--advertise-client-urls",
+                    client_urls,
+                ]
+                return Popen(etcd_cmd, stdout=out, stderr=err)
 
     def bench(self, bench_cmd: List[str]):
         with open(os.path.join(self.bench_dir, "etcd_bench.out"), "w") as out:
@@ -86,16 +84,13 @@ class CCFKVSStore(Store):
         logging.info(f"spawning {self.name()}")
         with open(os.path.join(self.bench_dir, "ccf_kvs.out"), "w") as out:
             with open(os.path.join(self.bench_dir, "ccf_kvs.err"), "w") as err:
-                return Popen(
-                    [
-                        "/opt/ccf/bin/sandbox.sh",
-                        "-p",
-                        "build/libccf_kvs.virtual.so",
-                        "--http2",
-                    ],
-                    stdout=out,
-                    stderr=err,
-                )
+                kvs_cmd = [
+                    "/opt/ccf/bin/sandbox.sh",
+                    "-p",
+                    "build/libccf_kvs.virtual.so",
+                    "--http2",
+                ]
+                return Popen(kvs_cmd, stdout=out, stderr=err)
 
     def bench(self, bench_cmd: List[str]):
         with open(os.path.join(self.bench_dir, "ccf_kvs_bench.out"), "w") as out:
