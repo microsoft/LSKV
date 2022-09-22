@@ -364,7 +364,7 @@ namespace app
           cmp.target() == etcdserverpb::Compare_CompareTarget_VALUE &&
           cmp.has_value())
         {
-          outcome = txn_compare(cmp.result(), value.value, cmp.value());
+          outcome = txn_compare(cmp.result(), value.get_data(), cmp.value());
         }
         else if (
           cmp.target() == etcdserverpb::Compare_CompareTarget_VERSION &&
