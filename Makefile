@@ -4,6 +4,10 @@ CCF_PREFIX=/opt/ccf
 CC="/opt/oe_lvi/clang-10"
 CXX="/opt/oe_lvi/clang++-10"
 
+ETCD_VER="v3.5.4"
+ETCD_DOWNLOAD_URL=https://github.com/etcd-io/etcd/releases/download
+BIN_DIR=bin
+
 .PHONY: build-virtual
 build-virtual:
 	mkdir -p $(BUILD)
@@ -29,6 +33,21 @@ patched-etcd:
 bin/benchmark: patched-etcd
 	cd $(BUILD)/3rdparty/etcd && go build ./tools/benchmark
 	mv $(BUILD)/3rdparty/etcd/benchmark bin/benchmark
+
+bin/etcd:
+
+	rm -f /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz
+	rm -rf /tmp/etcd-download-test && mkdir -p /tmp/etcd-download-test
+
+	curl -L $(ETCD_DOWNLOAD_URL)/$(ETCD_VER)/etcd-$(ETCD_VER)-linux-amd64.tar.gz -o /tmp/etcd-$(ETCD_VER)-linux-amd64.tar.gz
+	tar xzvf /tmp/etcd-$(ETCD_VER)-linux-amd64.tar.gz -C /tmp/etcd-download-test --strip-components=1
+	rm -f /tmp/etcd-$(ETCD_VER)-linux-amd64.tar.gz
+
+	mkdir -p $(BIN_DIR)
+	mv /tmp/etcd-download-test/etcdctl $(BIN_DIR)/etcdctl
+	mv /tmp/etcd-download-test/etcd $(BIN_DIR)/etcd
+
+bin/etcdctl: bin/etcd
 
 .PHONY: clean
 clean:
