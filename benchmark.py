@@ -3,6 +3,7 @@
 # Licensed under the MIT License.
 
 from subprocess import Popen
+import abc
 import shutil
 import time
 import cimetrics.upload
@@ -41,22 +42,25 @@ def wait_for_file(file: str):
         time.sleep(1)
 
 
-class Store:
+class Store(abc.ABC):
     def __init__(self, bench_dir: str, port: int):
         self.bench_dir = bench_dir
         self.port = port
 
+    @abc.abstractmethod
     def spawn(self) -> Popen:
-        raise Exception("unimplemented")
+        raise NotImplemented
 
+    @abc.abstractmethod
     def bench(self, _bench_cmd: List[str]):
-        raise Exception("unimplemented")
+        raise NotImplemented
 
     def wait(self):
         wait_for_port(self.port)
 
+    @abc.abstractmethod
     def name(self):
-        raise Exception("unimplemented")
+        raise NotImplemented
 
     def output_dir(self) -> str:
         d = os.path.join(self.bench_dir, self.name())
