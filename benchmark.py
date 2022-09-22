@@ -76,7 +76,7 @@ class Store(abc.ABC):
 
 class EtcdStore(Store):
     def __init__(self, bench_dir: str, port: int, tls: bool):
-        super.__init__(self, bench_dir, port)
+        Store.__init__(self, bench_dir, port)
         self.tls = tls
 
     def spawn(self) -> Popen:
@@ -85,7 +85,6 @@ class EtcdStore(Store):
         client_urls = f"{self.scheme()}://127.0.0.1:{self.port}"
         with open(os.path.join(self.output_dir(), "node.out"), "w") as out:
             with open(os.path.join(self.output_dir(), "node.err"), "w") as err:
-                # TODO(#41): enable tls connection for etcd
                 etcd_cmd = [
                     "bin/etcd",
                     "--listen-client-urls",
@@ -93,6 +92,15 @@ class EtcdStore(Store):
                     "--advertise-client-urls",
                     client_urls,
                 ]
+                if self.tls:
+                    etcd_cmd += [
+                        "--cert-file",
+                        "certs/server.pem",
+                        "--key-file",
+                        "certs/server-key.pem",
+                        "--trusted-ca-file",
+                        "certs/ca.pem",
+                    ]
                 return Popen(etcd_cmd, stdout=out, stderr=err)
 
     def bench(self, bench_cmd: List[str]) -> str:
@@ -104,7 +112,17 @@ class EtcdStore(Store):
                     "bin/benchmark",
                     "--endpoints",
                     f"{self.scheme()}://127.0.0.1:{self.port}",
-                ] + bench_cmd
+                ]
+                if self.tls:
+                    bench += [
+                        "--cacert",
+                        "certs/ca.pem",
+                        "--cert",
+                        "certs/client.pem",
+                        "--key",
+                        "certs/client-key.pem",
+                    ]
+                bench += bench_cmd
                 p = Popen(bench, stdout=out, stderr=err)
                 p.wait()
                 return timings_file
@@ -242,6 +260,10 @@ def main():
         os.makedirs(d)
 
         store = EtcdStore(d, port, False)
+        timings_file = run_benchmark(store, bench_cmd)
+        run_metrics(store.name(), bench_cmd[0], timings_file)
+
+        store = EtcdStore(d, port, True)
         timings_file = run_benchmark(store, bench_cmd)
         run_metrics(store.name(), bench_cmd[0], timings_file)
 
