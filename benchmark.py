@@ -153,7 +153,7 @@ def run_metrics(name: str, cmd: str, file: str):
     print(f"p99.9 latency (ms): {latency_p999}")
 
     group = f"{name}_{cmd}"
-    with cimetrics.upload.Metrics(complete=False) as metrics:
+    with cimetrics.upload.metrics(complete=False) as metrics:
         metrics.put(f"throughput (req/s)^", thput, group=group)
         metrics.put(f"latency p50 (ms)", latency_p50, group=group)
         metrics.put(f"latency p90 (ms)", latency_p90, group=group)
@@ -187,7 +187,7 @@ def main():
         timings_file = run_benchmark(store, bench_cmd)
         run_metrics(store.name(), bench_cmd_string, timings_file)
 
-    with cimetrics.upload.Metrics(complete=False):
+    with cimetrics.upload.metrics():
         pass
 
 
