@@ -77,7 +77,7 @@ class EtcdStore(Store):
                 return timings_file
 
     def name(self) -> str:
-        return "etcd"
+        return "etcd-virtual"
 
 
 class CCFKVSStore(Store):
@@ -114,7 +114,7 @@ class CCFKVSStore(Store):
                 return timings_file
 
     def name(self) -> str:
-        return "ccf_kvs"
+        return "ccf-kvs-virtual"
 
 
 def run_benchmark(store, bench_cmd: List[str]) -> str:
@@ -152,13 +152,13 @@ def run_metrics(name: str, cmd: str, file: str):
     print(f"  p99 latency (ms): {latency_p99}")
     print(f"p99.9 latency (ms): {latency_p999}")
 
-    group = f"{name}_{cmd}"
+    group = name
     with cimetrics.upload.metrics(complete=False) as metrics:
-        metrics.put(f"throughput (req/s)^", thput, group=group)
-        metrics.put(f"latency p50 (ms)", latency_p50, group=group)
-        metrics.put(f"latency p90 (ms)", latency_p90, group=group)
-        metrics.put(f"latency p99 (ms)", latency_p99, group=group)
-        metrics.put(f"latency p99.9 (ms)", latency_p999, group=group)
+        metrics.put(f"{cmd} throughput (req/s)^", thput, group=group)
+        metrics.put(f"{cmd} latency p50 (ms)", latency_p50, group=group)
+        metrics.put(f"{cmd} latency p90 (ms)", latency_p90, group=group)
+        metrics.put(f"{cmd} latency p99 (ms)", latency_p99, group=group)
+        metrics.put(f"{cmd} latency p99.9 (ms)", latency_p999, group=group)
 
 
 def main():
@@ -185,11 +185,11 @@ def main():
 
         store = EtcdStore(d, port)
         timings_file = run_benchmark(store, bench_cmd)
-        run_metrics(store.name(), bench_cmd_string, timings_file)
+        run_metrics(store.name(), bench_cmd[0], timings_file)
 
         store = CCFKVSStore(d, port)
         timings_file = run_benchmark(store, bench_cmd)
-        run_metrics(store.name(), bench_cmd_string, timings_file)
+        run_metrics(store.name(), bench_cmd[0], timings_file)
 
     with cimetrics.upload.metrics():
         pass
