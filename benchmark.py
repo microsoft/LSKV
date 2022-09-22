@@ -21,11 +21,24 @@ def wait_for_port(port):
     while True:
         try:
             s.connect(("127.0.0.1", port))
+            logging.info(f"finished waiting for port to be open, try {i}")
             break
         except:
             i += 1
+            logging.info(f"waiting for port to be open, try {i}")
             time.sleep(1)
     time.sleep(1)
+
+
+def wait_for_file(file: str):
+    i = 0
+    while True:
+        if os.path.exists(file):
+            logging.info(f"finished waiting for file to exist, try {i}")
+            return
+        i += 1
+        logging.info(f"waiting for file to exist, try {i}")
+        time.sleep(1)
 
 
 class Store:
@@ -96,9 +109,14 @@ class CCFKVSStore(Store):
                     "/opt/ccf/bin/sandbox.sh",
                     "-p",
                     "build/libccf_kvs.virtual.so",
+                    "--verbose",
                     "--http2",
                 ]
                 return Popen(kvs_cmd, stdout=out, stderr=err)
+
+    def wait(self):
+        wait_for_port(self.port)
+        wait_for_file(os.path.join("workspace", "sandbox_common", "user0_cert.pem"))
 
     def bench(self, bench_cmd: List[str]) -> str:
         with open(os.path.join(self.bench_dir, "ccf_kvs_bench.out"), "w") as out:
