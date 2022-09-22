@@ -1,0 +1,17 @@
+name: "CCF KVS Perf testing"
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-20.04
+    container: mcr.microsoft.com/ccf/app/dev:3.0.0-dev3-sgx
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Build app
+        run: make benchmark
