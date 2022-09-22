@@ -171,7 +171,6 @@ def main():
 
     # TODO(#40): write a kv into the store for the range query benchmark
     bench_cmds = [["put"], ["range", "key"]]
-    bench_cmds = [["put"]]
     for bench_cmd in bench_cmds:
         logging.info(f"benching with extra args {bench_cmd}")
 
