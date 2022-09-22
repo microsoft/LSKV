@@ -47,10 +47,16 @@ $(BIN_DIR)/etcd:
 
 $(BIN_DIR)/etcdctl: $(BIN_DIR)/etcd
 
-benchmark: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual
+benchmark: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual .venv
+	. .venv/bin/activate && ./benchmark.py
+
+.venv: requirements.txt
 	python3 -m venv .venv
 	. .venv/bin/activate && pip3 install -r requirements.txt
-	. .venv/bin/activate && ./benchmark.py
+
+.PHONY: notebook
+notebook: .venv
+	. .venv/bin/activate && jupyter notebook
 
 .PHONY: clean
 clean:
