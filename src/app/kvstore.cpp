@@ -23,6 +23,7 @@ namespace app::store
     create_revision = 0;
     mod_revision = 0;
     version = 1;
+    lease = 0;
   }
 
   Value::Value() = default;

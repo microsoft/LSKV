@@ -29,8 +29,15 @@ namespace app
       const auto etcdserverpb = "etcdserverpb";
       const auto kv = "KV";
 
+      auto range = [this](
+                     ccf::endpoints::ReadOnlyEndpointContext& ctx,
+                     etcdserverpb::RangeRequest&& payload) {
+        auto kvs = store::KVStore(ctx.tx);
+        return this->range(kvs, std::move(payload));
+      };
+
       make_grpc_ro<etcdserverpb::RangeRequest, etcdserverpb::RangeResponse>(
-        etcdserverpb, kv, "Range", this->range, ccf::no_auth_required)
+        etcdserverpb, kv, "Range", range, ccf::no_auth_required)
         .install();
 
       make_grpc<etcdserverpb::PutRequest, etcdserverpb::PutResponse>(
@@ -46,11 +53,14 @@ namespace app
         this->delete_range,
         ccf::no_auth_required)
         .install();
+
+      make_grpc<etcdserverpb::TxnRequest, etcdserverpb::TxnResponse>(
+        etcdserverpb, kv, "Txn", this->txn, ccf::no_auth_required)
+        .install();
     }
 
     static ccf::grpc::GrpcAdapterResponse<etcdserverpb::RangeResponse> range(
-      ccf::endpoints::ReadOnlyEndpointContext& ctx,
-      etcdserverpb::RangeRequest&& payload)
+      store::KVStore records_map, etcdserverpb::RangeRequest&& payload)
     {
       etcdserverpb::RangeResponse range_response;
       CCF_APP_DEBUG(
@@ -125,7 +135,6 @@ namespace app
             payload.max_create_revision()));
       }
 
-      auto records_map = store::KVStore(ctx.tx);
       auto& key = payload.key();
       auto& range_end = payload.range_end();
       if (range_end.empty())
@@ -134,11 +143,10 @@ namespace app
         auto value_option = records_map.get(key);
         if (!value_option.has_value())
         {
-          ctx.rpc_ctx->set_response_status(HTTP_STATUS_NOT_FOUND);
+          // no values so send the response with an empty list and a count of 0
+          // rather than an error
           range_response.set_count(0);
-          return ccf::grpc::make_error<etcdserverpb::RangeResponse>(
-            GRPC_STATUS_NOT_FOUND,
-            fmt::format("Key {} not found", payload.key()));
+          return ccf::grpc::make_success(range_response);
         }
 
         auto* kv = range_response.add_kvs();
@@ -315,6 +323,176 @@ namespace app
       return ccf::grpc::make_success(delete_range_response);
     }
 
+    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::TxnResponse> txn(
+      ccf::endpoints::EndpointContext& ctx, etcdserverpb::TxnRequest&& payload)
+    {
+      CCF_APP_DEBUG(
+        "Txn = compare:{} success:{} failure:{}",
+        payload.compare().size(),
+        payload.success().size(),
+        payload.failure().size());
+
+      bool success = true;
+      auto records_map = store::KVStore(ctx.tx);
+      // evaluate each comparison in the transaction and report the success
+      for (auto const& cmp : payload.compare())
+      {
+        CCF_APP_DEBUG(
+          "Cmp = [{}]{}:[{}]{}",
+          cmp.key().size(),
+          cmp.key(),
+          cmp.range_end().size(),
+          cmp.range_end());
+
+        if (!cmp.range_end().empty())
+        {
+          return ccf::grpc::make_error(
+            GRPC_STATUS_FAILED_PRECONDITION,
+            fmt::format("range_end in comparison not yet supported"));
+        }
+
+        // fetch the key from the store
+        auto key = cmp.key();
+        auto value_option = records_map.get(key);
+        // get the value if there was one, otherwise use a default entry to
+        // compare against
+        auto value = value_option.value_or(store::Value());
+
+        // got the key to check against, now do the check
+        std::optional<bool> outcome = std::nullopt;
+        if (
+          cmp.target() == etcdserverpb::Compare_CompareTarget_VALUE &&
+          cmp.has_value())
+        {
+          outcome = txn_compare(cmp.result(), value.value, cmp.value());
+        }
+        else if (
+          cmp.target() == etcdserverpb::Compare_CompareTarget_VERSION &&
+          cmp.has_version())
+        {
+          outcome = txn_compare(cmp.result(), value.version, cmp.version());
+        }
+        else if (
+          cmp.target() == etcdserverpb::Compare_CompareTarget_CREATE &&
+          cmp.has_create_revision())
+        {
+          outcome = txn_compare(
+            cmp.result(), value.create_revision, cmp.create_revision());
+        }
+        else if (
+          cmp.target() == etcdserverpb::Compare_CompareTarget_MOD &&
+          cmp.has_mod_revision())
+        {
+          outcome =
+            txn_compare(cmp.result(), value.mod_revision, cmp.mod_revision());
+        }
+        else if (
+          cmp.target() == etcdserverpb::Compare_CompareTarget_LEASE &&
+          cmp.has_lease())
+        {
+          outcome = txn_compare(cmp.result(), value.lease, cmp.lease());
+        }
+        else
+        {
+          return ccf::grpc::make_error<etcdserverpb::TxnResponse>(
+            GRPC_STATUS_INVALID_ARGUMENT,
+            fmt::format("unknown target in comparison: {}", cmp.target()));
+        }
+
+        if (!outcome.has_value())
+        {
+          return ccf::grpc::make_error<etcdserverpb::TxnResponse>(
+            GRPC_STATUS_INVALID_ARGUMENT,
+            fmt::format("unknown result in comparison: {}", cmp.result()));
+        }
+
+        success = success && outcome.value();
+      }
+
+      etcdserverpb::TxnResponse txn_response;
+
+      txn_response.set_succeeded(success);
+      google::protobuf::RepeatedPtrField<etcdserverpb::RequestOp> requests;
+      if (success)
+      {
+        requests = payload.success();
+      }
+      else
+      {
+        requests = payload.failure();
+      }
+
+      for (auto const& req : requests)
+      {
+        if (req.has_request_range())
+        {
+          auto request = req.request_range();
+          auto response = range(records_map, std::move(request));
+          auto success_response = std::get_if<
+            ccf::grpc::SuccessResponse<etcdserverpb::RangeResponse>>(&response);
+          if (success_response == nullptr)
+          {
+            return std::get<ccf::grpc::ErrorResponse>(response);
+          }
+          auto* resp_op = txn_response.add_responses();
+          auto* resp = resp_op->mutable_response_range();
+          *resp = success_response->body;
+        }
+        else if (req.has_request_put())
+        {
+          auto request = req.request_put();
+          auto response = put(ctx, std::move(request));
+          auto success_response =
+            std::get_if<ccf::grpc::SuccessResponse<etcdserverpb::PutResponse>>(
+              &response);
+          if (success_response == nullptr)
+          {
+            return std::get<ccf::grpc::ErrorResponse>(response);
+          }
+          auto* resp_op = txn_response.add_responses();
+          auto* resp = resp_op->mutable_response_put();
+          *resp = success_response->body;
+        }
+        else if (req.has_request_delete_range())
+        {
+          auto request = req.request_delete_range();
+          auto response = delete_range(ctx, std::move(request));
+          auto success_response = std::get_if<
+            ccf::grpc::SuccessResponse<etcdserverpb::DeleteRangeResponse>>(
+            &response);
+          if (success_response == nullptr)
+          {
+            return std::get<ccf::grpc::ErrorResponse>(response);
+          }
+          auto* resp_op = txn_response.add_responses();
+          auto* resp = resp_op->mutable_response_delete_range();
+          *resp = success_response->body;
+        }
+        else if (req.has_request_txn())
+        {
+          auto request = req.request_txn();
+          auto response = txn(ctx, std::move(request));
+          auto success_response =
+            std::get_if<ccf::grpc::SuccessResponse<etcdserverpb::TxnResponse>>(
+              &response);
+          if (success_response == nullptr)
+          {
+            return std::get<ccf::grpc::ErrorResponse>(response);
+          }
+          auto* resp_op = txn_response.add_responses();
+          auto* resp = resp_op->mutable_response_txn();
+          *resp = success_response->body;
+        }
+        else
+        {
+          return ccf::grpc::make_error<etcdserverpb::TxnResponse>(
+            GRPC_STATUS_INVALID_ARGUMENT, "unknown request op");
+        }
+      }
+
+      return ccf::grpc::make_success(txn_response);
+    }
+
     template <typename In, typename Out>
     ccf::endpoints::Endpoint make_grpc_ro(
       const std::string& package,
@@ -338,6 +516,43 @@ namespace app
     {
       auto path = fmt::format("/{}.{}/{}", package, service, method);
       return make_endpoint(path, HTTP_POST, ccf::grpc_adapter(f), ap);
+    }
+
+    /// @brief Compare a stored value with the given target using the result
+    /// operator.
+    /// @tparam T the type of the values to compare
+    /// @param result the method to compare them with
+    /// @param stored the stored value to compare
+    /// @param target the given value to use in comparison
+    /// @return nullopt if the result is invalid, true if the result is valid
+    /// and the comparison succeeds, false if the result is valid and the
+    /// comparison fails
+    template <typename T>
+    static std::optional<bool> txn_compare(
+      etcdserverpb::Compare_CompareResult result,
+      const T stored,
+      const T target)
+    {
+      if (result == etcdserverpb::Compare_CompareResult_EQUAL)
+      {
+        return stored == target;
+      }
+      else if (result == etcdserverpb::Compare_CompareResult_GREATER)
+      {
+        return stored > target;
+      }
+      else if (result == etcdserverpb::Compare_CompareResult_LESS)
+      {
+        return stored < target;
+      }
+      else if (result == etcdserverpb::Compare_CompareResult_NOT_EQUAL)
+      {
+        return stored != target;
+      }
+      else
+      {
+        return std::nullopt;
+      }
     }
   };
 

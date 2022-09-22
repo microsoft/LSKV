@@ -14,11 +14,13 @@ namespace app::store
     // the actual value that the client wants written.
     std::string value;
     // the revision that this entry was created (since the last delete).
-    uint64_t create_revision;
+    int64_t create_revision;
     // the latest modification of this entry (0 in the serialised field).
-    uint64_t mod_revision;
+    int64_t mod_revision;
     // the version of this key, reset on delete and incremented every update.
-    uint64_t version;
+    int64_t version;
+    // the id of the lease associated with this key, 0 if no lease.
+    int64_t lease;
 
     Value(std::string v);
     Value();

@@ -9,3 +9,5 @@ workspace/
 node_modules/
 bin/
 .vscode/
+
+default.etcd/
