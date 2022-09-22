@@ -94,7 +94,7 @@ class EtcdStore(Store):
                 return timings_file
 
     def name(self) -> str:
-        return "etcd-virtual"
+        return "etcd-notls-virtual"
 
     def cleanup(self):
         shutil.rmtree("default.etcd", ignore_errors=True)
