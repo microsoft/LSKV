@@ -6,7 +6,7 @@ CXX="/opt/oe_lvi/clang++-10"
 
 ETCD_VER="v3.5.4"
 ETCD_DOWNLOAD_URL=https://github.com/etcd-io/etcd/releases/download
-BIN_DIR=bin
+BIN_DIR=$(abspath bin)
 
 .PHONY: build-virtual
 build-virtual:
@@ -47,7 +47,7 @@ $(BIN_DIR)/etcd:
 
 $(BIN_DIR)/etcdctl: $(BIN_DIR)/etcd
 
-benchmark: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual
+benchmark: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual certs
 	python3 -m venv .venv
 	. .venv/bin/activate && pip3 install -r requirements.txt
 	. .venv/bin/activate && ./benchmark.py
@@ -60,6 +60,14 @@ $(BIN_DIR)/cfssl:
 	chmod +x $(BIN_DIR)/cfssljson
 
 $(BIN_DIR)/cfssljson: $(BIN_DIR)/cfssl
+
+.PHONY: certs
+certs: $(BIN_DIR)/cfssl $(BIN_DIR)/cfssljson
+	rm -rf certs
+	mkdir -p certs
+	cd certs && $(BIN_DIR)/cfssl gencert -initca ../certs-config/ca-csr.json | $(BIN_DIR)/cfssljson -bare ca -
+	cd certs && $(BIN_DIR)/cfssl gencert -ca ../certs/ca.pem -ca-key ../certs/ca-key.pem -config ../certs-config/ca-config.json -profile server ../certs-config/server.json | $(BIN_DIR)/cfssljson -bare server -
+	cd certs && $(BIN_DIR)/cfssl gencert -ca ../certs/ca.pem -ca-key ../certs/ca-key.pem -config ../certs-config/ca-config.json -profile client ../certs-config/client.json | $(BIN_DIR)/cfssljson -bare client -
 
 .PHONY: clean
 clean:
