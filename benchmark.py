@@ -45,6 +45,10 @@ class Store:
     def name(self):
         raise Exception("unimplemented")
 
+    def cleanup(self):
+        # no cleanup for the base class to do and not a required method
+        pass
+
 
 class EtcdStore(Store):
     def spawn(self) -> Popen:
@@ -78,6 +82,9 @@ class EtcdStore(Store):
 
     def name(self) -> str:
         return "etcd-virtual"
+
+    def cleanup(self):
+        shutil.rmtree("default.etcd", ignore_errors=True)
 
 
 class CCFKVSStore(Store):
@@ -116,6 +123,9 @@ class CCFKVSStore(Store):
     def name(self) -> str:
         return "ccf-kvs-virtual"
 
+    def cleanup(self):
+        shutil.rmtree("workspace", ignore_errors=True)
+
 
 def run_benchmark(store, bench_cmd: List[str]) -> str:
     proc = store.spawn()
@@ -129,6 +139,9 @@ def run_benchmark(store, bench_cmd: List[str]) -> str:
     proc.terminate()
     proc.wait()
     logging.info(f"stopped {store.name()}")
+
+    store.cleanup()
+
     return timings_file
 
 
