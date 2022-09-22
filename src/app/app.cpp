@@ -152,7 +152,7 @@ namespace app
         auto* kv = range_response.add_kvs();
         kv->set_key(payload.key());
         auto value = value_option.value();
-        kv->set_value(value.value.decode());
+        kv->set_value(value.get_data());
         kv->set_create_revision(value.create_revision);
         kv->set_mod_revision(value.mod_revision);
         kv->set_version(value.version);
@@ -173,7 +173,7 @@ namespace app
             // add the kv to the response
             auto* kv = range_response.add_kvs();
             kv->set_key(key);
-            kv->set_value(value.value.decode());
+            kv->set_value(value.get_data());
             kv->set_create_revision(value.create_revision);
             kv->set_mod_revision(value.mod_revision);
             kv->set_version(value.version);
@@ -265,7 +265,7 @@ namespace app
             auto* prev_kv = delete_range_response.add_prev_kvs();
             prev_kv->set_key(payload.key());
             auto old_value = old_option.value();
-            prev_kv->set_value(old_value.value.decode());
+            prev_kv->set_value(old_value.get_data());
             prev_kv->set_create_revision(old_value.create_revision);
             prev_kv->set_mod_revision(old_value.mod_revision);
             prev_kv->set_version(old_value.version);
@@ -308,7 +308,7 @@ namespace app
               auto* prev_kv = delete_range_response.add_prev_kvs();
 
               prev_kv->set_key(key);
-              prev_kv->set_value(old.value.decode());
+              prev_kv->set_value(old.get_data());
               prev_kv->set_create_revision(old.create_revision);
               prev_kv->set_mod_revision(old.mod_revision);
               prev_kv->set_version(old.version);

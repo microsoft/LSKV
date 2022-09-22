@@ -5,7 +5,6 @@
 
 #include "ccf/app_interface.h"
 #include "ccf/common_auth_policies.h"
-#include "ccf/ds/hex.h"
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
 #include "kv/untyped_map.h" // TODO(#22): private header
@@ -18,25 +17,9 @@ namespace app::store
 
   static constexpr auto RECORDS = "records";
 
-  HexString::HexString(std::string v)
-  {
-    value = ds::to_hex(v);
-  }
-
-  HexString::HexString() = default;
-
-  std::string HexString::decode()
-  {
-    const auto vec = ds::from_hex(value);
-    return std::string(vec.begin(), vec.end());
-  }
-
-  DECLARE_JSON_TYPE(HexString);
-  DECLARE_JSON_REQUIRED_FIELDS(HexString, value);
-
   Value::Value(std::string v)
   {
-    value = HexString(v);
+    data = std::vector(v.begin(), v.end());
     create_revision = 0;
     mod_revision = 0;
     version = 1;
@@ -45,8 +28,13 @@ namespace app::store
 
   Value::Value() = default;
 
+  std::string Value::get_data()
+  {
+    return std::string(data.begin(), data.end());
+  }
+
   DECLARE_JSON_TYPE(Value);
-  DECLARE_JSON_REQUIRED_FIELDS(Value, value, create_revision, version);
+  DECLARE_JSON_REQUIRED_FIELDS(Value, data, create_revision, version);
 
   // using K = std::string;
   // using V = Value;
