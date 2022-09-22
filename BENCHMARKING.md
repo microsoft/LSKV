@@ -5,5 +5,5 @@ With the implementation of the etcd API we can use the [etcd benchmark tool](htt
 ## Running
 
 ```sh
-./benchmark.py
+make benchmark
 ```
