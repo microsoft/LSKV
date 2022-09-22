@@ -58,6 +58,13 @@ class Store:
     def name(self):
         raise Exception("unimplemented")
 
+    def output_dir(self) -> str:
+        d = os.path.join(self.bench_dir, self.name())
+        if not os.path.exists(d):
+            logging.info(f"creating output dir: {d}")
+            os.makedirs(d)
+        return d
+
     def cleanup(self):
         # no cleanup for the base class to do and not a required method
         pass
@@ -67,8 +74,8 @@ class EtcdStore(Store):
     def spawn(self) -> Popen:
         logging.info(f"spawning {self.name()}")
         client_urls = f"http://127.0.0.1:{self.port}"
-        with open(os.path.join(self.bench_dir, "etcd.out"), "w") as out:
-            with open(os.path.join(self.bench_dir, "etcd.err"), "w") as err:
+        with open(os.path.join(self.output_dir(), "node.out"), "w") as out:
+            with open(os.path.join(self.output_dir(), "node.err"), "w") as err:
                 # TODO(#41): enable tls connection for etcd
                 etcd_cmd = [
                     "bin/etcd",
@@ -80,9 +87,9 @@ class EtcdStore(Store):
                 return Popen(etcd_cmd, stdout=out, stderr=err)
 
     def bench(self, bench_cmd: List[str]) -> str:
-        with open(os.path.join(self.bench_dir, "etcd_bench.out"), "w") as out:
-            with open(os.path.join(self.bench_dir, "etcd_bench.err"), "w") as err:
-                timings_file = os.path.join(self.bench_dir, "etcd_timings.csv")
+        with open(os.path.join(self.output_dir(), "bench.out"), "w") as out:
+            with open(os.path.join(self.output_dir(), "bench.err"), "w") as err:
+                timings_file = os.path.join(self.output_dir(), "timings.csv")
                 bench_cmd = ["--csv-file", timings_file] + bench_cmd
                 bench = [
                     "bin/benchmark",
@@ -103,8 +110,8 @@ class EtcdStore(Store):
 class CCFKVSStore(Store):
     def spawn(self) -> Popen:
         logging.info(f"spawning {self.name()}")
-        with open(os.path.join(self.bench_dir, "ccf_kvs.out"), "w") as out:
-            with open(os.path.join(self.bench_dir, "ccf_kvs.err"), "w") as err:
+        with open(os.path.join(self.output_dir(), "node.out"), "w") as out:
+            with open(os.path.join(self.output_dir(), "node.err"), "w") as err:
                 kvs_cmd = [
                     "/opt/ccf/bin/sandbox.sh",
                     "-p",
@@ -121,9 +128,9 @@ class CCFKVSStore(Store):
         wait_for_file(os.path.join("workspace", "sandbox_common", "user0_cert.pem"))
 
     def bench(self, bench_cmd: List[str]) -> str:
-        with open(os.path.join(self.bench_dir, "ccf_kvs_bench.out"), "w") as out:
-            with open(os.path.join(self.bench_dir, "ccf_kvs_bench.err"), "w") as err:
-                timings_file = os.path.join(self.bench_dir, "ccf_kvs_timings.csv")
+        with open(os.path.join(self.output_dir(), "bench.out"), "w") as out:
+            with open(os.path.join(self.output_dir(), "bench.err"), "w") as err:
+                timings_file = os.path.join(self.output_dir(), "timings.csv")
                 bench_cmd = ["--csv-file", timings_file] + bench_cmd
                 bench = [
                     "bin/benchmark",
