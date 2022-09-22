@@ -159,11 +159,11 @@ def run_metrics(name: str, cmd: str, file: str):
     latency_p99 = latencies.quantile(0.99)
     latency_p999 = latencies.quantile(0.999)
 
-    print(f"throughput (req/s): {thput}")
-    print(f"  p50 latency (ms): {latency_p50}")
-    print(f"  p90 latency (ms): {latency_p90}")
-    print(f"  p99 latency (ms): {latency_p99}")
-    print(f"p99.9 latency (ms): {latency_p999}")
+    logging.info(f"throughput (req/s): {thput}")
+    logging.info(f"  p50 latency (ms): {latency_p50}")
+    logging.info(f"  p90 latency (ms): {latency_p90}")
+    logging.info(f"  p99 latency (ms): {latency_p99}")
+    logging.info(f"p99.9 latency (ms): {latency_p999}")
 
     group = name
     with cimetrics.upload.metrics(complete=False) as metrics:
