@@ -30,12 +30,12 @@ patched-etcd:
 	cp -r 3rdparty/etcd $(BUILD)/3rdparty/.
 	git apply --directory=$(BUILD) patches/*
 
-bin/benchmark: patched-etcd
+$(BIN_DIR)/benchmark: patched-etcd
 	cd $(BUILD)/3rdparty/etcd && go build -buildvcs=false ./tools/benchmark
-	mkdir -p $(BUILD)
-	mv $(BUILD)/3rdparty/etcd/benchmark bin/benchmark
+	mkdir -p $(BIN_DIR)
+	mv $(BUILD)/3rdparty/etcd/benchmark $(BIN_DIR)/benchmark
 
-bin/etcd:
+$(BIN_DIR)/etcd:
 	rm -f /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz
 	rm -rf /tmp/etcd-download-test && mkdir -p /tmp/etcd-download-test
 	curl -L $(ETCD_DOWNLOAD_URL)/$(ETCD_VER)/etcd-$(ETCD_VER)-linux-amd64.tar.gz -o /tmp/etcd-$(ETCD_VER)-linux-amd64.tar.gz
@@ -45,9 +45,9 @@ bin/etcd:
 	mv /tmp/etcd-download-test/etcdctl $(BIN_DIR)/etcdctl
 	mv /tmp/etcd-download-test/etcd $(BIN_DIR)/etcd
 
-bin/etcdctl: bin/etcd
+$(BIN_DIR)/etcdctl: $(BIN_DIR)/etcd
 
-benchmark: bin/etcd bin/benchmark build-virtual
+benchmark: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual
 	python3 -m venv .venv
 	. .venv/bin/activate && pip3 install -r requirements.txt
 	. .venv/bin/activate && ./benchmark.py
