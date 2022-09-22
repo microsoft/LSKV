@@ -5,7 +5,9 @@
 from subprocess import Popen
 import shutil
 import time
+import cimetrics.upload
 import logging
+import pandas as pd
 import socket
 import os
 from typing import List
@@ -60,13 +62,11 @@ class EtcdStore(Store):
                 ]
                 return Popen(etcd_cmd, stdout=out, stderr=err)
 
-    def bench(self, bench_cmd: List[str]):
+    def bench(self, bench_cmd: List[str]) -> str:
         with open(os.path.join(self.bench_dir, "etcd_bench.out"), "w") as out:
             with open(os.path.join(self.bench_dir, "etcd_bench.err"), "w") as err:
-                bench_cmd = [
-                    "--csv-file",
-                    os.path.join(self.bench_dir, "etcd_timings.csv"),
-                ] + bench_cmd
+                timings_file = os.path.join(self.bench_dir, "etcd_timings.csv")
+                bench_cmd = ["--csv-file", timings_file] + bench_cmd
                 bench = [
                     "bin/benchmark",
                     "--endpoints",
@@ -74,6 +74,7 @@ class EtcdStore(Store):
                 ] + bench_cmd
                 p = Popen(bench, stdout=out, stderr=err)
                 p.wait()
+                return timings_file
 
     def name(self) -> str:
         return "etcd"
@@ -92,13 +93,11 @@ class CCFKVSStore(Store):
                 ]
                 return Popen(kvs_cmd, stdout=out, stderr=err)
 
-    def bench(self, bench_cmd: List[str]):
+    def bench(self, bench_cmd: List[str]) -> str:
         with open(os.path.join(self.bench_dir, "ccf_kvs_bench.out"), "w") as out:
             with open(os.path.join(self.bench_dir, "ccf_kvs_bench.err"), "w") as err:
-                bench_cmd = [
-                    "--csv-file",
-                    os.path.join(self.bench_dir, "ccf_kvs_timings.csv"),
-                ] + bench_cmd
+                timings_file = os.path.join(self.bench_dir, "ccf_kvs_timings.csv")
+                bench_cmd = ["--csv-file", timings_file] + bench_cmd
                 bench = [
                     "bin/benchmark",
                     "--endpoints",
@@ -112,23 +111,54 @@ class CCFKVSStore(Store):
                 ] + bench_cmd
                 p = Popen(bench, stdout=out, stderr=err)
                 p.wait()
+                return timings_file
 
     def name(self) -> str:
         return "ccf_kvs"
 
 
-def run_benchmark(store, bench_cmd: List[str]):
+def run_benchmark(store, bench_cmd: List[str]) -> str:
     proc = store.spawn()
 
     store.wait()
 
     logging.info(f"starting benchmark for {store.name()}")
-    store.bench(bench_cmd)
+    timings_file = store.bench(bench_cmd)
     logging.info(f"stopping benchmark for {store.name()}")
 
     proc.terminate()
     proc.wait()
     logging.info(f"stopped {store.name()}")
+    return timings_file
+
+
+def run_metrics(name: str, cmd: str, file: str):
+    df = pd.read_csv(file)
+
+    start = df["start_micros"].min()
+    end = df["end_micros"].max()
+    count = df["start_micros"].count()
+    thput = count / ((end - start) / 10 ** 6)
+
+    latencies = (df["end_micros"] - df["start_micros"]) / 1000
+    latency_p50 = latencies.quantile(0.5)
+    latency_p90 = latencies.quantile(0.9)
+    latency_p99 = latencies.quantile(0.99)
+    latency_p999 = latencies.quantile(0.999)
+
+    print(f"throughput (req/s): {thput}")
+    print(f"  p50 latency (ms): {latency_p50}")
+    print(f"  p90 latency (ms): {latency_p90}")
+    print(f"  p99 latency (ms): {latency_p99}")
+    print(f"p99.9 latency (ms): {latency_p999}")
+
+    group = f"{name}_{cmd}"
+    with cimetrics.upload.Metrics(complete=False) as metrics:
+        metrics.put(f"throughput (req/s)^", thput, group=group)
+        metrics.put(f"latency p50 (ms)", latency_p50, group=group)
+        metrics.put(f"latency p90 (ms)", latency_p90, group=group)
+        metrics.put(f"latency p99 (ms)", latency_p99, group=group)
+        metrics.put(f"latency p99.9 (ms)", latency_p999, group=group)
 
 
 def main():
@@ -141,15 +171,24 @@ def main():
 
     # TODO(#40): write a kv into the store for the range query benchmark
     bench_cmds = [["put"], ["range", "key"]]
+    bench_cmds = [["put"]]
     for bench_cmd in bench_cmds:
         logging.info(f"benching with extra args {bench_cmd}")
 
-        d = os.path.join(bench_dir, "_".join(bench_cmd))
+        bench_cmd_string = "_".join(bench_cmd)
+        d = os.path.join(bench_dir, bench_cmd_string)
         os.makedirs(d)
 
-        run_benchmark(EtcdStore(d, port), bench_cmd)
+        store = EtcdStore(d, port)
+        timings_file = run_benchmark(store, bench_cmd)
+        run_metrics(store.name(), bench_cmd_string, timings_file)
 
-        run_benchmark(CCFKVSStore(d, port), bench_cmd)
+        store = CCFKVSStore(d, port)
+        timings_file = run_benchmark(store, bench_cmd)
+        run_metrics(store.name(), bench_cmd_string, timings_file)
+
+    with cimetrics.upload.Metrics(complete=False):
+        pass
 
 
 if __name__ == "__main__":
