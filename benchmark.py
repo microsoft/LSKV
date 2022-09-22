@@ -166,7 +166,7 @@ def main():
     port = 8000
 
     # make the bench directory
-    shutil.rmtree(bench_dir)
+    shutil.rmtree(bench_dir, ignore_errors=True)
     os.makedirs(bench_dir)
 
     # TODO(#40): write a kv into the store for the range query benchmark
