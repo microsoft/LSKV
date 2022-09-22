@@ -18,14 +18,14 @@ namespace app::index
   void KVIndexer::handle_committed_transaction(
     const ccf::TxID& tx_id, const kv::ReadOnlyStorePtr& store_ptr)
   {
-    CCF_APP_DEBUG("handling committed transaction {}", tx_id.seqno);
+    CCF_APP_DEBUG("index: handling committed transaction {}", tx_id.seqno);
     current_txid = tx_id;
     auto tx = store_ptr->create_read_only_tx();
     auto kvs = store::KVStore(tx);
     auto revision = tx_id.seqno;
 
     kvs.foreach([this, &revision](const auto& k, const auto& v) {
-      CCF_APP_DEBUG("updating index with key {}", k);
+      CCF_APP_DEBUG("index: updating key {}", k);
       revisions_to_key[revision].push_back(k);
 
       keys_to_values[k].push_back(v);
