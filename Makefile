@@ -49,6 +49,9 @@ bin/etcd:
 
 bin/etcdctl: bin/etcd
 
+benchmark: bin/etcd bin/benchmark build-virtual
+	./benchmark.py
+
 .PHONY: clean
 clean:
 	rm -rf $(BUILD)
