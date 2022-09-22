@@ -17,7 +17,7 @@ jobs:
         run: curl -L -o go1.19.1.linux-amd64.tar.gz https://go.dev/dl/go1.19.1.linux-amd64.tar.gz && tar -C /usr/local -xzf go1.19.1.linux-amd64.tar.gz
 
       - name: Build benchmark
-        run: make bin/benchmark
+        run: export PATH=$PATH:/usr/local/go/bin && make bin/benchmark
 
       - name: Get etcd
         run: make bin/etcd
@@ -26,4 +26,4 @@ jobs:
         run: make build-virtual
 
       - name: Build app
-        run: export PATH=$PATH:/usr/local/go/bin && make benchmark
+        run:  make benchmark
