@@ -152,7 +152,7 @@ class CCFKVSStore(Store):
                 return timings_file
 
     def name(self) -> str:
-        return "ccf-kvs-virtual"
+        return "ccfkvs-tls-virtual"
 
     def cleanup(self):
         shutil.rmtree("workspace", ignore_errors=True)
