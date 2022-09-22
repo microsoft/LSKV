@@ -21,11 +21,11 @@ def wait_for_port(port):
     while True:
         try:
             s.connect(("127.0.0.1", port))
-            logging.info(f"finished waiting for port to be open, try {i}")
+            logging.info(f"finished waiting for port ({port}) to be open, try {i}")
             break
         except:
             i += 1
-            logging.info(f"waiting for port to be open, try {i}")
+            logging.info(f"waiting for port ({port}) to be open, try {i}")
             time.sleep(1)
     time.sleep(1)
 
@@ -34,10 +34,10 @@ def wait_for_file(file: str):
     i = 0
     while True:
         if os.path.exists(file):
-            logging.info(f"finished waiting for file to exist, try {i}")
+            logging.info(f"finished waiting for file ({file}) to exist, try {i}")
             return
         i += 1
-        logging.info(f"waiting for file to exist, try {i}")
+        logging.info(f"waiting for file ({file}) to exist, try {i}")
         time.sleep(1)
 
 
