@@ -75,9 +75,14 @@ class Store(abc.ABC):
 
 
 class EtcdStore(Store):
+    def __init__(self, bench_dir: str, port: int, tls: bool):
+        super.__init__(self, bench_dir, port)
+        self.tls = tls
+
     def spawn(self) -> Popen:
         logging.info(f"spawning {self.name()}")
-        client_urls = f"http://127.0.0.1:{self.port}"
+
+        client_urls = f"{self.scheme()}://127.0.0.1:{self.port}"
         with open(os.path.join(self.output_dir(), "node.out"), "w") as out:
             with open(os.path.join(self.output_dir(), "node.err"), "w") as err:
                 # TODO(#41): enable tls connection for etcd
@@ -98,14 +103,23 @@ class EtcdStore(Store):
                 bench = [
                     "bin/benchmark",
                     "--endpoints",
-                    f"http://127.0.0.1:{self.port}",
+                    f"{self.scheme()}://127.0.0.1:{self.port}",
                 ] + bench_cmd
                 p = Popen(bench, stdout=out, stderr=err)
                 p.wait()
                 return timings_file
 
+    def scheme(self) -> str:
+        if self.tls:
+            return "https"
+        else:
+            return "http"
+
     def name(self) -> str:
-        return "etcd-notls-virtual"
+        if self.tls:
+            return "etcd-tls-virtual"
+        else:
+            return "etcd-plain-virtual"
 
     def cleanup(self):
         shutil.rmtree("default.etcd", ignore_errors=True)
@@ -227,7 +241,7 @@ def main():
         d = os.path.join(bench_dir, bench_cmd_string)
         os.makedirs(d)
 
-        store = EtcdStore(d, port)
+        store = EtcdStore(d, port, False)
         timings_file = run_benchmark(store, bench_cmd)
         run_metrics(store.name(), bench_cmd[0], timings_file)
 
