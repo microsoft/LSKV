@@ -31,7 +31,7 @@ patched-etcd:
 	git apply --directory=$(BUILD) patches/*
 
 bin/benchmark: patched-etcd
-	cd $(BUILD)/3rdparty/etcd && go build ./tools/benchmark
+	cd $(BUILD)/3rdparty/etcd && go build -buildvcs=false ./tools/benchmark
 	mv $(BUILD)/3rdparty/etcd/benchmark bin/benchmark
 
 bin/etcd:
