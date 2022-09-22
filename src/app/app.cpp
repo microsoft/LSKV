@@ -9,6 +9,7 @@
 #include "ccf/json_handler.h"
 #include "etcd.pb.h"
 #include "grpc.h" // TODO(#25): use grpc from ccf
+#include "index.h"
 #include "kvstore.h"
 
 #define FMT_HEADER_ONLY
@@ -18,6 +19,10 @@ namespace app
 {
   class AppHandlers : public ccf::UserEndpointRegistry
   {
+  private:
+    using IndexStrategy = app::index::KVIndexer;
+    std::shared_ptr<IndexStrategy> kvindex = nullptr;
+
   public:
     AppHandlers(ccfapp::AbstractNodeContext& context) :
       ccf::UserEndpointRegistry(context)
@@ -25,6 +30,9 @@ namespace app
       openapi_info.title = "CCF Sample C++ Key-Value Store";
       openapi_info.description = "Sample Key-Value store built on CCF";
       openapi_info.document_version = "0.0.1";
+
+      kvindex = std::make_shared<IndexStrategy>(app::store::RECORDS);
+      context.get_indexing_strategies().install_strategy(kvindex);
 
       const auto etcdserverpb = "etcdserverpb";
       const auto kv = "KV";

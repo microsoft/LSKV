@@ -77,6 +77,16 @@ namespace app::store
     return val;
   }
 
+  void KVStore::foreach(const std::function<bool(KVStore::K&, KVStore::V&)>& fn)
+  {
+    inner_map->foreach([&](auto& key, auto& value) -> bool {
+      auto k = KVStore::KSerialiser::from_serialised(key);
+      auto v = KVStore::VSerialiser::from_serialised(value);
+      hydrate_value(k, v);
+      return fn(k, v);
+    });
+  }
+
   void KVStore::range(
     const std::function<void(KVStore::K&, KVStore::V&)>& fn,
     const KVStore::K& from,

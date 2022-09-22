@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma once
+
 #include "ccf/app_interface.h"
 #include "ccf/common_auth_policies.h"
 #include "ccf/http_query.h"
@@ -9,6 +11,9 @@
 
 namespace app::store
 {
+
+  static constexpr auto RECORDS = "records";
+
   struct Value
   {
     // the actual value that the client wants written stored as a list of bytes
@@ -45,6 +50,8 @@ namespace app::store
     /// @param key the key to get.
     /// @return The value, if present.
     std::optional<V> get(const K& key);
+
+    void foreach(const std::function<bool(K&, V&)>& fn);
 
     void range(
       const std::function<void(K&, V&)>& fn, const K& from, const K& to);
