@@ -11,8 +11,9 @@ namespace app::store
 {
   struct Value
   {
-    // the actual value that the client wants written.
-    std::string value;
+    // the actual value that the client wants written stored as a list of bytes
+    // to avoid requiring valid utf-8 (for the json serialiser).
+    std::vector<uint8_t> data;
     // the revision that this entry was created (since the last delete).
     int64_t create_revision;
     // the latest modification of this entry (0 in the serialised field).
@@ -24,6 +25,8 @@ namespace app::store
 
     Value(std::string v);
     Value();
+
+    std::string get_data();
   };
 
   class KVStore

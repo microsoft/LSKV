@@ -19,7 +19,7 @@ namespace app::store
 
   Value::Value(std::string v)
   {
-    value = v;
+    data = std::vector<uint8_t>(v.begin(), v.end());
     create_revision = 0;
     mod_revision = 0;
     version = 1;
@@ -28,8 +28,13 @@ namespace app::store
 
   Value::Value() = default;
 
+  std::string Value::get_data()
+  {
+    return std::string(data.begin(), data.end());
+  }
+
   DECLARE_JSON_TYPE(Value);
-  DECLARE_JSON_REQUIRED_FIELDS(Value, value, create_revision, version);
+  DECLARE_JSON_REQUIRED_FIELDS(Value, data, create_revision, version);
 
   // using K = std::string;
   // using V = Value;
