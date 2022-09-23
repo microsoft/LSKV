@@ -11,10 +11,11 @@ namespace app::index
 
   class KVIndexer : public ccf::indexing::Strategy
   {
-  protected:
+  public:
     using K = app::store::KVStore::K;
     using V = app::store::KVStore::V;
 
+  protected:
     ccf::TxID current_txid = {};
 
   private:
@@ -33,6 +34,8 @@ namespace app::index
       const ccf::TxID& tx_id, const kv::ReadOnlyStorePtr& store) override;
 
     std::optional<ccf::SeqNo> next_requested() override;
+
+    std::optional<V> get(int64_t at, const K& key);
 
     void range(
       int64_t at,

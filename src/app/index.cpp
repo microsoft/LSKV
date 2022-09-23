@@ -40,6 +40,35 @@ namespace app::index
     return current_txid.seqno + 1;
   };
 
+  std::optional<KVIndexer::V> find_value(
+    int64_t at, const std::vector<KVIndexer::V> values)
+  {
+    std::optional<KVIndexer::V> val;
+    for (const auto& value : values)
+    {
+      if (value.mod_revision > at)
+      { // we've gone into the future, stop
+        break;
+      }
+      val = value;
+    }
+    return val;
+  }
+
+  std::optional<KVIndexer::V> KVIndexer::get(int64_t at, const K& key)
+  {
+    CCF_APP_DEBUG("getting value from index with key {}", key);
+    if (keys_to_values.contains(key))
+    {
+      auto& values = keys_to_values.at(key);
+      CCF_APP_DEBUG("index get found values");
+
+      auto value = find_value(at, values);
+      return value;
+    }
+    return std::nullopt;
+  }
+
   void KVIndexer::range(
     int64_t at,
     const std::function<void(const KVIndexer::K&, KVIndexer::V&)>& fn,
@@ -48,17 +77,9 @@ namespace app::index
   {
     // iterate over the keys in keys_to_values
     auto lb = keys_to_values.lower_bound(from);
-    std::map<KVIndexer::K, std::vector<KVIndexer::V>>::iterator ub;
-    if (to == "")
-    {
-      ub = keys_to_values.end();
-    }
-    else
-    {
-      ub = keys_to_values.upper_bound(to);
-    }
+    auto ub = keys_to_values.lower_bound(to);
+
     CCF_APP_DEBUG("ranging over index from {} to {}", from, to);
-    CCF_APP_DEBUG("ranging over index, lb {} ub {}", lb->first, ub->first);
     for (auto it = lb; it != ub; ++it)
     {
       CCF_APP_INFO("index range found key: {}", it->first);
@@ -66,15 +87,7 @@ namespace app::index
       auto& key = it->first;
       auto& values = it->second;
 
-      std::optional<KVIndexer::V> val;
-      for (auto& value : values)
-      {
-        if (value.mod_revision > at)
-        { // we've gone into the future, stop
-          break;
-        }
-        val = value;
-      }
+      auto val = find_value(at, values);
       if (val.has_value())
       {
         fn(key, val.value());

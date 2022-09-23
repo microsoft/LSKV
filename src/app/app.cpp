@@ -156,8 +156,20 @@ namespace app
 
       if (payload.revision() > 0)
       {
-        kvindex->range(
-          payload.revision(), add_kv, payload.key(), payload.range_end());
+        if (payload.range_end().empty())
+        {
+          // empty range end so just query for a single key
+          auto value_option = kvindex->get(payload.revision(), payload.key());
+          if (value_option.has_value())
+          {
+            add_kv(payload.key(), value_option.value());
+          }
+        }
+        else
+        {
+          kvindex->range(
+            payload.revision(), add_kv, payload.key(), payload.range_end());
+        }
       }
       else if (payload.range_end().empty())
       {
