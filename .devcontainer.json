@@ -3,7 +3,5 @@
   "context": "..",
   "image": "mcr.microsoft.com/ccf/app/dev:3.0.0-dev4-sgx",
   "runArgs": [],
-  "extensions": [
-    "ms-vscode.cpptools"
-  ]
+  "extensions": ["ms-vscode.cpptools"]
 }
