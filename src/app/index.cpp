@@ -82,7 +82,7 @@ namespace app::index
     CCF_APP_DEBUG("ranging over index from {} to {}", from, to);
     for (auto it = lb; it != ub; ++it)
     {
-      CCF_APP_INFO("index range found key: {}", it->first);
+      CCF_APP_DEBUG("index range found key: {}", it->first);
       // for each key, get the value it had at the revision
       auto& key = it->first;
       auto& values = it->second;
