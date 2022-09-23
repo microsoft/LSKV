@@ -34,10 +34,10 @@ namespace app::index
 
     std::optional<ccf::SeqNo> next_requested() override;
 
-    std::optional<V> get(int64_t at, const K& key);
+    std::optional<V> get(const int64_t at, const K& key);
 
     void range(
-      int64_t at,
+      const int64_t at,
       const std::function<void(const K&, V&)>& fn,
       const K& from,
       const K& to);

@@ -52,7 +52,7 @@ namespace app::index
   };
 
   std::optional<KVIndexer::V> find_value(
-    int64_t at, const std::vector<KVIndexer::V> values)
+    const int64_t at, const std::vector<KVIndexer::V> values)
   {
     std::optional<KVIndexer::V> val;
     for (const auto& value : values)
@@ -66,7 +66,7 @@ namespace app::index
     return val;
   }
 
-  std::optional<KVIndexer::V> KVIndexer::get(int64_t at, const K& key)
+  std::optional<KVIndexer::V> KVIndexer::get(const int64_t at, const K& key)
   {
     CCF_APP_DEBUG("getting value from index with key {}", key);
     if (keys_to_values.contains(key))
@@ -81,7 +81,7 @@ namespace app::index
   }
 
   void KVIndexer::range(
-    int64_t at,
+    const int64_t at,
     const std::function<void(const KVIndexer::K&, KVIndexer::V&)>& fn,
     const KVIndexer::K& from,
     const KVIndexer::K& to)

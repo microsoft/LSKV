@@ -50,7 +50,7 @@ namespace app::store
     /// @return The value, if present.
     std::optional<V> get(const K& key);
 
-    void foreach(const std::function<bool(K&, V&)>& fn);
+    void foreach(const std::function<bool(const K&, const V&)>& fn);
 
     void range(
       const std::function<void(K&, V&)>& fn, const K& from, const K& to);

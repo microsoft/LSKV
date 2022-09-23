@@ -77,7 +77,8 @@ namespace app::store
     return val;
   }
 
-  void KVStore::foreach(const std::function<bool(KVStore::K&, KVStore::V&)>& fn)
+  void KVStore::foreach(
+    const std::function<bool(const KVStore::K&, const KVStore::V&)>& fn)
   {
     inner_map->foreach([&](auto& key, auto& value) -> bool {
       auto k = KVStore::KSerialiser::from_serialised(key);
