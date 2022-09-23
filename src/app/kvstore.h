@@ -11,7 +11,6 @@
 
 namespace app::store
 {
-
   static constexpr auto RECORDS = "records";
 
   struct Value

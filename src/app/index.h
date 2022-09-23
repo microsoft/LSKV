@@ -8,7 +8,6 @@
 
 namespace app::index
 {
-
   class KVIndexer : public ccf::indexing::Strategy
   {
   public:
