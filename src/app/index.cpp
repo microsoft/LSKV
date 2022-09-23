@@ -32,12 +32,60 @@ namespace app::index
 
       return true;
     });
+    CCF_APP_DEBUG("finished handling committed transaction {}", tx_id.seqno);
   }
 
   std::optional<ccf::SeqNo> KVIndexer::next_requested()
   {
     return current_txid.seqno + 1;
   };
+
+  void KVIndexer::range(
+    int64_t at,
+    const std::function<
+      void(const app::store::KVStore::K&, app::store::KVStore::V&)>& fn,
+    const app::store::KVStore::K& from,
+    const app::store::KVStore::K& to)
+  {
+    // iterate over the keys in keys_to_values
+    auto lb = keys_to_values.lower_bound(from);
+    std::map<app::store::KVStore::K, std::vector<app::store::KVStore::V>>::
+      iterator ub;
+    if (to == "")
+    {
+      ub = keys_to_values.end();
+    }
+    else
+    {
+      ub = keys_to_values.upper_bound(to);
+    }
+    CCF_APP_DEBUG("ranging over index from {} to {}", from, to);
+    CCF_APP_DEBUG("ranging over index, lb {} ub {}", lb->first, ub->first);
+    for (auto it = lb; it != ub; ++it)
+    {
+      CCF_APP_INFO("index range found key: {}", it->first);
+      // for each key, get the value it had at the revision
+      auto& key = it->first;
+      auto& values = it->second;
+
+      std::optional<app::store::KVStore::V> val;
+      for (auto& value : values)
+      {
+        if (value.mod_revision > at)
+        { // we've gone into the future, stop
+          break;
+        }
+        val = value;
+      }
+      if (val.has_value())
+      {
+        fn(key, val.value());
+      }
+
+      // if it was not present (deleted) skip it, otherwise return it to the
+      // user
+    }
+  }
 
   // two types of historical query: (1) range at specific revision, (2) range
   // since specific revision

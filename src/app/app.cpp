@@ -62,12 +62,18 @@ namespace app
         ccf::no_auth_required)
         .install();
 
+      auto txn = [this](
+                   ccf::endpoints::EndpointContext& ctx,
+                   etcdserverpb::TxnRequest&& payload) {
+        return this->txn(ctx, std::move(payload));
+      };
+
       make_grpc<etcdserverpb::TxnRequest, etcdserverpb::TxnResponse>(
-        etcdserverpb, kv, "Txn", this->txn, ccf::no_auth_required)
+        etcdserverpb, kv, "Txn", txn, ccf::no_auth_required)
         .install();
     }
 
-    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::RangeResponse> range(
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::RangeResponse> range(
       store::KVStore records_map, etcdserverpb::RangeRequest&& payload)
     {
       etcdserverpb::RangeResponse range_response;
@@ -83,14 +89,6 @@ namespace app
         return ccf::grpc::make_error<etcdserverpb::RangeResponse>(
           GRPC_STATUS_FAILED_PRECONDITION,
           fmt::format("limit {} not yet supported", payload.limit()));
-      }
-      if (payload.revision() > 0)
-      {
-        return ccf::grpc::make_error<etcdserverpb::RangeResponse>(
-          GRPC_STATUS_FAILED_PRECONDITION,
-          fmt::format(
-            "revision {} not yet supported (no historical ranges)",
-            payload.revision()));
       }
       if (payload.sort_order() != etcdserverpb::RangeRequest_SortOrder_NONE)
       {
@@ -143,10 +141,35 @@ namespace app
             payload.max_create_revision()));
       }
 
-      auto& key = payload.key();
-      auto& range_end = payload.range_end();
-      if (range_end.empty())
+      if (payload.revision() > 0)
       {
+        auto& start = payload.key();
+        auto& end = payload.range_end();
+        auto count = 0;
+
+        kvindex->range(
+          payload.revision(),
+          [&](auto& key, auto& value) {
+            count++;
+
+            // add the kv to the response
+            auto* kv = range_response.add_kvs();
+            kv->set_key(key);
+            kv->set_value(value.get_data());
+            kv->set_create_revision(value.create_revision);
+            kv->set_mod_revision(value.mod_revision);
+            kv->set_version(value.version);
+          },
+          start,
+          end);
+
+        range_response.set_count(count);
+      }
+      else if (payload.range_end().empty())
+      {
+        auto& key = payload.key();
+        auto& range_end = payload.range_end();
+
         // empty range end so just query for a single key
         auto value_option = records_map.get(key);
         if (!value_option.has_value())
@@ -331,7 +354,7 @@ namespace app
       return ccf::grpc::make_success(delete_range_response);
     }
 
-    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::TxnResponse> txn(
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::TxnResponse> txn(
       ccf::endpoints::EndpointContext& ctx, etcdserverpb::TxnRequest&& payload)
     {
       CCF_APP_DEBUG(
