@@ -10,6 +10,16 @@
 
 namespace app::index
 {
+  // Index to handle two types of historical query: (1) range at specific
+  // revision, (2) range since specific revision
+  //
+  // (1): cares about entire state at a set revision, including past things.
+  // Perform the range on keys you're interested in then work out the state of
+  // those keys at the specified revision
+  //
+  // (2): cares about changes to state since revision. Run a query over
+  // revisions since the specified and have caused changes matching the range
+  // and emit those events
   KVIndexer::KVIndexer(const std::string& map_name) : Strategy(map_name)
   {
     CCF_APP_DEBUG("created kvindexer for {}", map_name);
@@ -98,14 +108,4 @@ namespace app::index
     }
   }
 
-  // two types of historical query: (1) range at specific revision, (2) range
-  // since specific revision
-  //
-  // (1): cares about entire state at a set revision, including past things.
-  // Perform the range on keys you're interested in then work out the state of
-  // those keys at the specified revision
-  //
-  // (2): cares about changes to state since revision. Run a query over
-  // revisions since the specified and have caused changes matching the range
-  // and emit those events
 }; // namespace app
