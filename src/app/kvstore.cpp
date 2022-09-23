@@ -17,7 +17,7 @@ namespace app::store
 
   static constexpr auto RECORDS = "records";
 
-  Value::Value(std::string v)
+  Value::Value(const std::string& v)
   {
     data = std::vector<uint8_t>(v.begin(), v.end());
     create_revision = 0;
