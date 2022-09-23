@@ -28,6 +28,7 @@ namespace app::index
   void KVIndexer::handle_committed_transaction(
     const ccf::TxID& tx_id, const kv::ReadOnlyStorePtr& store_ptr)
   {
+    // TODO(#47): handle deleted kvs
     CCF_APP_DEBUG("index: handling committed transaction {}", tx_id.seqno);
     current_txid = tx_id;
     auto tx = store_ptr->create_read_only_tx();
