@@ -11,10 +11,13 @@ namespace app::index
 
   class KVIndexer : public ccf::indexing::Strategy
   {
-  private:
+  protected:
     using K = app::store::KVStore::K;
     using V = app::store::KVStore::V;
 
+    ccf::TxID current_txid = {};
+
+  private:
     // a map from revisions to the keys they changed.
     // Each revision may have changed multiple keys (txn) so we keep a vector of
     // them.
@@ -22,9 +25,6 @@ namespace app::index
 
     // a mapping from keys to the values those keys had at certain points.
     std::map<K, std::vector<V>> keys_to_values;
-
-  protected:
-    ccf::TxID current_txid = {};
 
   public:
     KVIndexer(const std::string& map_name);

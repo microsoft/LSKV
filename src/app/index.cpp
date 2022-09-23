@@ -42,15 +42,13 @@ namespace app::index
 
   void KVIndexer::range(
     int64_t at,
-    const std::function<
-      void(const app::store::KVStore::K&, app::store::KVStore::V&)>& fn,
-    const app::store::KVStore::K& from,
-    const app::store::KVStore::K& to)
+    const std::function<void(const KVIndexer::K&, KVIndexer::V&)>& fn,
+    const KVIndexer::K& from,
+    const KVIndexer::K& to)
   {
     // iterate over the keys in keys_to_values
     auto lb = keys_to_values.lower_bound(from);
-    std::map<app::store::KVStore::K, std::vector<app::store::KVStore::V>>::
-      iterator ub;
+    std::map<KVIndexer::K, std::vector<KVIndexer::V>>::iterator ub;
     if (to == "")
     {
       ub = keys_to_values.end();
@@ -68,7 +66,7 @@ namespace app::index
       auto& key = it->first;
       auto& values = it->second;
 
-      std::optional<app::store::KVStore::V> val;
+      std::optional<KVIndexer::V> val;
       for (auto& value : values)
       {
         if (value.mod_revision > at)
