@@ -58,6 +58,10 @@ benchmark: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual .venv
 notebook: .venv
 	. .venv/bin/activate && jupyter notebook
 
+.PHONY: clear-notebook
+clear-notebook: .venv
+	. .venv/bin/activate && jupyter nbconvert --clear-output *.ipynb
+
 .PHONY: clean
 clean:
 	rm -rf $(BUILD)
