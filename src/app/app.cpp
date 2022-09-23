@@ -154,27 +154,21 @@ namespace app
         kv->set_version(value.version);
       };
 
-      if (payload.revision() > 0)
+      if (payload.range_end().empty())
       {
-        if (payload.range_end().empty())
+        // empty range end so just query for a single key
+        std::optional<app::store::KVStore::V> value_option;
+        if (payload.revision() > 0)
         {
-          // empty range end so just query for a single key
-          auto value_option = kvindex->get(payload.revision(), payload.key());
-          if (value_option.has_value())
-          {
-            add_kv(payload.key(), value_option.value());
-          }
+          // historical, use the index of commited values
+          value_option = kvindex->get(payload.revision(), payload.key());
         }
         else
         {
-          kvindex->range(
-            payload.revision(), add_kv, payload.key(), payload.range_end());
+          // current, use the local map
+          value_option = records_map.get(payload.key());
         }
-      }
-      else if (payload.range_end().empty())
-      {
-        // empty range end so just query for a single key
-        auto value_option = records_map.get(payload.key());
+
         if (value_option.has_value())
         {
           add_kv(payload.key(), value_option.value());
@@ -183,7 +177,17 @@ namespace app
       else
       {
         // range end is non-empty so perform a range scan
-        records_map.range(add_kv, payload.key(), payload.range_end());
+        if (payload.revision() > 0)
+        {
+          // historical, use the index of commited values
+          kvindex->range(
+            payload.revision(), add_kv, payload.key(), payload.range_end());
+        }
+        else
+        {
+          // current, use the local map
+          records_map.range(add_kv, payload.key(), payload.range_end());
+        }
       }
 
       range_response.set_count(count);
