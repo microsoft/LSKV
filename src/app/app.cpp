@@ -141,79 +141,40 @@ namespace app
             payload.max_create_revision()));
       }
 
-      if (payload.revision() > 0)
-      {
-        auto& start = payload.key();
-        auto& end = payload.range_end();
-        auto count = 0;
+      auto count = 0;
+      auto add_kv = [&](auto& key, auto& value) {
+        count++;
 
-        kvindex->range(
-          payload.revision(),
-          [&](auto& key, auto& value) {
-            count++;
-
-            // add the kv to the response
-            auto* kv = range_response.add_kvs();
-            kv->set_key(key);
-            kv->set_value(value.get_data());
-            kv->set_create_revision(value.create_revision);
-            kv->set_mod_revision(value.mod_revision);
-            kv->set_version(value.version);
-          },
-          start,
-          end);
-
-        range_response.set_count(count);
-      }
-      else if (payload.range_end().empty())
-      {
-        auto& key = payload.key();
-        auto& range_end = payload.range_end();
-
-        // empty range end so just query for a single key
-        auto value_option = records_map.get(key);
-        if (!value_option.has_value())
-        {
-          // no values so send the response with an empty list and a count of 0
-          // rather than an error
-          range_response.set_count(0);
-          return ccf::grpc::make_success(range_response);
-        }
-
+        // add the kv to the response
         auto* kv = range_response.add_kvs();
-        kv->set_key(payload.key());
-        auto value = value_option.value();
+        kv->set_key(key);
         kv->set_value(value.get_data());
         kv->set_create_revision(value.create_revision);
         kv->set_mod_revision(value.mod_revision);
         kv->set_version(value.version);
+      };
 
-        range_response.set_count(1);
+      if (payload.revision() > 0)
+      {
+        kvindex->range(
+          payload.revision(), add_kv, payload.key(), payload.range_end());
+      }
+      else if (payload.range_end().empty())
+      {
+        // empty range end so just query for a single key
+        auto value_option = records_map.get(payload.key());
+        if (value_option.has_value())
+        {
+          add_kv(payload.key(), value_option.value());
+        }
       }
       else
       {
         // range end is non-empty so perform a range scan
-        auto& start = payload.key();
-        auto& end = payload.range_end();
-        auto count = 0;
-
-        records_map.range(
-          [&](auto& key, auto& value) {
-            count++;
-
-            // add the kv to the response
-            auto* kv = range_response.add_kvs();
-            kv->set_key(key);
-            kv->set_value(value.get_data());
-            kv->set_create_revision(value.create_revision);
-            kv->set_mod_revision(value.mod_revision);
-            kv->set_version(value.version);
-          },
-          start,
-          end);
-
-        range_response.set_count(count);
+        records_map.range(add_kv, payload.key(), payload.range_end());
       }
+
+      range_response.set_count(count);
 
       return ccf::grpc::make_success(range_response);
     }
