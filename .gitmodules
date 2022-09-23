@@ -1,0 +1,3 @@
+[submodule "3rdparty/etcd"]
+	path = 3rdparty/etcd
+	url = https://github.com/etcd-io/etcd.git
