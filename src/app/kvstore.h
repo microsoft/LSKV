@@ -13,7 +13,7 @@ namespace app::store
   {
     // the actual value that the client wants written stored as a list of bytes
     // to avoid requiring valid utf-8 (for the json serialiser).
-    std::vector<char> data;
+    std::vector<uint8_t> data;
     // the revision that this entry was created (since the last delete).
     int64_t create_revision;
     // the latest modification of this entry (0 in the serialised field).

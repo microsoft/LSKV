@@ -19,7 +19,7 @@ namespace app::store
 
   Value::Value(std::string v)
   {
-    data = std::vector(v.begin(), v.end());
+    data = std::vector<uint8_t>(v.begin(), v.end());
     create_revision = 0;
     mod_revision = 0;
     version = 1;
