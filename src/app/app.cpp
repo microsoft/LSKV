@@ -176,17 +176,27 @@ namespace app
       }
       else
       {
+        auto end = payload.range_end();
+        // If range_end is '\0', the range is all keys greater than or equal
+        // to the key argument.
+        if (end == std::string(1, '\0'))
+        {
+          CCF_APP_DEBUG("found empty end, making it work with range");
+          // TODO(#23): should change the range to make sure we get all keys
+          // greater than the start but this works for enough cases now
+          end = std::string(16, '\255');
+        }
+
         // range end is non-empty so perform a range scan
         if (payload.revision() > 0)
         {
           // historical, use the index of commited values
-          kvindex->range(
-            payload.revision(), add_kv, payload.key(), payload.range_end());
+          kvindex->range(payload.revision(), add_kv, payload.key(), end);
         }
         else
         {
           // current, use the local map
-          records_map.range(add_kv, payload.key(), payload.range_end());
+          records_map.range(add_kv, payload.key(), end);
         }
       }
 
