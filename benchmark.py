@@ -197,7 +197,8 @@ def run_metrics(name: str, cmd: str, file: str):
     start = df["start_micros"].min()
     end = df["end_micros"].max()
     count = df["start_micros"].count()
-    thput = count / ((end - start) / 10 ** 6)
+    total = (end - start) / 10 ** 6
+    thput = count / total
 
     latencies = (df["end_micros"] - df["start_micros"]) / 1000
     latency_p50 = latencies.quantile(0.5)
@@ -205,6 +206,8 @@ def run_metrics(name: str, cmd: str, file: str):
     latency_p99 = latencies.quantile(0.99)
     latency_p999 = latencies.quantile(0.999)
 
+    logging.info(f"             count: {count}")
+    logging.info(f"         total (s): {total}")
     logging.info(f"throughput (req/s): {thput}")
     logging.info(f"  p50 latency (ms): {latency_p50}")
     logging.info(f"  p90 latency (ms): {latency_p90}")
