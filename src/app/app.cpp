@@ -18,9 +18,7 @@
 #include <fmt/format.h>
 
 template <typename I, typename O>
-std::function<ccf::jsonhandler::JsonAdapterResponse(
-  ccf::endpoints::ReadOnlyEndpointContext&, nlohmann::json&&)>
-json_to_grpc_adapter_ro(
+ccf::ReadOnlyHandlerWithJson json_to_grpc_adapter_ro(
   std::function<ccf::grpc::GrpcAdapterResponse<O>(
     ccf::endpoints::ReadOnlyEndpointContext&, const I&&)> f)
 {
@@ -45,10 +43,9 @@ json_to_grpc_adapter_ro(
 }
 
 template <typename I, typename O>
-std::function<ccf::jsonhandler::JsonAdapterResponse(
-  ccf::endpoints::EndpointContext&, nlohmann::json&&)>
-json_to_grpc_adapter(std::function<ccf::grpc::GrpcAdapterResponse<O>(
-                       ccf::endpoints::EndpointContext&, const I&&)> f)
+ccf::HandlerJsonParamsAndForward json_to_grpc_adapter(
+  std::function<ccf::grpc::GrpcAdapterResponse<O>(
+    ccf::endpoints::EndpointContext&, const I&&)> f)
 {
   return [f](ccf::endpoints::EndpointContext& ctx, nlohmann::json&& params) {
     const I payload = params.get<I>();
