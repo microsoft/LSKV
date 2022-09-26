@@ -3,17 +3,6 @@
 #include "etcd.pb.h"
 #include "nlohmann/json.hpp"
 
-namespace app::json
-{
-  etcdserverpb::RangeRequest RangeRequest::to_grpc() const
-  {
-    etcdserverpb::RangeRequest req;
-    req.set_key(key);
-    req.set_range_end(range_end);
-    return req;
-  }
-} // namespace app::json
-
 namespace etcdserverpb
 {
   using json = nlohmann::json;
