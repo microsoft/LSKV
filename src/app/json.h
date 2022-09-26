@@ -5,7 +5,6 @@
 
 namespace etcdserverpb
 {
-
   using json = nlohmann::json;
   // Range
   void from_json(const json& j, RangeRequest& req);
