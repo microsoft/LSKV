@@ -124,7 +124,6 @@ class CCFKVSStore(Store):
                 ]
                 return Popen(kvs_cmd, stdout=out, stderr=err)
 
-
     def wait_for_ready(self):
         wait_for_port(self.port)
         wait_for_file(os.path.join("workspace", "sandbox_common", "user0_cert.pem"))
@@ -146,7 +145,6 @@ class CCFKVSStore(Store):
                     "workspace/sandbox_common/user0_privk.pem",
                 ] + bench_cmd
                 p = Popen(bench, stdout=out, stderr=err)
-
                 return p, timings_file
 
     def name(self) -> str:
@@ -154,7 +152,6 @@ class CCFKVSStore(Store):
 
     def cleanup(self):
         shutil.rmtree("workspace", ignore_errors=True)
-
 
 
 def wait_with_timeout(process: Popen, duration_seconds=90):
