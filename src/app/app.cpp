@@ -9,6 +9,7 @@
 #include "ccf/json_handler.h"
 #include "etcd.pb.h"
 #include "grpc.h" // TODO(#25): use grpc from ccf
+#include "index.h"
 #include "kvstore.h"
 
 #define FMT_HEADER_ONLY
@@ -18,6 +19,10 @@ namespace app
 {
   class AppHandlers : public ccf::UserEndpointRegistry
   {
+  private:
+    using IndexStrategy = app::index::KVIndexer;
+    std::shared_ptr<IndexStrategy> kvindex = nullptr;
+
   public:
     AppHandlers(ccfapp::AbstractNodeContext& context) :
       ccf::UserEndpointRegistry(context)
@@ -25,6 +30,9 @@ namespace app
       openapi_info.title = "CCF Sample C++ Key-Value Store";
       openapi_info.description = "Sample Key-Value store built on CCF";
       openapi_info.document_version = "0.0.1";
+
+      kvindex = std::make_shared<IndexStrategy>(app::store::RECORDS);
+      context.get_indexing_strategies().install_strategy(kvindex);
 
       const auto etcdserverpb = "etcdserverpb";
       const auto kv = "KV";
@@ -54,12 +62,18 @@ namespace app
         ccf::no_auth_required)
         .install();
 
+      auto txn = [this](
+                   ccf::endpoints::EndpointContext& ctx,
+                   etcdserverpb::TxnRequest&& payload) {
+        return this->txn(ctx, std::move(payload));
+      };
+
       make_grpc<etcdserverpb::TxnRequest, etcdserverpb::TxnResponse>(
-        etcdserverpb, kv, "Txn", this->txn, ccf::no_auth_required)
+        etcdserverpb, kv, "Txn", txn, ccf::no_auth_required)
         .install();
     }
 
-    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::RangeResponse> range(
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::RangeResponse> range(
       store::KVStore records_map, etcdserverpb::RangeRequest&& payload)
     {
       etcdserverpb::RangeResponse range_response;
@@ -75,14 +89,6 @@ namespace app
         return ccf::grpc::make_error<etcdserverpb::RangeResponse>(
           GRPC_STATUS_FAILED_PRECONDITION,
           fmt::format("limit {} not yet supported", payload.limit()));
-      }
-      if (payload.revision() > 0)
-      {
-        return ccf::grpc::make_error<etcdserverpb::RangeResponse>(
-          GRPC_STATUS_FAILED_PRECONDITION,
-          fmt::format(
-            "revision {} not yet supported (no historical ranges)",
-            payload.revision()));
       }
       if (payload.sort_order() != etcdserverpb::RangeRequest_SortOrder_NONE)
       {
@@ -135,54 +141,66 @@ namespace app
             payload.max_create_revision()));
       }
 
-      auto& key = payload.key();
-      auto& range_end = payload.range_end();
-      if (range_end.empty())
-      {
-        // empty range end so just query for a single key
-        auto value_option = records_map.get(key);
-        if (!value_option.has_value())
-        {
-          // no values so send the response with an empty list and a count of 0
-          // rather than an error
-          range_response.set_count(0);
-          return ccf::grpc::make_success(range_response);
-        }
+      auto count = 0;
+      auto add_kv = [&](auto& key, auto& value) {
+        count++;
 
+        // add the kv to the response
         auto* kv = range_response.add_kvs();
-        kv->set_key(payload.key());
-        auto value = value_option.value();
+        kv->set_key(key);
         kv->set_value(value.get_data());
         kv->set_create_revision(value.create_revision);
         kv->set_mod_revision(value.mod_revision);
         kv->set_version(value.version);
+      };
 
-        range_response.set_count(1);
+      if (payload.range_end().empty())
+      {
+        // empty range end so just query for a single key
+        std::optional<app::store::KVStore::V> value_option;
+        if (payload.revision() > 0)
+        {
+          // historical, use the index of commited values
+          value_option = kvindex->get(payload.revision(), payload.key());
+        }
+        else
+        {
+          // current, use the local map
+          value_option = records_map.get(payload.key());
+        }
+
+        if (value_option.has_value())
+        {
+          add_kv(payload.key(), value_option.value());
+        }
       }
       else
       {
+        auto end = payload.range_end();
+        // If range_end is '\0', the range is all keys greater than or equal
+        // to the key argument.
+        if (end == std::string(1, '\0'))
+        {
+          CCF_APP_DEBUG("found empty end, making it work with range");
+          // TODO(#23): should change the range to make sure we get all keys
+          // greater than the start but this works for enough cases now
+          end = std::string(16, '\255');
+        }
+
         // range end is non-empty so perform a range scan
-        auto& start = payload.key();
-        auto& end = payload.range_end();
-        auto count = 0;
-
-        records_map.range(
-          [&](auto& key, auto& value) {
-            count++;
-
-            // add the kv to the response
-            auto* kv = range_response.add_kvs();
-            kv->set_key(key);
-            kv->set_value(value.get_data());
-            kv->set_create_revision(value.create_revision);
-            kv->set_mod_revision(value.mod_revision);
-            kv->set_version(value.version);
-          },
-          start,
-          end);
-
-        range_response.set_count(count);
+        if (payload.revision() > 0)
+        {
+          // historical, use the index of commited values
+          kvindex->range(payload.revision(), add_kv, payload.key(), end);
+        }
+        else
+        {
+          // current, use the local map
+          records_map.range(add_kv, payload.key(), end);
+        }
       }
+
+      range_response.set_count(count);
 
       return ccf::grpc::make_success(range_response);
     }
@@ -323,7 +341,7 @@ namespace app
       return ccf::grpc::make_success(delete_range_response);
     }
 
-    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::TxnResponse> txn(
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::TxnResponse> txn(
       ccf::endpoints::EndpointContext& ctx, etcdserverpb::TxnRequest&& payload)
     {
       CCF_APP_DEBUG(
