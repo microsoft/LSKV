@@ -108,7 +108,6 @@ class EtcdStore(Store):
                 bench = [
                     "bin/benchmark",
                     "--endpoints",
-
                     f"{self.scheme()}://127.0.0.1:{self.port}",
                 ]
                 if self.tls:
@@ -122,8 +121,7 @@ class EtcdStore(Store):
                     ]
                 bench += bench_cmd
                 p = Popen(bench, stdout=out, stderr=err)
-                p.wait()
-                return timings_file
+                return p, timings_file
 
     def scheme(self) -> str:
         if self.tls:
@@ -156,7 +154,6 @@ class CCFKVSStore(Store):
                     "--http2",
                 ]
                 return Popen(kvs_cmd, stdout=out, stderr=err)
-
 
     def wait_for_ready(self):
         wait_for_port(self.port)
