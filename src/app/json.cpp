@@ -62,11 +62,11 @@ namespace etcdserverpb
     req.set_max_create_revision(max_create_revision);
   }
 
-  void to_json(json& j, const RangeResponse& req)
+  void to_json(json& j, const RangeResponse& res)
   {
     j = json{};
     auto kvs = json::array();
-    for (const auto& kv : req.kvs())
+    for (const auto& kv : res.kvs())
     {
       json jkv = json{};
       jkv["key"] = kv.key();
@@ -78,8 +78,7 @@ namespace etcdserverpb
       kvs.push_back(jkv);
     }
     j["kvs"] = kvs;
-
     j["more"] = false;
-    j["count"] = req.count();
+    j["count"] = res.count();
   }
 }

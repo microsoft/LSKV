@@ -21,4 +21,5 @@ namespace etcdserverpb
 
   using json = nlohmann::json;
   void from_json(const json& j, RangeRequest& req);
+  void to_json(json& j, const RangeResponse& res);
 };

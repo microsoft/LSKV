@@ -63,7 +63,8 @@ namespace app
         if (success != nullptr)
         {
           // really was success!
-          return ccf::make_success(true);
+          nlohmann::json resp = success->body;
+          return ccf::make_success(resp);
         }
         else
         {
