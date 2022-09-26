@@ -16,6 +16,7 @@ PREFIXES_CCF = [
 ]
 PREFIXES_CCF.append("#!/bin/bash" + os.linesep + "#")
 PREFIXES_CCF.append("#!/usr/bin/env sh" + os.linesep + "#")
+PREFIXES_CCF.append("#!/usr/bin/env python3" + os.linesep + "#")
 
 
 def has_notice(path, prefixes):

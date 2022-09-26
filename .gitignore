@@ -10,4 +10,7 @@ node_modules/
 bin/
 .vscode/
 
+/bench/
 default.etcd/
+
+/.venv/
