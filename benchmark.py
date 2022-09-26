@@ -11,7 +11,7 @@ import logging
 import pandas as pd
 import socket
 import os
-from typing import List
+from typing import List, Tuple
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
 
@@ -55,7 +55,7 @@ class Store(abc.ABC):
     def bench(self, _bench_cmd: List[str]):
         raise NotImplemented
 
-    def wait(self):
+    def wait_for_ready(self):
         wait_for_port(self.port)
 
     @abc.abstractmethod
@@ -90,7 +90,7 @@ class EtcdStore(Store):
                 ]
                 return Popen(etcd_cmd, stdout=out, stderr=err)
 
-    def bench(self, bench_cmd: List[str]) -> str:
+    def bench(self, bench_cmd: List[str]) -> Tuple[Popen, str]:
         with open(os.path.join(self.output_dir(), "bench.out"), "w") as out:
             with open(os.path.join(self.output_dir(), "bench.err"), "w") as err:
                 timings_file = os.path.join(self.output_dir(), "timings.csv")
@@ -101,8 +101,7 @@ class EtcdStore(Store):
                     f"http://127.0.0.1:{self.port}",
                 ] + bench_cmd
                 p = Popen(bench, stdout=out, stderr=err)
-                p.wait()
-                return timings_file
+                return p, timings_file
 
     def name(self) -> str:
         return "etcd-notls-virtual"
@@ -127,11 +126,11 @@ class CCFKVSStore(Store):
                 ]
                 return Popen(kvs_cmd, stdout=out, stderr=err)
 
-    def wait(self):
+    def wait_for_ready(self):
         wait_for_port(self.port)
         wait_for_file(os.path.join("workspace", "sandbox_common", "user0_cert.pem"))
 
-    def bench(self, bench_cmd: List[str]) -> str:
+    def bench(self, bench_cmd: List[str]) -> Tuple[Popen, str]:
         with open(os.path.join(self.output_dir(), "bench.out"), "w") as out:
             with open(os.path.join(self.output_dir(), "bench.err"), "w") as err:
                 timings_file = os.path.join(self.output_dir(), "timings.csv")
@@ -148,8 +147,7 @@ class CCFKVSStore(Store):
                     "workspace/sandbox_common/user0_privk.pem",
                 ] + bench_cmd
                 p = Popen(bench, stdout=out, stderr=err)
-                p.wait()
-                return timings_file
+                return p, timings_file
 
     def name(self) -> str:
         return "ccfkvs-tls-virtual"
@@ -158,13 +156,32 @@ class CCFKVSStore(Store):
         shutil.rmtree("workspace", ignore_errors=True)
 
 
+def wait_with_timeout(process: Popen, duration_seconds=60):
+    for i in range(0, duration_seconds):
+        if process.poll() is None:
+            # process still running
+            logging.debug(f"waiting for process to complete, try {i}")
+            time.sleep(1)
+        else:
+            # process finished
+            logging.info(f"process completed successfully within timeout (took {i}s)")
+            return
+
+    # didn't finish in time
+    logging.error(f"killing process after timeout of {duration_seconds}s")
+    process.kill()
+    process.wait()
+    return
+
+
 def run_benchmark(store, bench_cmd: List[str]) -> str:
     proc = store.spawn()
 
-    store.wait()
+    store.wait_for_ready()
 
     logging.info(f"starting benchmark for {store.name()}")
-    timings_file = store.bench(bench_cmd)
+    bench_process, timings_file = store.bench(bench_cmd)
+    wait_with_timeout(bench_process)
     logging.info(f"stopping benchmark for {store.name()}")
 
     proc.terminate()
