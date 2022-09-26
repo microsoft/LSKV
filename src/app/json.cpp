@@ -92,6 +92,16 @@ namespace etcdserverpb
     }
   }
 
+  void to_json(json& j, const KeyValue& kv)
+  {
+    j["key"] = kv.key();
+    j["create_revision"] = kv.create_revision();
+    j["mod_revision"] = kv.mod_revision();
+    j["version"] = kv.version();
+    j["value"] = kv.value();
+    j["lease"] = kv.lease();
+  }
+
   void to_json(json& j, const RangeResponse& res)
   {
     j = json{};
@@ -99,16 +109,53 @@ namespace etcdserverpb
     for (const auto& kv : res.kvs())
     {
       json jkv = json{};
-      jkv["key"] = kv.key();
-      jkv["create_revision"] = kv.create_revision();
-      jkv["mod_revision"] = kv.mod_revision();
-      jkv["version"] = kv.version();
-      jkv["value"] = kv.value();
-      jkv["lease"] = kv.lease();
+      to_json(jkv, kv);
       kvs.push_back(jkv);
     }
     j["kvs"] = kvs;
     j["more"] = false;
     j["count"] = res.count();
+  }
+
+  void from_json(const json& j, PutRequest& req)
+  {
+    j.at("key").get_to(*req.mutable_key());
+    j.at("value").get_to(*req.mutable_value());
+
+    if (j.contains("lease"))
+    {
+      int64_t lease;
+      j.at("lease").get_to(lease);
+      req.set_lease(lease);
+    }
+
+    if (j.contains("prev_kv"))
+    {
+      bool prev_kv;
+      j.at("prev_kv").get_to(prev_kv);
+      req.set_prev_kv(prev_kv);
+    }
+
+    if (j.contains("ignore_value"))
+    {
+      bool ignore_value;
+      j.at("ignore_value").get_to(ignore_value);
+      req.set_ignore_value(ignore_value);
+    }
+
+    if (j.contains("ignore_lease"))
+    {
+      bool ignore_lease;
+      j.at("ignore_lease").get_to(ignore_lease);
+      req.set_ignore_lease(ignore_lease);
+    }
+  }
+
+  void to_json(json& j, const PutResponse& res)
+  {
+    j = json{};
+    json jkv = json{};
+    to_json(jkv, res.prev_kv());
+    j["prev_kv"] = jkv;
   }
 }

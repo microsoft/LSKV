@@ -85,6 +85,36 @@ namespace app
         etcdserverpb, kv, "Put", this->put, ccf::no_auth_required)
         .install();
 
+      auto put_json =
+        [this](ccf::endpoints::EndpointContext& ctx, nlohmann::json&& params) {
+          const auto payload = params.get<etcdserverpb::PutRequest>();
+          auto kvs = store::KVStore(ctx.tx);
+          auto res = this->put(ctx, std::move(payload));
+
+          auto success =
+            std::get_if<ccf::grpc::SuccessResponse<etcdserverpb::PutResponse>>(
+              &res);
+          if (success != nullptr)
+          {
+            // really was success!
+            nlohmann::json resp = success->body;
+            return ccf::make_success(resp);
+          }
+          else
+          {
+            // failure
+            return ccf::make_error(
+              HTTP_STATUS_BAD_REQUEST, ccf::errors::InvalidInput, "");
+          }
+        };
+
+      make_endpoint(
+        "/v3/kv/put",
+        HTTP_POST,
+        ccf::json_adapter(put_json),
+        ccf::no_auth_required)
+        .install();
+
       make_grpc<
         etcdserverpb::DeleteRangeRequest,
         etcdserverpb::DeleteRangeResponse>(
@@ -239,7 +269,8 @@ namespace app
     }
 
     static ccf::grpc::GrpcAdapterResponse<etcdserverpb::PutResponse> put(
-      ccf::endpoints::EndpointContext& ctx, etcdserverpb::PutRequest&& payload)
+      ccf::endpoints::EndpointContext& ctx,
+      const etcdserverpb::PutRequest&& payload)
     {
       etcdserverpb::PutResponse put_response;
       CCF_APP_DEBUG(
