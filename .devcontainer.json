@@ -1,7 +1,7 @@
 {
   "name": "Development Container for CCF C++ Apps",
   "context": "..",
-  "image": "mcr.microsoft.com/ccf/app/dev:3.0.0-dev4-sgx",
+  "image": "mcr.microsoft.com/ccf/app/dev:3.0.0-dev5-sgx",
   "runArgs": [],
   "extensions": ["ms-vscode.cpptools"]
 }
