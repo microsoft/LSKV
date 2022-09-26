@@ -65,5 +65,21 @@ namespace etcdserverpb
   void to_json(json& j, const RangeResponse& req)
   {
     j = json{};
+    auto kvs = json::array();
+    for (const auto& kv : req.kvs())
+    {
+      json jkv = json{};
+      jkv["key"] = kv.key();
+      jkv["create_revision"] = kv.create_revision();
+      jkv["mod_revision"] = kv.mod_revision();
+      jkv["version"] = kv.version();
+      jkv["value"] = kv.value();
+      jkv["lease"] = kv.lease();
+      kvs.push_back(jkv);
+    }
+    j["kvs"] = kvs;
+
+    j["more"] = false;
+    j["count"] = req.count();
   }
 }
