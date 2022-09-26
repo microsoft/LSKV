@@ -154,7 +154,7 @@ class CCFKVSStore(Store):
         shutil.rmtree("workspace", ignore_errors=True)
 
 
-def wait_with_timeout(process: Popen, duration_seconds=60):
+def wait_with_timeout(process: Popen, duration_seconds=90):
     for i in range(0, duration_seconds):
         if process.poll() is None:
             # process still running
