@@ -25,7 +25,7 @@ json_to_grpc_adapter_ro(
     ccf::endpoints::ReadOnlyEndpointContext&, const I&&)> f)
 {
   return
-    [&](ccf::endpoints::ReadOnlyEndpointContext& ctx, nlohmann::json&& params) {
+    [f](ccf::endpoints::ReadOnlyEndpointContext& ctx, nlohmann::json&& params) {
       const I payload = params.get<I>();
       auto res = f(ctx, std::move(payload));
       auto success = std::get_if<ccf::grpc::SuccessResponse<O>>(&res);
@@ -50,7 +50,7 @@ std::function<ccf::jsonhandler::JsonAdapterResponse(
 json_to_grpc_adapter(std::function<ccf::grpc::GrpcAdapterResponse<O>(
                        ccf::endpoints::EndpointContext&, const I&&)> f)
 {
-  return [&](ccf::endpoints::EndpointContext& ctx, nlohmann::json&& params) {
+  return [f](ccf::endpoints::EndpointContext& ctx, nlohmann::json&& params) {
     const I payload = params.get<I>();
     auto res = f(ctx, std::move(payload));
     auto success = std::get_if<ccf::grpc::SuccessResponse<O>>(&res);
