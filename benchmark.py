@@ -16,30 +16,28 @@ from typing import List, Tuple
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
 
 
-def wait_for_port(port):
+def wait_for_port(port, tries=60):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    i = 0
-    while True:
+    for i in range(0, tries):
         try:
             s.connect(("127.0.0.1", port))
             logging.info(f"finished waiting for port ({port}) to be open, try {i}")
-            break
+            time.sleep(1)
+            return
         except:
-            i += 1
             logging.info(f"waiting for port ({port}) to be open, try {i}")
             time.sleep(1)
-    time.sleep(1)
+    logging.error(f"took too long waiting for port {port} ({tries}s)")
 
 
-def wait_for_file(file: str):
-    i = 0
-    while True:
+def wait_for_file(file: str, tries=60):
+    for i in range(0, tries):
         if os.path.exists(file):
             logging.info(f"finished waiting for file ({file}) to exist, try {i}")
             return
-        i += 1
         logging.info(f"waiting for file ({file}) to exist, try {i}")
         time.sleep(1)
+    logging.error(f"took too long waiting for file {file} ({tries}s)")
 
 
 class Store(abc.ABC):
