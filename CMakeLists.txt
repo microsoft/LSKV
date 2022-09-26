@@ -17,6 +17,7 @@ add_ccf_app(
   SRCS
   src/app/app.cpp
   src/app/kvstore.cpp
+  src/app/index.cpp
   INCLUDE_DIRS
   "${CMAKE_BINARY_DIR}/proto"
   "${CCF_DIR}/include/ccf/_private"
