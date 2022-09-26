@@ -10,7 +10,9 @@
 #include "etcd.pb.h"
 #include "grpc.h" // TODO(#25): use grpc from ccf
 #include "index.h"
+#include "json.h"
 #include "kvstore.h"
+#include "nlohmann/json.hpp"
 
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
@@ -48,6 +50,36 @@ namespace app
         etcdserverpb, kv, "Range", range, ccf::no_auth_required)
         .install();
 
+      auto range_json = [this](
+                          ccf::endpoints::ReadOnlyEndpointContext& ctx,
+                          nlohmann::json&& params) {
+        const auto payload = params.get<etcdserverpb::RangeRequest>();
+        auto kvs = store::KVStore(ctx.tx);
+        auto res = this->range(kvs, std::move(payload));
+
+        auto success =
+          std::get_if<ccf::grpc::SuccessResponse<etcdserverpb::RangeResponse>>(
+            &res);
+        if (success != nullptr)
+        {
+          // really was success!
+          return ccf::make_success(true);
+        }
+        else
+        {
+          // failure
+          return ccf::make_error(
+            HTTP_STATUS_BAD_REQUEST, ccf::errors::InvalidInput, "");
+        }
+      };
+
+      make_read_only_endpoint(
+        "/v3/kv/range",
+        HTTP_POST,
+        ccf::json_read_only_adapter(range_json),
+        ccf::no_auth_required)
+        .install();
+
       make_grpc<etcdserverpb::PutRequest, etcdserverpb::PutResponse>(
         etcdserverpb, kv, "Put", this->put, ccf::no_auth_required)
         .install();
@@ -74,7 +106,7 @@ namespace app
     }
 
     ccf::grpc::GrpcAdapterResponse<etcdserverpb::RangeResponse> range(
-      store::KVStore records_map, etcdserverpb::RangeRequest&& payload)
+      store::KVStore records_map, const etcdserverpb::RangeRequest&& payload)
     {
       etcdserverpb::RangeResponse range_response;
       CCF_APP_DEBUG(
