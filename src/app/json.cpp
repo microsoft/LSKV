@@ -176,4 +176,4 @@ namespace etcdserverpb
     }
     j["prev_kvs"] = kvs;
   }
-}
+};
