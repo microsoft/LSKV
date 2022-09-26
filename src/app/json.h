@@ -26,4 +26,7 @@ namespace etcdserverpb
   // Put
   void from_json(const json& j, PutRequest& req);
   void to_json(json& j, const PutResponse& res);
+  // DeleteRange
+  void from_json(const json& j, DeleteRangeRequest& req);
+  void to_json(json& j, const DeleteRangeResponse& res);
 };

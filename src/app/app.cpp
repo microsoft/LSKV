@@ -125,6 +125,36 @@ namespace app
         ccf::no_auth_required)
         .install();
 
+      auto delete_range_json = [this](
+                                 ccf::endpoints::EndpointContext& ctx,
+                                 nlohmann::json&& params) {
+        const auto payload = params.get<etcdserverpb::DeleteRangeRequest>();
+        auto kvs = store::KVStore(ctx.tx);
+        auto res = this->delete_range(ctx, std::move(payload));
+
+        auto success = std::get_if<
+          ccf::grpc::SuccessResponse<etcdserverpb::DeleteRangeResponse>>(&res);
+        if (success != nullptr)
+        {
+          // really was success!
+          nlohmann::json resp = success->body;
+          return ccf::make_success(resp);
+        }
+        else
+        {
+          // failure
+          return ccf::make_error(
+            HTTP_STATUS_BAD_REQUEST, ccf::errors::InvalidInput, "");
+        }
+      };
+
+      make_endpoint(
+        "/v3/kv/delete_range",
+        HTTP_POST,
+        ccf::json_adapter(delete_range_json),
+        ccf::no_auth_required)
+        .install();
+
       auto txn = [this](
                    ccf::endpoints::EndpointContext& ctx,
                    etcdserverpb::TxnRequest&& payload) {
@@ -315,7 +345,7 @@ namespace app
     static ccf::grpc::GrpcAdapterResponse<etcdserverpb::DeleteRangeResponse>
     delete_range(
       ccf::endpoints::EndpointContext& ctx,
-      etcdserverpb::DeleteRangeRequest&& payload)
+      const etcdserverpb::DeleteRangeRequest&& payload)
     {
       CCF_APP_DEBUG(
         "DeleteRange = [{}]{} -> [{}]{} prevkv:{}",

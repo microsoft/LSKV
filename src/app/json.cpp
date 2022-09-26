@@ -104,7 +104,6 @@ namespace etcdserverpb
 
   void to_json(json& j, const RangeResponse& res)
   {
-    j = json{};
     auto kvs = json::array();
     for (const auto& kv : res.kvs())
     {
@@ -153,9 +152,39 @@ namespace etcdserverpb
 
   void to_json(json& j, const PutResponse& res)
   {
-    j = json{};
     json jkv = json{};
     to_json(jkv, res.prev_kv());
     j["prev_kv"] = jkv;
+  }
+
+  void from_json(const json& j, DeleteRangeRequest& req)
+  {
+    j.at("key").get_to(*req.mutable_key());
+
+    if (j.contains("range_end"))
+    {
+      j.at("range_end").get_to(*req.mutable_range_end());
+    }
+
+    if (j.contains("prev_kv"))
+    {
+      bool prev_kv;
+      j.at("prev_kv").get_to(prev_kv);
+      req.set_prev_kv(prev_kv);
+    }
+  }
+
+  void to_json(json& j, const DeleteRangeResponse& res)
+  {
+    j["deleted"] = res.deleted();
+
+    auto kvs = json::array();
+    for (const auto& kv : res.prev_kvs())
+    {
+      json jkv = json{};
+      to_json(jkv, kv);
+      kvs.push_back(jkv);
+    }
+    j["prev_kvs"] = kvs;
   }
 }
