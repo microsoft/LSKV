@@ -11,35 +11,33 @@ import logging
 import pandas as pd
 import socket
 import os
-from typing import List
+from typing import List, Tuple
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
 
 
-def wait_for_port(port):
+def wait_for_port(port, tries=60):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    i = 0
-    while True:
+    for i in range(0, tries):
         try:
             s.connect(("127.0.0.1", port))
             logging.info(f"finished waiting for port ({port}) to be open, try {i}")
-            break
+            time.sleep(1)
+            return
         except:
-            i += 1
             logging.info(f"waiting for port ({port}) to be open, try {i}")
             time.sleep(1)
-    time.sleep(1)
+    logging.error(f"took too long waiting for port {port} ({tries}s)")
 
 
-def wait_for_file(file: str):
-    i = 0
-    while True:
+def wait_for_file(file: str, tries=60):
+    for i in range(0, tries):
         if os.path.exists(file):
             logging.info(f"finished waiting for file ({file}) to exist, try {i}")
             return
-        i += 1
         logging.info(f"waiting for file ({file}) to exist, try {i}")
         time.sleep(1)
+    logging.error(f"took too long waiting for file {file} ({tries}s)")
 
 
 class Store(abc.ABC):
@@ -55,7 +53,7 @@ class Store(abc.ABC):
     def bench(self, _bench_cmd: List[str]):
         raise NotImplemented
 
-    def wait(self):
+    def wait_for_ready(self):
         wait_for_port(self.port)
 
     @abc.abstractmethod
@@ -90,7 +88,7 @@ class EtcdStore(Store):
                 ]
                 return Popen(etcd_cmd, stdout=out, stderr=err)
 
-    def bench(self, bench_cmd: List[str]) -> str:
+    def bench(self, bench_cmd: List[str]) -> Tuple[Popen, str]:
         with open(os.path.join(self.output_dir(), "bench.out"), "w") as out:
             with open(os.path.join(self.output_dir(), "bench.err"), "w") as err:
                 timings_file = os.path.join(self.output_dir(), "timings.csv")
@@ -101,8 +99,7 @@ class EtcdStore(Store):
                     f"http://127.0.0.1:{self.port}",
                 ] + bench_cmd
                 p = Popen(bench, stdout=out, stderr=err)
-                p.wait()
-                return timings_file
+                return p, timings_file
 
     def name(self) -> str:
         return "etcd-notls-virtual"
@@ -127,11 +124,12 @@ class CCFKVSStore(Store):
                 ]
                 return Popen(kvs_cmd, stdout=out, stderr=err)
 
-    def wait(self):
+
+    def wait_for_ready(self):
         wait_for_port(self.port)
         wait_for_file(os.path.join("workspace", "sandbox_common", "user0_cert.pem"))
 
-    def bench(self, bench_cmd: List[str]) -> str:
+    def bench(self, bench_cmd: List[str]) -> Tuple[Popen, str]:
         with open(os.path.join(self.output_dir(), "bench.out"), "w") as out:
             with open(os.path.join(self.output_dir(), "bench.err"), "w") as err:
                 timings_file = os.path.join(self.output_dir(), "timings.csv")
@@ -148,8 +146,8 @@ class CCFKVSStore(Store):
                     "workspace/sandbox_common/user0_privk.pem",
                 ] + bench_cmd
                 p = Popen(bench, stdout=out, stderr=err)
-                p.wait()
-                return timings_file
+
+                return p, timings_file
 
     def name(self) -> str:
         return "ccfkvs-tls-virtual"
@@ -158,13 +156,33 @@ class CCFKVSStore(Store):
         shutil.rmtree("workspace", ignore_errors=True)
 
 
+
+def wait_with_timeout(process: Popen, duration_seconds=90):
+    for i in range(0, duration_seconds):
+        if process.poll() is None:
+            # process still running
+            logging.debug(f"waiting for process to complete, try {i}")
+            time.sleep(1)
+        else:
+            # process finished
+            logging.info(f"process completed successfully within timeout (took {i}s)")
+            return
+
+    # didn't finish in time
+    logging.error(f"killing process after timeout of {duration_seconds}s")
+    process.kill()
+    process.wait()
+    return
+
+
 def run_benchmark(store, bench_cmd: List[str]) -> str:
     proc = store.spawn()
 
-    store.wait()
+    store.wait_for_ready()
 
     logging.info(f"starting benchmark for {store.name()}")
-    timings_file = store.bench(bench_cmd)
+    bench_process, timings_file = store.bench(bench_cmd)
+    wait_with_timeout(bench_process)
     logging.info(f"stopping benchmark for {store.name()}")
 
     proc.terminate()
@@ -182,7 +200,8 @@ def run_metrics(name: str, cmd: str, file: str):
     start = df["start_micros"].min()
     end = df["end_micros"].max()
     count = df["start_micros"].count()
-    thput = count / ((end - start) / 10 ** 6)
+    total = (end - start) / 10 ** 6
+    thput = count / total
 
     latencies = (df["end_micros"] - df["start_micros"]) / 1000
     latency_p50 = latencies.quantile(0.5)
@@ -190,6 +209,8 @@ def run_metrics(name: str, cmd: str, file: str):
     latency_p99 = latencies.quantile(0.99)
     latency_p999 = latencies.quantile(0.999)
 
+    logging.info(f"             count: {count}")
+    logging.info(f"         total (s): {total}")
     logging.info(f"throughput (req/s): {thput}")
     logging.info(f"  p50 latency (ms): {latency_p50}")
     logging.info(f"  p90 latency (ms): {latency_p90}")

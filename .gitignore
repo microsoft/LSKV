@@ -14,5 +14,6 @@ bin/
 default.etcd/
 
 /.venv/
+
 /.ipynb_checkpoints/
 /plots/
