@@ -3,7 +3,6 @@
 
 #include "json.h"
 
-#include "etcd.pb.h"
 #include "nlohmann/json.hpp"
 
 namespace etcdserverpb
