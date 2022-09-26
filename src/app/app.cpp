@@ -17,6 +17,58 @@
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
 
+template <typename I, typename O>
+std::function<ccf::jsonhandler::JsonAdapterResponse(
+  ccf::endpoints::ReadOnlyEndpointContext&, nlohmann::json&&)>
+json_to_grpc_adapter_ro(
+  std::function<ccf::grpc::GrpcAdapterResponse<O>(
+    ccf::endpoints::ReadOnlyEndpointContext&, const I&&)> f)
+{
+  return
+    [&](ccf::endpoints::ReadOnlyEndpointContext& ctx, nlohmann::json&& params) {
+      const I payload = params.get<I>();
+      auto res = f(ctx, std::move(payload));
+      auto success = std::get_if<ccf::grpc::SuccessResponse<O>>(&res);
+      if (success != nullptr)
+      {
+        // really was success!
+        nlohmann::json resp = success->body;
+        return ccf::make_success(resp);
+      }
+      else
+      {
+        // failure
+        return ccf::make_error(
+          HTTP_STATUS_BAD_REQUEST, ccf::errors::InvalidInput, "");
+      }
+    };
+}
+
+template <typename I, typename O>
+std::function<ccf::jsonhandler::JsonAdapterResponse(
+  ccf::endpoints::EndpointContext&, nlohmann::json&&)>
+json_to_grpc_adapter(std::function<ccf::grpc::GrpcAdapterResponse<O>(
+                       ccf::endpoints::EndpointContext&, const I&&)> f)
+{
+  return [&](ccf::endpoints::EndpointContext& ctx, nlohmann::json&& params) {
+    const I payload = params.get<I>();
+    auto res = f(ctx, std::move(payload));
+    auto success = std::get_if<ccf::grpc::SuccessResponse<O>>(&res);
+    if (success != nullptr)
+    {
+      // really was success!
+      nlohmann::json resp = success->body;
+      return ccf::make_success(resp);
+    }
+    else
+    {
+      // failure
+      return ccf::make_error(
+        HTTP_STATUS_BAD_REQUEST, ccf::errors::InvalidInput, "");
+    }
+  };
+}
+
 namespace app
 {
   class AppHandlers : public ccf::UserEndpointRegistry
@@ -41,7 +93,7 @@ namespace app
 
       auto range = [this](
                      ccf::endpoints::ReadOnlyEndpointContext& ctx,
-                     etcdserverpb::RangeRequest&& payload) {
+                     const etcdserverpb::RangeRequest&& payload) {
         auto kvs = store::KVStore(ctx.tx);
         return this->range(kvs, std::move(payload));
       };
@@ -50,34 +102,12 @@ namespace app
         etcdserverpb, kv, "Range", range, ccf::no_auth_required)
         .install();
 
-      auto range_json = [this](
-                          ccf::endpoints::ReadOnlyEndpointContext& ctx,
-                          nlohmann::json&& params) {
-        const auto payload = params.get<etcdserverpb::RangeRequest>();
-        auto kvs = store::KVStore(ctx.tx);
-        auto res = this->range(kvs, std::move(payload));
-
-        auto success =
-          std::get_if<ccf::grpc::SuccessResponse<etcdserverpb::RangeResponse>>(
-            &res);
-        if (success != nullptr)
-        {
-          // really was success!
-          nlohmann::json resp = success->body;
-          return ccf::make_success(resp);
-        }
-        else
-        {
-          // failure
-          return ccf::make_error(
-            HTTP_STATUS_BAD_REQUEST, ccf::errors::InvalidInput, "");
-        }
-      };
-
       make_read_only_endpoint(
         "/v3/kv/range",
         HTTP_POST,
-        ccf::json_read_only_adapter(range_json),
+        ccf::json_read_only_adapter(json_to_grpc_adapter_ro<
+                                    etcdserverpb::RangeRequest,
+                                    etcdserverpb::RangeResponse>(range)),
         ccf::no_auth_required)
         .install();
 
@@ -85,33 +115,12 @@ namespace app
         etcdserverpb, kv, "Put", this->put, ccf::no_auth_required)
         .install();
 
-      auto put_json =
-        [this](ccf::endpoints::EndpointContext& ctx, nlohmann::json&& params) {
-          const auto payload = params.get<etcdserverpb::PutRequest>();
-          auto kvs = store::KVStore(ctx.tx);
-          auto res = this->put(ctx, std::move(payload));
-
-          auto success =
-            std::get_if<ccf::grpc::SuccessResponse<etcdserverpb::PutResponse>>(
-              &res);
-          if (success != nullptr)
-          {
-            // really was success!
-            nlohmann::json resp = success->body;
-            return ccf::make_success(resp);
-          }
-          else
-          {
-            // failure
-            return ccf::make_error(
-              HTTP_STATUS_BAD_REQUEST, ccf::errors::InvalidInput, "");
-          }
-        };
-
       make_endpoint(
         "/v3/kv/put",
         HTTP_POST,
-        ccf::json_adapter(put_json),
+        ccf::json_adapter(json_to_grpc_adapter<
+                          etcdserverpb::PutRequest,
+                          etcdserverpb::PutResponse>(put)),
         ccf::no_auth_required)
         .install();
 
@@ -125,33 +134,12 @@ namespace app
         ccf::no_auth_required)
         .install();
 
-      auto delete_range_json = [this](
-                                 ccf::endpoints::EndpointContext& ctx,
-                                 nlohmann::json&& params) {
-        const auto payload = params.get<etcdserverpb::DeleteRangeRequest>();
-        auto kvs = store::KVStore(ctx.tx);
-        auto res = this->delete_range(ctx, std::move(payload));
-
-        auto success = std::get_if<
-          ccf::grpc::SuccessResponse<etcdserverpb::DeleteRangeResponse>>(&res);
-        if (success != nullptr)
-        {
-          // really was success!
-          nlohmann::json resp = success->body;
-          return ccf::make_success(resp);
-        }
-        else
-        {
-          // failure
-          return ccf::make_error(
-            HTTP_STATUS_BAD_REQUEST, ccf::errors::InvalidInput, "");
-        }
-      };
-
       make_endpoint(
         "/v3/kv/delete_range",
         HTTP_POST,
-        ccf::json_adapter(delete_range_json),
+        ccf::json_adapter(json_to_grpc_adapter<
+                          etcdserverpb::DeleteRangeRequest,
+                          etcdserverpb::DeleteRangeResponse>(delete_range)),
         ccf::no_auth_required)
         .install();
 
