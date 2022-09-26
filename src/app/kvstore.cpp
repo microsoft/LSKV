@@ -15,8 +15,6 @@ namespace app::store
 {
   using json = nlohmann::json;
 
-  static constexpr auto RECORDS = "records";
-
   Value::Value(const std::string& v)
   {
     data = std::vector<uint8_t>(v.begin(), v.end());
