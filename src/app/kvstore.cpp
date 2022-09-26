@@ -15,8 +15,6 @@ namespace app::store
 {
   using json = nlohmann::json;
 
-  static constexpr auto RECORDS = "records";
-
   Value::Value(const std::string& v)
   {
     data = std::vector<uint8_t>(v.begin(), v.end());
@@ -75,6 +73,17 @@ namespace app::store
     hydrate_value(key, val);
 
     return val;
+  }
+
+  void KVStore::foreach(
+    const std::function<bool(const KVStore::K&, const KVStore::V&)>& fn)
+  {
+    inner_map->foreach([&](auto& key, auto& value) -> bool {
+      auto k = KVStore::KSerialiser::from_serialised(key);
+      auto v = KVStore::VSerialiser::from_serialised(value);
+      hydrate_value(k, v);
+      return fn(k, v);
+    });
   }
 
   void KVStore::range(
