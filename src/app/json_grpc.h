@@ -25,7 +25,11 @@ namespace app::json_grpc
 
     std::string input(request_body.begin(), request_body.end());
     In in;
-    google::protobuf::util::JsonStringToMessage(input, &in);
+    auto status = google::protobuf::util::JsonStringToMessage(input, &in);
+    if (!status.ok())
+    {
+      throw std::runtime_error(status.ToString());
+    }
 
     return in;
   }
@@ -46,7 +50,12 @@ namespace app::json_grpc
           http::headers::CONTENT_TYPE, http::headervalues::contenttype::JSON);
 
         std::string json_out;
-        google::protobuf::util::MessageToJsonString(resp, &json_out);
+        auto status =
+          google::protobuf::util::MessageToJsonString(resp, &json_out);
+        if (!status.ok())
+        {
+          throw std::runtime_error(status.ToString());
+        }
 
         ctx->set_response_body(
           std::vector<uint8_t>(json_out.begin(), json_out.end()));
