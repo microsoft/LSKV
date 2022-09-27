@@ -36,6 +36,7 @@ namespace app::json_grpc
     if (success_response != nullptr)
     {
       const auto& resp = success_response->body;
+      ctx->set_response_status(HTTP_STATUS_OK);
       if constexpr (!std::is_same_v<Out, ccf::grpc::EmptyResponse>)
       {
         ctx->set_response_header(
@@ -50,8 +51,17 @@ namespace app::json_grpc
     }
     else
     {
-      //   auto error_response = std::get<ErrorResponse>(r);
+      auto error_response = std::get<ccf::grpc::ErrorResponse>(r);
       ctx->set_response_status(HTTP_STATUS_BAD_REQUEST);
+      ctx->set_response_header(
+        http::headers::CONTENT_TYPE, http::headervalues::contenttype::JSON);
+
+      std::string json_out;
+      google::protobuf::util::MessageToJsonString(
+        error_response.status, &json_out);
+
+      ctx->set_response_body(
+        std::vector<uint8_t>(json_out.begin(), json_out.end()));
     }
   }
 
