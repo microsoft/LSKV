@@ -305,7 +305,7 @@ message LeaseRevokeResponse {
 }
 
 message LeaseCheckpoint {
-    // ID is the lease ID to checkpoint.
+  // ID is the lease ID to checkpoint.
   int64 ID = 1;
 
   // Remaining_TTL is the remaining time until expiry of the lease.
