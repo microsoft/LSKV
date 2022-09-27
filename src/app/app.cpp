@@ -12,6 +12,7 @@
 #include "index.h"
 #include "json_grpc.h"
 #include "kvstore.h"
+#include "leases.h"
 
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
@@ -37,6 +38,7 @@ namespace app
 
       const auto etcdserverpb = "etcdserverpb";
       const auto kv = "KV";
+      const auto lease = "Lease";
 
       auto range = [this](
                      ccf::endpoints::ReadOnlyEndpointContext& ctx,
@@ -111,6 +113,26 @@ namespace app
         path,
         HTTP_POST,
         app::json_grpc::json_grpc_adapter<In, Out>(f),
+        ccf::no_auth_required)
+        .install();
+
+      make_grpc<
+        etcdserverpb::LeaseGrantRequest,
+        etcdserverpb::LeaseGrantResponse>(
+        etcdserverpb,
+        lease,
+        "LeaseGrant",
+        this->lease_grant,
+        ccf::no_auth_required)
+        .install();
+
+      make_grpc<
+        etcdserverpb::LeaseRevokeRequest,
+        etcdserverpb::LeaseRevokeResponse>(
+        etcdserverpb,
+        lease,
+        "LeaseRevoke",
+        this->lease_revoke,
         ccf::no_auth_required)
         .install();
     }
@@ -588,6 +610,46 @@ namespace app
       {
         return std::nullopt;
       }
+    }
+
+    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseGrantResponse>
+    lease_grant(
+      ccf::endpoints::EndpointContext& ctx,
+      etcdserverpb::LeaseGrantRequest&& payload)
+    {
+      etcdserverpb::LeaseGrantResponse response;
+      CCF_APP_DEBUG("LEASE GRANT = {} {}", payload.id(), payload.ttl());
+
+      // decide whether to use the given ttl or one chosen by us
+      int64_t ttl = 2;
+
+      auto leases =
+        ctx.tx.template rw<kv::Map<int64_t, int64_t>>(app::leases::LEASES);
+      // randomly generate an id value and write it to a leases map
+      // (ignore their lease id for now)
+      int64_t id = 1;
+      leases->put(id, ttl);
+
+      response.set_id(id);
+      response.set_ttl(ttl);
+
+      return ccf::grpc::make_success(response);
+    }
+
+    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseRevokeResponse>
+    lease_revoke(
+      ccf::endpoints::EndpointContext& ctx,
+      etcdserverpb::LeaseRevokeRequest&& payload)
+    {
+      etcdserverpb::LeaseRevokeResponse response;
+
+      auto leases =
+        ctx.tx.template rw<kv::Map<int64_t, int64_t>>(app::leases::LEASES);
+
+      // TODO: also remove the keys associated with it
+      leases->remove(payload.id());
+
+      return ccf::grpc::make_success(response);
     }
   };
 } // namespace app
