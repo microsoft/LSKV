@@ -117,6 +117,8 @@ class CCFKVSStore(Store):
                     "/opt/ccf/bin/sandbox.sh",
                     "-p",
                     "build/libccf_kvs.virtual.so",
+                    "--workspace",
+                    self.workspace(),
                     "--node",
                     f"local://127.0.0.1:{self.port}",
                     "--verbose",
@@ -124,9 +126,14 @@ class CCFKVSStore(Store):
                 ]
                 return Popen(kvs_cmd, stdout=out, stderr=err)
 
+    def workspace(self):
+        return os.path.join(self.output_dir(), "workspace")
+
     def wait_for_ready(self):
         wait_for_port(self.port)
-        wait_for_file(os.path.join("workspace", "sandbox_common", "user0_cert.pem"))
+        wait_for_file(
+            os.path.join(self.workspace(), "sandbox_common", "user0_cert.pem")
+        )
 
     def bench(self, bench_cmd: List[str]) -> Tuple[Popen, str]:
         with open(os.path.join(self.output_dir(), "bench.out"), "w") as out:
@@ -138,11 +145,11 @@ class CCFKVSStore(Store):
                     "--endpoints",
                     f"https://127.0.0.1:{self.port}",
                     "--cacert",
-                    "workspace/sandbox_common/service_cert.pem",
+                    f"{self.workspace()}/sandbox_common/service_cert.pem",
                     "--cert",
-                    "workspace/sandbox_common/user0_cert.pem",
+                    f"{self.workspace()}/sandbox_common/user0_cert.pem",
                     "--key",
-                    "workspace/sandbox_common/user0_privk.pem",
+                    f"{self.workspace()}/sandbox_common/user0_privk.pem",
                 ] + bench_cmd
                 p = Popen(bench, stdout=out, stderr=err)
                 return p, timings_file
@@ -151,7 +158,7 @@ class CCFKVSStore(Store):
         return "ccfkvs-tls-virtual"
 
     def cleanup(self):
-        shutil.rmtree("workspace", ignore_errors=True)
+        shutil.rmtree(self.workspace(), ignore_errors=True)
 
 
 def wait_with_timeout(process: Popen, duration_seconds=90):
