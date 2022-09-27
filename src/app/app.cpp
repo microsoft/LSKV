@@ -10,6 +10,7 @@
 #include "etcd.pb.h"
 #include "grpc.h" // TODO(#25): use grpc from ccf
 #include "index.h"
+#include "json_grpc.h"
 #include "kvstore.h"
 
 #define FMT_HEADER_ONLY
@@ -48,8 +49,26 @@ namespace app
         etcdserverpb, kv, "Range", range, ccf::no_auth_required)
         .install();
 
+      make_read_only_endpoint(
+        "/v3/kv/range",
+        HTTP_POST,
+        app::json_grpc::json_grpc_adapter_ro<
+          etcdserverpb::RangeRequest,
+          etcdserverpb::RangeResponse>(range),
+        ccf::no_auth_required)
+        .install();
+
       make_grpc<etcdserverpb::PutRequest, etcdserverpb::PutResponse>(
         etcdserverpb, kv, "Put", this->put, ccf::no_auth_required)
+        .install();
+
+      make_endpoint(
+        "/v3/kv/put",
+        HTTP_POST,
+        app::json_grpc::json_grpc_adapter<
+          etcdserverpb::PutRequest,
+          etcdserverpb::PutResponse>(put),
+        ccf::no_auth_required)
         .install();
 
       make_grpc<
@@ -59,6 +78,15 @@ namespace app
         kv,
         "DeleteRange",
         this->delete_range,
+        ccf::no_auth_required)
+        .install();
+
+      make_endpoint(
+        "/v3/kv/delete_range",
+        HTTP_POST,
+        app::json_grpc::json_grpc_adapter<
+          etcdserverpb::DeleteRangeRequest,
+          etcdserverpb::DeleteRangeResponse>(delete_range),
         ccf::no_auth_required)
         .install();
 
