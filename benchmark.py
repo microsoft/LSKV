@@ -127,7 +127,7 @@ class CCFKVSStore(Store):
                 return Popen(kvs_cmd, stdout=out, stderr=err)
 
     def workspace(self):
-        return os.path.join(self.output_dir(), "workspace")
+        return os.path.join(os.getcwd(), self.output_dir(), "workspace")
 
     def wait_for_ready(self):
         wait_for_port(self.port)
