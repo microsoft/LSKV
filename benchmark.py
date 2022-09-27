@@ -157,9 +157,6 @@ class CCFKVSStore(Store):
     def name(self) -> str:
         return "ccfkvs-tls-virtual"
 
-    def cleanup(self):
-        shutil.rmtree(self.workspace(), ignore_errors=True)
-
 
 def wait_with_timeout(process: Popen, duration_seconds=90):
     for i in range(0, duration_seconds):
