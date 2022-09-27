@@ -10,10 +10,8 @@
 #include "etcd.pb.h"
 #include "grpc.h" // TODO(#25): use grpc from ccf
 #include "index.h"
-#include "json.h"
 #include "json_grpc.h"
 #include "kvstore.h"
-#include "nlohmann/json.hpp"
 
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
