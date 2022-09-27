@@ -16,9 +16,20 @@ build-virtual:
 	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja ..
 	cd $(BUILD) && ninja
 
+.PHONY: build-sgx
+build-sgx:
+	mkdir -p $(BUILD)
+	cd $(BUILD)
+	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=sgx -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja ..
+	cd $(BUILD) && ninja
+
 .PHONY: run-virtual
 run-virtual: build-virtual
 	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/libccf_kvs.virtual.so --http2 --verbose
+
+.PHONY: run-sgx
+run-sgx: build-sgx
+	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/libccf_kvs.enclave.so.signed -e release --http2 --verbose
 
 .PHONY: test-virtual
 test-virtual: build-virtual patched-etcd
@@ -49,7 +60,7 @@ $(BIN_DIR)/etcd:
 $(BIN_DIR)/etcdctl: $(BIN_DIR)/etcd
 
 .PHONY: benchmark
-benchmark: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual .venv certs
+benchmark: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual build-sgx .venv certs
 	. .venv/bin/activate && python3 benchmark.py
 
 .venv: requirements.txt

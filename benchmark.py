@@ -140,21 +140,32 @@ class EtcdStore(Store):
 
 
 class CCFKVSStore(Store):
+    def __init__(self, bench_dir: str, port: int, sgx: bool):
+        Store.__init__(self, bench_dir, port)
+        self.sgx = sgx
+
     def spawn(self) -> Popen:
         logging.info(f"spawning {self.name()}")
         with open(os.path.join(self.output_dir(), "node.out"), "w") as out:
             with open(os.path.join(self.output_dir(), "node.err"), "w") as err:
-                kvs_cmd = [
-                    "/opt/ccf/bin/sandbox.sh",
-                    "-p",
-                    "build/libccf_kvs.virtual.so",
-                    "--workspace",
-                    self.workspace(),
-                    "--node",
-                    f"local://127.0.0.1:{self.port}",
-                    "--verbose",
-                    "--http2",
-                ]
+                libargs = ["build/libccf_kvs.virtual.so"]
+                if self.sgx:
+                    libargs = ["build/libccf_kvs.enclave.so.signed", "-e", "release"]
+                kvs_cmd = (
+                    [
+                        "/opt/ccf/bin/sandbox.sh",
+                        "-p",
+                    ]
+                    + libargs
+                    + [
+                        "--workspace",
+                        self.workspace(),
+                        "--node",
+                        f"local://127.0.0.1:{self.port}",
+                        "--verbose",
+                        "--http2",
+                    ]
+                )
                 return Popen(kvs_cmd, stdout=out, stderr=err)
 
     def workspace(self):
@@ -186,7 +197,10 @@ class CCFKVSStore(Store):
                 return p, timings_file
 
     def name(self) -> str:
-        return "ccfkvs-tls-virtual"
+        if self.sgx:
+            return "ccfkvs-tls-sgx"
+        else:
+            return "ccfkvs-tls-virtual"
 
 
 def wait_with_timeout(process: Popen, duration_seconds=90):
@@ -232,7 +246,7 @@ def run_metrics(name: str, cmd: str, file: str):
     start = df["start_micros"].min()
     end = df["end_micros"].max()
     count = df["start_micros"].count()
-    total = (end - start) / 10 ** 6
+    total = (end - start) / 10**6
     thput = count / total
 
     latencies = (df["end_micros"] - df["start_micros"]) / 1000
@@ -280,15 +294,23 @@ def main():
         d = os.path.join(bench_dir, bench_cmd_string)
         os.makedirs(d)
 
+        # plain
         store = EtcdStore(d, port, False)
         timings_file = run_benchmark(store, bench_cmd)
         run_metrics(store.name(), bench_cmd[0], timings_file)
 
+        # tls
         store = EtcdStore(d, port, True)
         timings_file = run_benchmark(store, bench_cmd)
         run_metrics(store.name(), bench_cmd[0], timings_file)
 
-        store = CCFKVSStore(d, port)
+        # virtual
+        store = CCFKVSStore(d, port, False)
+        timings_file = run_benchmark(store, bench_cmd)
+        run_metrics(store.name(), bench_cmd[0], timings_file)
+
+        # sgx
+        store = CCFKVSStore(d, port, True)
         timings_file = run_benchmark(store, bench_cmd)
         run_metrics(store.name(), bench_cmd[0], timings_file)
 
