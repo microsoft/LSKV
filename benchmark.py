@@ -16,28 +16,30 @@ from typing import List, Tuple
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
 
 
-def wait_for_port(port, tries=60):
+def wait_for_port(port, tries=60) -> bool:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     for i in range(0, tries):
         try:
             s.connect(("127.0.0.1", port))
             logging.info(f"finished waiting for port ({port}) to be open, try {i}")
             time.sleep(1)
-            return
+            return True
         except:
             logging.info(f"waiting for port ({port}) to be open, try {i}")
             time.sleep(1)
     logging.error(f"took too long waiting for port {port} ({tries}s)")
+    return False
 
 
-def wait_for_file(file: str, tries=60):
+def wait_for_file(file: str, tries=60) -> bool:
     for i in range(0, tries):
         if os.path.exists(file):
             logging.info(f"finished waiting for file ({file}) to exist, try {i}")
-            return
+            return True
         logging.info(f"waiting for file ({file}) to exist, try {i}")
         time.sleep(1)
     logging.error(f"took too long waiting for file {file} ({tries}s)")
+    return False
 
 
 class Store(abc.ABC):
@@ -152,10 +154,7 @@ class CCFKVSStore(Store):
                 if self.sgx:
                     libargs = ["build/libccf_kvs.enclave.so.signed", "-e", "release"]
                 kvs_cmd = (
-                    [
-                        "/opt/ccf/bin/sandbox.sh",
-                        "-p",
-                    ]
+                    ["/opt/ccf/bin/sandbox.sh", "-p"]
                     + libargs
                     + [
                         "--workspace",
@@ -172,10 +171,25 @@ class CCFKVSStore(Store):
         return os.path.join(os.getcwd(), self.output_dir(), "workspace")
 
     def wait_for_ready(self):
-        wait_for_port(self.port)
-        wait_for_file(
+        def show_logs():
+            out = "\n".join(
+                open(os.path.join(self.output_dir(), "node.out"), "r").readlines()
+            )
+            print("node.out: ", out)
+            print()
+            err = "\n".join(
+                open(os.path.join(self.output_dir(), "node.err"), "r").readlines()
+            )
+            print("node.err: ", err)
+
+        if not wait_for_port(self.port):
+            show_logs()
+            return
+        if not wait_for_file(
             os.path.join(self.workspace(), "sandbox_common", "user0_cert.pem")
-        )
+        ):
+            show_logs()
+            return
 
     def bench(self, bench_cmd: List[str]) -> Tuple[Popen, str]:
         with open(os.path.join(self.output_dir(), "bench.out"), "w") as out:
@@ -246,7 +260,7 @@ def run_metrics(name: str, cmd: str, file: str):
     start = df["start_micros"].min()
     end = df["end_micros"].max()
     count = df["start_micros"].count()
-    total = (end - start) / 10**6
+    total = (end - start) / 10 ** 6
     thput = count / total
 
     latencies = (df["end_micros"] - df["start_micros"]) / 1000
