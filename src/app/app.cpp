@@ -234,8 +234,7 @@ namespace app
     }
 
     static ccf::grpc::GrpcAdapterResponse<etcdserverpb::PutResponse> put(
-      ccf::endpoints::EndpointContext& ctx,
-      etcdserverpb::PutRequest&& payload)
+      ccf::endpoints::EndpointContext& ctx, etcdserverpb::PutRequest&& payload)
     {
       etcdserverpb::PutResponse put_response;
       CCF_APP_DEBUG(
