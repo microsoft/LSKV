@@ -11,60 +11,12 @@
 #include "grpc.h" // TODO(#25): use grpc from ccf
 #include "index.h"
 #include "json.h"
+#include "json_grpc.h"
 #include "kvstore.h"
 #include "nlohmann/json.hpp"
 
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
-
-template <typename I, typename O>
-ccf::ReadOnlyHandlerWithJson json_to_grpc_adapter_ro(
-  std::function<ccf::grpc::GrpcAdapterResponse<O>(
-    ccf::endpoints::ReadOnlyEndpointContext&, const I&&)> f)
-{
-  return
-    [f](ccf::endpoints::ReadOnlyEndpointContext& ctx, nlohmann::json&& params) {
-      const I payload = params.get<I>();
-      auto res = f(ctx, std::move(payload));
-      auto success = std::get_if<ccf::grpc::SuccessResponse<O>>(&res);
-      if (success != nullptr)
-      {
-        // really was success!
-        nlohmann::json resp = success->body;
-        return ccf::make_success(resp);
-      }
-      else
-      {
-        // failure
-        return ccf::make_error(
-          HTTP_STATUS_BAD_REQUEST, ccf::errors::InvalidInput, "");
-      }
-    };
-}
-
-template <typename I, typename O>
-ccf::HandlerJsonParamsAndForward json_to_grpc_adapter(
-  std::function<ccf::grpc::GrpcAdapterResponse<O>(
-    ccf::endpoints::EndpointContext&, const I&&)> f)
-{
-  return [f](ccf::endpoints::EndpointContext& ctx, nlohmann::json&& params) {
-    const I payload = params.get<I>();
-    auto res = f(ctx, std::move(payload));
-    auto success = std::get_if<ccf::grpc::SuccessResponse<O>>(&res);
-    if (success != nullptr)
-    {
-      // really was success!
-      nlohmann::json resp = success->body;
-      return ccf::make_success(resp);
-    }
-    else
-    {
-      // failure
-      return ccf::make_error(
-        HTTP_STATUS_BAD_REQUEST, ccf::errors::InvalidInput, "");
-    }
-  };
-}
 
 namespace app
 {
@@ -102,9 +54,9 @@ namespace app
       make_read_only_endpoint(
         "/v3/kv/range",
         HTTP_POST,
-        ccf::json_read_only_adapter(json_to_grpc_adapter_ro<
-                                    etcdserverpb::RangeRequest,
-                                    etcdserverpb::RangeResponse>(range)),
+        app::json_grpc::json_grpc_adapter_ro<
+          etcdserverpb::RangeRequest,
+          etcdserverpb::RangeResponse>(range),
         ccf::no_auth_required)
         .install();
 
@@ -115,9 +67,9 @@ namespace app
       make_endpoint(
         "/v3/kv/put",
         HTTP_POST,
-        ccf::json_adapter(json_to_grpc_adapter<
-                          etcdserverpb::PutRequest,
-                          etcdserverpb::PutResponse>(put)),
+        app::json_grpc::json_grpc_adapter<
+          etcdserverpb::PutRequest,
+          etcdserverpb::PutResponse>(put),
         ccf::no_auth_required)
         .install();
 
@@ -134,9 +86,9 @@ namespace app
       make_endpoint(
         "/v3/kv/delete_range",
         HTTP_POST,
-        ccf::json_adapter(json_to_grpc_adapter<
-                          etcdserverpb::DeleteRangeRequest,
-                          etcdserverpb::DeleteRangeResponse>(delete_range)),
+        app::json_grpc::json_grpc_adapter<
+          etcdserverpb::DeleteRangeRequest,
+          etcdserverpb::DeleteRangeResponse>(delete_range),
         ccf::no_auth_required)
         .install();
 
