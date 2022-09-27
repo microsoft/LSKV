@@ -78,17 +78,8 @@ namespace app::json_grpc
   }
 
   template <typename In, typename Out>
-  using JsonGrpcReadOnlyEndpoint =
-    std::function<ccf::grpc::GrpcAdapterResponse<Out>(
-      ccf::endpoints::ReadOnlyEndpointContext& ctx, In&& payload)>;
-
-  template <typename In, typename Out>
-  using JsonGrpcEndpoint = std::function<ccf::grpc::GrpcAdapterResponse<Out>(
-    ccf::endpoints::EndpointContext& ctx, In&& payload)>;
-
-  template <typename In, typename Out>
   ccf::endpoints::EndpointFunction json_grpc_adapter(
-    const JsonGrpcEndpoint<In, Out>& f)
+    const ccf::GrpcEndpoint<In, Out>& f)
   {
     return [f](ccf::endpoints::EndpointContext& ctx) {
       set_json_grpc_response<Out>(
@@ -98,7 +89,7 @@ namespace app::json_grpc
 
   template <typename In, typename Out>
   ccf::endpoints::ReadOnlyEndpointFunction json_grpc_adapter_ro(
-    const JsonGrpcReadOnlyEndpoint<In, Out>& f)
+    const ccf::GrpcReadOnlyEndpoint<In, Out>& f)
   {
     return [f](ccf::endpoints::ReadOnlyEndpointContext& ctx) {
       set_json_grpc_response<Out>(
