@@ -73,12 +73,15 @@ class Store(abc.ABC):
 
 
 class EtcdStore(Store):
+    def __init__(self, bench_dir: str, port: int, tls: bool):
+        Store.__init__(self, bench_dir, port)
+        self.tls = tls
+
     def spawn(self) -> Popen:
         logging.info(f"spawning {self.name()}")
-        client_urls = f"http://127.0.0.1:{self.port}"
+        client_urls = f"{self.scheme()}://127.0.0.1:{self.port}"
         with open(os.path.join(self.output_dir(), "node.out"), "w") as out:
             with open(os.path.join(self.output_dir(), "node.err"), "w") as err:
-                # TODO(#41): enable tls connection for etcd
                 etcd_cmd = [
                     "bin/etcd",
                     "--listen-client-urls",
@@ -86,6 +89,15 @@ class EtcdStore(Store):
                     "--advertise-client-urls",
                     client_urls,
                 ]
+                if self.tls:
+                    etcd_cmd += [
+                        "--cert-file",
+                        "certs/server.pem",
+                        "--key-file",
+                        "certs/server-key.pem",
+                        "--trusted-ca-file",
+                        "certs/ca.pem",
+                    ]
                 return Popen(etcd_cmd, stdout=out, stderr=err)
 
     def bench(self, bench_cmd: List[str]) -> Tuple[Popen, str]:
@@ -96,13 +108,32 @@ class EtcdStore(Store):
                 bench = [
                     "bin/benchmark",
                     "--endpoints",
-                    f"http://127.0.0.1:{self.port}",
-                ] + bench_cmd
+                    f"{self.scheme()}://127.0.0.1:{self.port}",
+                ]
+                if self.tls:
+                    bench += [
+                        "--cacert",
+                        "certs/ca.pem",
+                        "--cert",
+                        "certs/client.pem",
+                        "--key",
+                        "certs/client-key.pem",
+                    ]
+                bench += bench_cmd
                 p = Popen(bench, stdout=out, stderr=err)
                 return p, timings_file
 
+    def scheme(self) -> str:
+        if self.tls:
+            return "https"
+        else:
+            return "http"
+
     def name(self) -> str:
-        return "etcd-notls-virtual"
+        if self.tls:
+            return "etcd-tls-virtual"
+        else:
+            return "etcd-plain-virtual"
 
     def cleanup(self):
         shutil.rmtree("default.etcd", ignore_errors=True)
@@ -117,6 +148,8 @@ class CCFKVSStore(Store):
                     "/opt/ccf/bin/sandbox.sh",
                     "-p",
                     "build/libccf_kvs.virtual.so",
+                    "--workspace",
+                    self.workspace(),
                     "--node",
                     f"local://127.0.0.1:{self.port}",
                     "--verbose",
@@ -124,9 +157,14 @@ class CCFKVSStore(Store):
                 ]
                 return Popen(kvs_cmd, stdout=out, stderr=err)
 
+    def workspace(self):
+        return os.path.join(os.getcwd(), self.output_dir(), "workspace")
+
     def wait_for_ready(self):
         wait_for_port(self.port)
-        wait_for_file(os.path.join("workspace", "sandbox_common", "user0_cert.pem"))
+        wait_for_file(
+            os.path.join(self.workspace(), "sandbox_common", "user0_cert.pem")
+        )
 
     def bench(self, bench_cmd: List[str]) -> Tuple[Popen, str]:
         with open(os.path.join(self.output_dir(), "bench.out"), "w") as out:
@@ -138,20 +176,17 @@ class CCFKVSStore(Store):
                     "--endpoints",
                     f"https://127.0.0.1:{self.port}",
                     "--cacert",
-                    "workspace/sandbox_common/service_cert.pem",
+                    f"{self.workspace()}/sandbox_common/service_cert.pem",
                     "--cert",
-                    "workspace/sandbox_common/user0_cert.pem",
+                    f"{self.workspace()}/sandbox_common/user0_cert.pem",
                     "--key",
-                    "workspace/sandbox_common/user0_privk.pem",
+                    f"{self.workspace()}/sandbox_common/user0_privk.pem",
                 ] + bench_cmd
                 p = Popen(bench, stdout=out, stderr=err)
                 return p, timings_file
 
     def name(self) -> str:
         return "ccfkvs-tls-virtual"
-
-    def cleanup(self):
-        shutil.rmtree("workspace", ignore_errors=True)
 
 
 def wait_with_timeout(process: Popen, duration_seconds=90):
@@ -245,7 +280,11 @@ def main():
         d = os.path.join(bench_dir, bench_cmd_string)
         os.makedirs(d)
 
-        store = EtcdStore(d, port)
+        store = EtcdStore(d, port, False)
+        timings_file = run_benchmark(store, bench_cmd)
+        run_metrics(store.name(), bench_cmd[0], timings_file)
+
+        store = EtcdStore(d, port, True)
         timings_file = run_benchmark(store, bench_cmd)
         run_metrics(store.name(), bench_cmd[0], timings_file)
 

@@ -6,6 +6,7 @@ CXX="/opt/oe_lvi/clang++-10"
 
 ETCD_VER="v3.5.4"
 ETCD_DOWNLOAD_URL=https://github.com/etcd-io/etcd/releases/download
+
 BIN_DIR=bin
 
 .PHONY: build-virtual
@@ -47,7 +48,8 @@ $(BIN_DIR)/etcd:
 
 $(BIN_DIR)/etcdctl: $(BIN_DIR)/etcd
 
-benchmark: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual .venv
+.PHONY: benchmark
+benchmark: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual .venv certs
 	. .venv/bin/activate && python3 benchmark.py
 
 .venv: requirements.txt
@@ -61,6 +63,23 @@ notebook: .venv
 .PHONY: clear-notebook
 clear-notebook: .venv
 	. .venv/bin/activate && jupyter nbconvert --clear-output *.ipynb
+
+$(BIN_DIR)/cfssl:
+	mkdir -p $(BIN_DIR)
+	curl -s -L -o $(BIN_DIR)/cfssl https://pkg.cfssl.org/R1.2/cfssl_linux-amd64
+	curl -s -L -o $(BIN_DIR)/cfssljson https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64
+	chmod +x $(BIN_DIR)/cfssl
+	chmod +x $(BIN_DIR)/cfssljson
+
+$(BIN_DIR)/cfssljson: $(BIN_DIR)/cfssl
+
+.PHONY: certs
+certs: $(BIN_DIR)/cfssl $(BIN_DIR)/cfssljson
+	rm -rf certs
+	mkdir -p certs
+	cd certs && ../$(BIN_DIR)/cfssl gencert -initca ../certs-config/ca-csr.json | ../$(BIN_DIR)/cfssljson -bare ca -
+	cd certs && ../$(BIN_DIR)/cfssl gencert -ca ../certs/ca.pem -ca-key ../certs/ca-key.pem -config ../certs-config/ca-config.json -profile server ../certs-config/server.json | ../$(BIN_DIR)/cfssljson -bare server -
+	cd certs && ../$(BIN_DIR)/cfssl gencert -ca ../certs/ca.pem -ca-key ../certs/ca-key.pem -config ../certs-config/ca-config.json -profile client ../certs-config/client.json | ../$(BIN_DIR)/cfssljson -bare client -
 
 .PHONY: clean
 clean:
