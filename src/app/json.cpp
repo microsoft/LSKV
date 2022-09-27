@@ -3,6 +3,7 @@
 
 #include "json.h"
 
+#include "ccf/crypto/base64.h"
 #include "nlohmann/json.hpp"
 
 #define CONTAINS_THEN_SET(ty, var) \
@@ -13,16 +14,33 @@
     req.set_##var(v); \
   }
 
+std::string to_base64(const std::string& d)
+{
+  std::vector<uint8_t> v(d.begin(), d.end());
+  return crypto::b64_from_raw(v);
+}
+
+std::string from_base64(const std::string& b)
+{
+  auto d = crypto::raw_from_b64(b);
+  return std::string(d.begin(), d.end());
+}
+
 namespace etcdserverpb
 {
   using json = nlohmann::json;
 
   void from_json(const json& j, RangeRequest& req)
   {
-    j.at("key").get_to(*req.mutable_key());
+    std::string key_b64;
+    j.at("key").get_to(key_b64);
+    req.set_key(from_base64(key_b64));
+
     if (j.contains("range_end"))
     {
-      j.at("range_end").get_to(*req.mutable_range_end());
+      std::string range_end_b64;
+      j.at("range_end").get_to(range_end_b64);
+      req.set_range_end(from_base64(range_end_b64));
     }
 
     CONTAINS_THEN_SET(int64_t, limit);
@@ -41,11 +59,11 @@ namespace etcdserverpb
 
   void to_json(json& j, const KeyValue& kv)
   {
-    j["key"] = kv.key();
+    j["key"] = to_base64(kv.key());
     j["create_revision"] = kv.create_revision();
     j["mod_revision"] = kv.mod_revision();
     j["version"] = kv.version();
-    j["value"] = kv.value();
+    j["value"] = to_base64(kv.value());
     j["lease"] = kv.lease();
   }
 
@@ -65,8 +83,13 @@ namespace etcdserverpb
 
   void from_json(const json& j, PutRequest& req)
   {
-    j.at("key").get_to(*req.mutable_key());
-    j.at("value").get_to(*req.mutable_value());
+    std::string key_b64;
+    j.at("key").get_to(key_b64);
+    req.set_key(from_base64(key_b64));
+
+    std::string value_b64;
+    j.at("value").get_to(value_b64);
+    req.set_value(from_base64(value_b64));
 
     CONTAINS_THEN_SET(int64_t, lease);
     CONTAINS_THEN_SET(bool, prev_kv);
@@ -83,11 +106,15 @@ namespace etcdserverpb
 
   void from_json(const json& j, DeleteRangeRequest& req)
   {
-    j.at("key").get_to(*req.mutable_key());
+    std::string key_b64;
+    j.at("key").get_to(key_b64);
+    req.set_key(from_base64(key_b64));
 
     if (j.contains("range_end"))
     {
-      j.at("range_end").get_to(*req.mutable_range_end());
+      std::string range_end_b64;
+      j.at("range_end").get_to(range_end_b64);
+      req.set_range_end(from_base64(range_end_b64));
     }
 
     CONTAINS_THEN_SET(bool, prev_kv);
