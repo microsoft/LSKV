@@ -48,10 +48,21 @@ $(BIN_DIR)/etcd:
 
 $(BIN_DIR)/etcdctl: $(BIN_DIR)/etcd
 
-benchmark: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual certs
+.PHONY: benchmark
+benchmark: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual .venv certs
+	. .venv/bin/activate && ./benchmark.py
+
+.venv: requirements.txt
 	python3 -m venv .venv
 	. .venv/bin/activate && pip3 install -r requirements.txt
-	. .venv/bin/activate && ./benchmark.py
+
+.PHONY: notebook
+notebook: .venv
+	. .venv/bin/activate && jupyter notebook
+
+.PHONY: clear-notebook
+clear-notebook: .venv
+	. .venv/bin/activate && jupyter nbconvert --clear-output *.ipynb
 
 $(BIN_DIR)/cfssl:
 	mkdir -p $(BIN_DIR)
