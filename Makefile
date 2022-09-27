@@ -48,7 +48,7 @@ $(BIN_DIR)/etcd:
 $(BIN_DIR)/etcdctl: $(BIN_DIR)/etcd
 
 benchmark: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual .venv
-	. .venv/bin/activate && ./benchmark.py
+	. .venv/bin/activate && python3 benchmark.py
 
 .venv: requirements.txt
 	python3 -m venv .venv
