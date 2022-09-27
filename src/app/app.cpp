@@ -40,7 +40,7 @@ namespace app
 
       auto range = [this](
                      ccf::endpoints::ReadOnlyEndpointContext& ctx,
-                     const etcdserverpb::RangeRequest&& payload) {
+                     etcdserverpb::RangeRequest&& payload) {
         auto kvs = store::KVStore(ctx.tx);
         return this->range(kvs, std::move(payload));
       };
@@ -102,7 +102,7 @@ namespace app
     }
 
     ccf::grpc::GrpcAdapterResponse<etcdserverpb::RangeResponse> range(
-      store::KVStore records_map, const etcdserverpb::RangeRequest&& payload)
+      store::KVStore records_map, etcdserverpb::RangeRequest&& payload)
     {
       etcdserverpb::RangeResponse range_response;
       CCF_APP_DEBUG(
@@ -235,7 +235,7 @@ namespace app
 
     static ccf::grpc::GrpcAdapterResponse<etcdserverpb::PutResponse> put(
       ccf::endpoints::EndpointContext& ctx,
-      const etcdserverpb::PutRequest&& payload)
+      etcdserverpb::PutRequest&& payload)
     {
       etcdserverpb::PutResponse put_response;
       CCF_APP_DEBUG(
@@ -280,7 +280,7 @@ namespace app
     static ccf::grpc::GrpcAdapterResponse<etcdserverpb::DeleteRangeResponse>
     delete_range(
       ccf::endpoints::EndpointContext& ctx,
-      const etcdserverpb::DeleteRangeRequest&& payload)
+      etcdserverpb::DeleteRangeRequest&& payload)
     {
       CCF_APP_DEBUG(
         "DeleteRange = [{}]{} -> [{}]{} prevkv:{}",
