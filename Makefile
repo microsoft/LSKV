@@ -7,7 +7,7 @@ CXX="/opt/oe_lvi/clang++-10"
 ETCD_VER="v3.5.4"
 ETCD_DOWNLOAD_URL=https://github.com/etcd-io/etcd/releases/download
 
-BIN_DIR=$(abspath bin)
+BIN_DIR=bin
 
 .PHONY: build-virtual
 build-virtual:
