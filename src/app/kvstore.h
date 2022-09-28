@@ -30,7 +30,7 @@ namespace app::store
     // the id of the lease associated with this key, 0 if no lease.
     int64_t lease;
 
-    explicit Value(const std::string& v);
+    explicit Value(const std::string& v, const int64_t lease_id);
     Value();
 
     std::string get_data();

@@ -15,13 +15,13 @@ namespace app::store
 {
   using json = nlohmann::json;
 
-  Value::Value(const std::string& v)
+  Value::Value(const std::string& v, const int64_t lease_id)
   {
     data = std::vector<uint8_t>(v.begin(), v.end());
     create_revision = 0;
     mod_revision = 0;
     version = 1;
-    lease = 0;
+    lease = lease_id;
   }
 
   Value::Value() = default;

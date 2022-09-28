@@ -1,3 +1,5 @@
+#define VERBOSE_LOGGING
+
 #include "leases.h"
 
 #include <string>
@@ -16,6 +18,17 @@ namespace app::leases
   DECLARE_JSON_TYPE(Value);
   DECLARE_JSON_REQUIRED_FIELDS(Value, ttl, start_time);
 
+  int64_t now_seconds() {
+    auto start_time = std::chrono::system_clock::now();
+    auto start_time_s = std::chrono::duration_cast<std::chrono::seconds>(start_time.time_since_epoch()).count();
+    return start_time_s;
+  }
+
+  bool Value::has_expired() {
+    // check start_time + ttl to current time in seconds
+    return start_time + ttl < now_seconds();
+  }
+
   LeaseStore::LeaseStore(kv::Tx& tx) : rng(rand()), dist(1, INT64_MAX)
   {
     inner_map = tx.template rw<LeaseStore::MT>(LEASES);
@@ -26,12 +39,18 @@ namespace app::leases
     return dist(rng);
   }
 
-  int64_t now_seconds() {
-    auto start_time = std::chrono::system_clock::now();
-    auto start_time_s = std::chrono::duration_cast<std::chrono::seconds>(start_time.time_since_epoch()).count();
-    return start_time_s;
-  }
 
+    bool LeaseStore::contains(K id){
+      auto value_opt = inner_map->get(id);
+      if (!value_opt.has_value()) {
+        CCF_APP_DEBUG("actually missing the lease");
+        return false;
+      }
+      CCF_APP_DEBUG("found lease id");
+      auto value = value_opt.value();
+      // TODO: if expired we should handle revoking
+      return !value.has_expired();
+    }
 
   // create and store a new lease with default ttl.
   std::pair<LeaseStore::K, LeaseStore::V> LeaseStore::grant()

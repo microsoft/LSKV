@@ -16,6 +16,8 @@ namespace app::leases
 
     Value();
     Value(int64_t ttl, int64_t start_time);
+
+    bool has_expired();
   };
 
   class LeaseStore
@@ -28,6 +30,9 @@ namespace app::leases
     using MT = kv::TypedMap<K, V, KSerialiser, VSerialiser>;
 
     LeaseStore(kv::Tx& tx);
+
+    // check whether this lease exists in this store.
+    bool contains(K id);
 
     // create and store a new lease with default ttl.
     std::pair<K, V> grant();

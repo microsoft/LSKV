@@ -226,6 +226,7 @@ namespace app
         kv->set_create_revision(value.create_revision);
         kv->set_mod_revision(value.mod_revision);
         kv->set_version(value.version);
+        kv->set_lease(value.lease);
       };
 
       if (payload.range_end().empty())
@@ -284,18 +285,13 @@ namespace app
     {
       etcdserverpb::PutResponse put_response;
       CCF_APP_DEBUG(
-        "Put = [{}]{}:[{}]{}",
+        "Put = [{}]{}:[{}]{} lease:{}",
         payload.key().size(),
         payload.key(),
         payload.value().size(),
-        payload.value());
+        payload.value(),
+        payload.lease());
 
-      if (payload.lease() != 0)
-      {
-        return ccf::grpc::make_error<etcdserverpb::PutResponse>(
-          GRPC_STATUS_FAILED_PRECONDITION,
-          fmt::format("lease {} not yet supported", payload.lease()));
-      }
       if (payload.prev_kv())
       {
         return ccf::grpc::make_error<etcdserverpb::PutResponse>(
@@ -315,8 +311,25 @@ namespace app
           fmt::format("ignore lease not yet supported"));
       }
 
+      auto lease = payload.lease();
+      if (lease != 0)
+      {
+        // check lease exists, error if missing
+        auto lstore = leases::LeaseStore(ctx.tx);
+        auto exists = lstore.contains(lease);
+        if (!exists)
+        {
+          return ccf::grpc::make_error<etcdserverpb::PutResponse>(
+            GRPC_STATUS_FAILED_PRECONDITION,
+            fmt::format(
+              "invalid lease {}: hasn't been granted or has expired", lease));
+        }
+        // continue with normal flow, recording the lease in the kvstore
+        // TODO: maybe track this key with the lease store too for revoke ease?
+      }
+
       auto records_map = store::KVStore(ctx.tx);
-      records_map.put(payload.key(), store::Value(payload.value()));
+      records_map.put(payload.key(), store::Value(payload.value(), lease));
       ctx.rpc_ctx->set_response_status(HTTP_STATUS_OK);
 
       return ccf::grpc::make_success(put_response);
@@ -633,8 +646,13 @@ namespace app
       auto lstore = leases::LeaseStore(ctx.tx);
       auto res = lstore.grant();
 
-      response.set_id(res.first);
-      response.set_ttl(res.second.ttl);
+      auto id = res.first;
+      auto ttl = res.second.ttl;
+
+      CCF_APP_DEBUG("granted lease with id {} and ttl {}", id, ttl);
+
+      response.set_id(id);
+      response.set_ttl(ttl);
 
       return ccf::grpc::make_success(response);
     }
