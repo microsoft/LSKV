@@ -1,8 +1,10 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
 #pragma once
 
 namespace app::exceptions
 {
-
   struct BadRequest : public std::exception
   {
     ccf::ErrorDetails error;
