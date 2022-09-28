@@ -686,7 +686,7 @@ namespace app
       CCF_APP_DEBUG("LEASE GRANT = {} {}", payload.id(), payload.ttl());
 
       auto lstore = leases::LeaseStore(ctx.tx);
-      auto res = lstore.grant();
+      auto res = lstore.grant(payload.ttl());
 
       auto id = res.first;
       auto ttl = res.second.ttl;

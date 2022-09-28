@@ -81,13 +81,11 @@ namespace app::leases
 
   // create and store a new lease with default ttl.
   std::pair<WriteOnlyLeaseStore::K, WriteOnlyLeaseStore::V>
-  WriteOnlyLeaseStore::grant()
+  WriteOnlyLeaseStore::grant(int64_t ttl)
   {
     // randomly generate an id value and write it to a leases map
     // (ignore their lease id for now)
     int64_t id = rand_id();
-    // decide whether to use the given ttl or one chosen by us
-    int64_t ttl = DEFAULT_TTL_S;
     auto value = Value(ttl, now_seconds());
     inner_map->put(id, value);
 

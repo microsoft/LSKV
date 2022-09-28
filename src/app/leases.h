@@ -58,7 +58,7 @@ namespace app::leases
     WriteOnlyLeaseStore(kv::Tx& tx);
 
     // create and store a new lease with default ttl.
-    std::pair<K, V> grant();
+    std::pair<K, V> grant(int64_t ttl);
 
     // remove a lease with the given id.
     // This just removes the id from the map, not removing any keys.
