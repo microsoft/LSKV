@@ -147,6 +147,17 @@ namespace app
         ccf::no_auth_required)
         .install();
 
+      make_grpc_ro<
+        etcdserverpb::LeaseLeasesRequest,
+        etcdserverpb::LeaseLeasesResponse>(
+        etcdserverpb,
+        lease,
+        "LeaseLeases",
+        this->lease_leases,
+        ccf::no_auth_required)
+        .install();
+
+
       make_grpc<
         etcdserverpb::LeaseKeepAliveRequest,
         etcdserverpb::LeaseKeepAliveResponse>(
@@ -744,6 +755,27 @@ namespace app
       response.set_id(id);
       response.set_ttl(value.ttl_remaining());
       response.set_grantedttl(value.ttl);
+
+      return ccf::grpc::make_success(response);
+    }
+
+    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseLeasesResponse>
+    lease_leases(
+      ccf::endpoints::ReadOnlyEndpointContext& ctx,
+      etcdserverpb::LeaseLeasesRequest&& payload)
+    {
+      etcdserverpb::LeaseLeasesResponse response;
+      CCF_APP_DEBUG("LEASE LEASES");
+
+      auto lstore = leases::ReadOnlyLeaseStore(ctx.tx);
+
+      lstore.foreach([&response](auto id, auto value) {
+        if (!value.has_expired()) {
+          auto* lease = response.add_leases();
+          lease->set_id(id);
+        }
+        return true;
+      });
 
       return ccf::grpc::make_success(response);
     }
