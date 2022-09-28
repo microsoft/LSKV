@@ -1,6 +1,7 @@
 #include "leases.h"
 
 #include <string>
+#include <chrono>
 
 namespace app::leases
 {
@@ -33,7 +34,9 @@ namespace app::leases
     int64_t id = rand_id();
     // decide whether to use the given ttl or one chosen by us
     int64_t ttl = DEFAULT_TTL_S;
-    auto value = Value(ttl, 0);
+    auto start_time = std::chrono::system_clock::now();
+    auto start_time_s = std::chrono::duration_cast<std::chrono::seconds>(start_time.time_since_epoch()).count();
+    auto value = Value(ttl, start_time_s);
     inner_map->put(id, value);
 
     return std::make_pair(id, value);
