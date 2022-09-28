@@ -14,6 +14,8 @@
 #include "kvstore.h"
 #include "leases.h"
 
+#include <random>
+
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
 
@@ -24,10 +26,19 @@ namespace app
   private:
     using IndexStrategy = app::index::KVIndexer;
     std::shared_ptr<IndexStrategy> kvindex = nullptr;
+    // default time to live (seconds) for leases.
+    // Clients can request a ttl but server can ignore it and use whatever.
+    int64_t DEFAULT_TTL_S = 60;
+
+    // random number generation for lease ids
+    std::mt19937 rng;
+    std::uniform_int_distribution<int64_t> dist;
 
   public:
     explicit AppHandlers(ccfapp::AbstractNodeContext& context) :
-      ccf::UserEndpointRegistry(context)
+      ccf::UserEndpointRegistry(context),
+      rng(std::random_device()),
+      dist(1, INT64_MAX)
     {
       openapi_info.title = "CCF Sample C++ Key-Value Store";
       openapi_info.description = "Sample Key-Value store built on CCF";
@@ -116,14 +127,16 @@ namespace app
         ccf::no_auth_required)
         .install();
 
+      auto lease_grant = [this](
+                           ccf::endpoints::EndpointContext& ctx,
+                           etcdserverpb::LeaseGrantRequest&& payload) {
+        return this->lease_grant(ctx, std::move(payload));
+      };
+
       make_grpc<
         etcdserverpb::LeaseGrantRequest,
         etcdserverpb::LeaseGrantResponse>(
-        etcdserverpb,
-        lease,
-        "LeaseGrant",
-        this->lease_grant,
-        ccf::no_auth_required)
+        etcdserverpb, lease, "LeaseGrant", lease_grant, ccf::no_auth_required)
         .install();
 
       make_grpc<
@@ -612,7 +625,12 @@ namespace app
       }
     }
 
-    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseGrantResponse>
+    int64_t rand_id()
+    {
+      return dist(rng);
+    }
+
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseGrantResponse>
     lease_grant(
       ccf::endpoints::EndpointContext& ctx,
       etcdserverpb::LeaseGrantRequest&& payload)
@@ -621,13 +639,15 @@ namespace app
       CCF_APP_DEBUG("LEASE GRANT = {} {}", payload.id(), payload.ttl());
 
       // decide whether to use the given ttl or one chosen by us
-      int64_t ttl = 2;
+      int64_t ttl = DEFAULT_TTL_S;
 
       auto leases =
         ctx.tx.template rw<kv::Map<int64_t, int64_t>>(app::leases::LEASES);
+
       // randomly generate an id value and write it to a leases map
       // (ignore their lease id for now)
-      int64_t id = 1;
+      int64_t id = rand_id();
+
       leases->put(id, ttl);
 
       response.set_id(id);
