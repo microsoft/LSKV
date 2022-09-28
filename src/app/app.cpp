@@ -82,7 +82,11 @@ namespace app
     {
       auto grpc_path = fmt::format("/{}.{}/{}", package, service, rpc);
       make_read_only_endpoint(
-        grpc_path, HTTP_POST, ccf::grpc_read_only_adapter(f), ccf::no_auth_required).install();
+        grpc_path,
+        HTTP_POST,
+        ccf::grpc_read_only_adapter(f),
+        ccf::no_auth_required)
+        .install();
       make_read_only_endpoint(
         path,
         HTTP_POST,
@@ -100,7 +104,9 @@ namespace app
       const ccf::GrpcEndpoint<In, Out>& f)
     {
       auto grpc_path = fmt::format("/{}.{}/{}", package, service, rpc);
-      make_endpoint(grpc_path, HTTP_POST, ccf::grpc_adapter(f), ccf::no_auth_required).install();
+      make_endpoint(
+        grpc_path, HTTP_POST, ccf::grpc_adapter(f), ccf::no_auth_required)
+        .install();
       make_endpoint(
         path,
         HTTP_POST,
