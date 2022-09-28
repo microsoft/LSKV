@@ -81,6 +81,10 @@ certs: $(BIN_DIR)/cfssl $(BIN_DIR)/cfssljson
 	cd certs && ../$(BIN_DIR)/cfssl gencert -ca ../certs/ca.pem -ca-key ../certs/ca-key.pem -config ../certs-config/ca-config.json -profile server ../certs-config/server.json | ../$(BIN_DIR)/cfssljson -bare server -
 	cd certs && ../$(BIN_DIR)/cfssl gencert -ca ../certs/ca.pem -ca-key ../certs/ca-key.pem -config ../certs-config/ca-config.json -profile client ../certs-config/client.json | ../$(BIN_DIR)/cfssljson -bare client -
 
+.PHONY: cpplint
+cpplint:
+	cpplint --filter=-whitespace/braces,-whitespace/indent,-whitespace/comments $$(find src -name '*.cpp' -o -name '*.h')
+
 .PHONY: clean
 clean:
 	rm -rf $(BUILD)
