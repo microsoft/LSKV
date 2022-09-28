@@ -21,8 +21,9 @@ namespace app::leases
     int64_t ttl_remaining();
   };
 
-  class ReadOnlyLeaseStore {
-    public:
+  class ReadOnlyLeaseStore
+  {
+  public:
     using K = int64_t;
     using V = Value;
     using KSerialiser = kv::serialisers::BlitSerialiser<K>;
@@ -38,7 +39,7 @@ namespace app::leases
 
     void foreach(const std::function<bool(const K&, const V&)>& fn);
 
-    private:
+  private:
     MT::ReadOnlyHandle* inner_map;
   };
 
@@ -78,8 +79,9 @@ namespace app::leases
     int64_t rand_id();
   };
 
-  class LeaseStore : public ReadOnlyLeaseStore, public WriteOnlyLeaseStore{
-    public :
-    LeaseStore(kv::Tx& tx) : ReadOnlyLeaseStore(tx), WriteOnlyLeaseStore(tx){}
+  class LeaseStore : public ReadOnlyLeaseStore, public WriteOnlyLeaseStore
+  {
+  public:
+    LeaseStore(kv::Tx& tx) : ReadOnlyLeaseStore(tx), WriteOnlyLeaseStore(tx) {}
   };
 }

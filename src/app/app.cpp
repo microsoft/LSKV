@@ -159,7 +159,9 @@ namespace app
     }
 
     ccf::grpc::GrpcAdapterResponse<etcdserverpb::RangeResponse> range(
-      store::KVStore records_map, leases::ReadOnlyLeaseStore lstore, etcdserverpb::RangeRequest&& payload)
+      store::KVStore records_map,
+      leases::ReadOnlyLeaseStore lstore,
+      etcdserverpb::RangeRequest&& payload)
     {
       etcdserverpb::RangeResponse range_response;
       CCF_APP_DEBUG(
@@ -230,10 +232,15 @@ namespace app
       auto add_kv = [&](auto& key, auto& value) {
         // check that the lease for this value has not expired
         // NOTE: contains checks the expiration of the lease too.
-        if (value.lease != 0 && !lstore.contains(value.lease)) {
+        if (value.lease != 0 && !lstore.contains(value.lease))
+        {
           // it had a lease and that lease is no longer (logically) in the store
-          // we can't remove it since this is a read-only endpoint but we can mimick the behaviour
-          CCF_APP_DEBUG("filtering out kv from range return as lease {} is missing or expired", value.lease);
+          // we can't remove it since this is a read-only endpoint but we can
+          // mimick the behaviour
+          CCF_APP_DEBUG(
+            "filtering out kv from range return as lease {} is missing or "
+            "expired",
+            value.lease);
           return;
         }
 
@@ -693,15 +700,17 @@ namespace app
       auto lstore = leases::LeaseStore(ctx.tx);
       lstore.revoke(id);
 
-        auto kvs = store::KVStore(ctx.tx);
-        kvs.foreach([&id,&kvs](auto key, auto value) {
-          if (value.lease == id) {
-            // remove this key
-            CCF_APP_DEBUG("removing key due to revoke lease {}: {}",value.lease, key);
-            kvs.remove(key);
-          }
-          return true;
-        });
+      auto kvs = store::KVStore(ctx.tx);
+      kvs.foreach([&id, &kvs](auto key, auto value) {
+        if (value.lease == id)
+        {
+          // remove this key
+          CCF_APP_DEBUG(
+            "removing key due to revoke lease {}: {}", value.lease, key);
+          kvs.remove(key);
+        }
+        return true;
+      });
 
       return ccf::grpc::make_success(response);
     }
@@ -715,15 +724,19 @@ namespace app
       auto id = payload.id();
       CCF_APP_DEBUG("LEASE TIMETOLIVE = {}", id);
 
-      if (payload.keys()) {
-        return ccf::grpc::make_error(GRPC_STATUS_FAILED_PRECONDITION, "keys is not yet supported");
+      if (payload.keys())
+      {
+        return ccf::grpc::make_error(
+          GRPC_STATUS_FAILED_PRECONDITION, "keys is not yet supported");
       }
 
       auto lstore = leases::ReadOnlyLeaseStore(ctx.tx);
 
       auto value_opt = lstore.get(id);
-      if (!value_opt.has_value()) {
-        return ccf::grpc::make_error(GRPC_STATUS_NOT_FOUND, fmt::format("lease {} not found", id));
+      if (!value_opt.has_value())
+      {
+        return ccf::grpc::make_error(
+          GRPC_STATUS_NOT_FOUND, fmt::format("lease {} not found", id));
       }
 
       auto value = value_opt.value();
@@ -761,29 +774,32 @@ namespace app
       auto lstore = leases::LeaseStore(tx);
 
       // go through all leases in the leasestore
-      lstore.foreach([&expired_leases, &lstore](auto id, auto value){
-      if (value.has_expired()) {
-        // if the lease has expired then revoke it in the lease store (remove the entry)
-        CCF_APP_DEBUG("found expired lease {}", id);
-        expired_leases.insert(id);
-        lstore.revoke(id);
-      }
-      return true;
+      lstore.foreach([&expired_leases, &lstore](auto id, auto value) {
+        if (value.has_expired())
+        {
+          // if the lease has expired then revoke it in the lease store (remove
+          // the entry)
+          CCF_APP_DEBUG("found expired lease {}", id);
+          expired_leases.insert(id);
+          lstore.revoke(id);
+        }
+        return true;
       });
 
-
       // and remove all keys associated with it in the kvstore
-        auto kvs = store::KVStore(tx);
-        kvs.foreach([&expired_leases,&kvs](auto key, auto value) {
-          if (value.lease > 0 && expired_leases.contains(value.lease)) {
-            // remove this key
-            CCF_APP_DEBUG("removing key due to expired lease {}: {}",value.lease, key);
-            kvs.remove(key);
-          }
-          return true;
-        });
+      auto kvs = store::KVStore(tx);
+      kvs.foreach([&expired_leases, &kvs](auto key, auto value) {
+        if (value.lease > 0 && expired_leases.contains(value.lease))
+        {
+          // remove this key
+          CCF_APP_DEBUG(
+            "removing key due to expired lease {}: {}", value.lease, key);
+          kvs.remove(key);
+        }
+        return true;
+      });
 
-        CCF_APP_DEBUG("finished revoking leases");
+      CCF_APP_DEBUG("finished revoking leases");
     }
   };
 } // namespace app
