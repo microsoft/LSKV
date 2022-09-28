@@ -8,7 +8,7 @@
 #include <random>
 #include <string>
 
-namespace app::leases
+namespace app::leasestore
 {
   static constexpr auto LEASES = "leases";
 
