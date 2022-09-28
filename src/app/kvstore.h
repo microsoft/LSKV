@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-namespace app::store
+namespace app::kvstore
 {
   static constexpr auto RECORDS = "records";
 

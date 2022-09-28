@@ -33,7 +33,7 @@ namespace app
       openapi_info.description = "Sample Key-Value store built on CCF";
       openapi_info.document_version = "0.0.1";
 
-      kvindex = std::make_shared<IndexStrategy>(app::store::RECORDS);
+      kvindex = std::make_shared<IndexStrategy>(app::kvstore::RECORDS);
       context.get_indexing_strategies().install_strategy(kvindex);
 
       const auto etcdserverpb = "etcdserverpb";
@@ -43,8 +43,8 @@ namespace app
       auto range = [this](
                      ccf::endpoints::ReadOnlyEndpointContext& ctx,
                      etcdserverpb::RangeRequest&& payload) {
-        auto kvs = store::KVStore(ctx.tx);
-        auto lstore = leases::ReadOnlyLeaseStore(ctx.tx);
+        auto kvs = kvstore::KVStore(ctx.tx);
+        auto lstore = leasestore::ReadOnlyLeaseStore(ctx.tx);
         return this->range(kvs, lstore, std::move(payload));
       };
 
@@ -169,8 +169,8 @@ namespace app
     }
 
     ccf::grpc::GrpcAdapterResponse<etcdserverpb::RangeResponse> range(
-      store::KVStore records_map,
-      leases::ReadOnlyLeaseStore lstore,
+      kvstore::KVStore records_map,
+      leasestore::ReadOnlyLeaseStore lstore,
       etcdserverpb::RangeRequest&& payload)
     {
       etcdserverpb::RangeResponse range_response;
@@ -269,7 +269,7 @@ namespace app
       if (payload.range_end().empty())
       {
         // empty range end so just query for a single key
-        std::optional<app::store::KVStore::V> value_option;
+        std::optional<app::kvstore::KVStore::V> value_option;
         if (payload.revision() > 0)
         {
           // historical, use the index of commited values
@@ -354,7 +354,7 @@ namespace app
       if (lease != 0)
       {
         // check lease exists, error if missing
-        auto lstore = leases::LeaseStore(ctx.tx);
+        auto lstore = leasestore::LeaseStore(ctx.tx);
         auto exists = lstore.contains(lease);
         if (!exists)
         {
@@ -366,8 +366,8 @@ namespace app
         // continue with normal flow, recording the lease in the kvstore
       }
 
-      auto records_map = store::KVStore(ctx.tx);
-      records_map.put(payload.key(), store::Value(payload.value(), lease));
+      auto records_map = kvstore::KVStore(ctx.tx);
+      records_map.put(payload.key(), kvstore::Value(payload.value(), lease));
       ctx.rpc_ctx->set_response_status(HTTP_STATUS_OK);
 
       return ccf::grpc::make_success(put_response);
@@ -389,7 +389,7 @@ namespace app
 
       revoke_expired_leases(ctx.tx);
 
-      auto records_map = store::KVStore(ctx.tx);
+      auto records_map = kvstore::KVStore(ctx.tx);
       auto& key = payload.key();
 
       if (payload.range_end().empty())
@@ -478,8 +478,8 @@ namespace app
         payload.failure().size());
 
       bool success = true;
-      auto records_map = store::KVStore(ctx.tx);
-      auto lstore = leases::ReadOnlyLeaseStore(ctx.tx);
+      auto records_map = kvstore::KVStore(ctx.tx);
+      auto lstore = leasestore::ReadOnlyLeaseStore(ctx.tx);
       // evaluate each comparison in the transaction and report the success
       for (auto const& cmp : payload.compare())
       {
@@ -502,7 +502,7 @@ namespace app
         auto value_option = records_map.get(key);
         // get the value if there was one, otherwise use a default entry to
         // compare against
-        auto value = value_option.value_or(store::Value());
+        auto value = value_option.value_or(kvstore::Value());
 
         // got the key to check against, now do the check
         std::optional<bool> outcome = std::nullopt;
@@ -684,7 +684,7 @@ namespace app
       etcdserverpb::LeaseGrantResponse response;
       CCF_APP_DEBUG("LEASE GRANT = {} {}", payload.id(), payload.ttl());
 
-      auto lstore = leases::LeaseStore(ctx.tx);
+      auto lstore = leasestore::LeaseStore(ctx.tx);
       auto res = lstore.grant(payload.ttl());
 
       auto id = res.first;
@@ -707,10 +707,10 @@ namespace app
       auto id = payload.id();
       CCF_APP_DEBUG("LEASE REVOKE = {}", id);
 
-      auto lstore = leases::LeaseStore(ctx.tx);
+      auto lstore = leasestore::LeaseStore(ctx.tx);
       lstore.revoke(id);
 
-      auto kvs = store::KVStore(ctx.tx);
+      auto kvs = kvstore::KVStore(ctx.tx);
       kvs.foreach([&id, &kvs](auto key, auto value) {
         if (value.lease == id)
         {
@@ -740,7 +740,7 @@ namespace app
           GRPC_STATUS_FAILED_PRECONDITION, "keys is not yet supported");
       }
 
-      auto lstore = leases::ReadOnlyLeaseStore(ctx.tx);
+      auto lstore = leasestore::ReadOnlyLeaseStore(ctx.tx);
 
       auto lease = lstore.get(id);
 
@@ -759,10 +759,10 @@ namespace app
       etcdserverpb::LeaseLeasesResponse response;
       CCF_APP_DEBUG("LEASE LEASES");
 
-      auto lstore = leases::ReadOnlyLeaseStore(ctx.tx);
+      auto lstore = leasestore::ReadOnlyLeaseStore(ctx.tx);
 
-      lstore.foreach([&response](auto id, auto value) {
-        if (!value.has_expired())
+      lstore.foreach([&response](auto id, auto lease) {
+        if (!lease.has_expired())
         {
           auto* lease = response.add_leases();
           lease->set_id(id);
@@ -782,7 +782,7 @@ namespace app
       auto id = payload.id();
       CCF_APP_DEBUG("LEASE KEEPALIVE = {}", id);
 
-      auto lstore = leases::LeaseStore(ctx.tx);
+      auto lstore = leasestore::LeaseStore(ctx.tx);
       auto ttl = lstore.keep_alive(id);
 
       response.set_id(id);
@@ -796,11 +796,11 @@ namespace app
       CCF_APP_DEBUG("revoking any expired leases");
       std::set<int64_t> expired_leases;
 
-      auto lstore = leases::LeaseStore(tx);
+      auto lstore = leasestore::LeaseStore(tx);
 
       // go through all leases in the leasestore
-      lstore.foreach([&expired_leases, &lstore](auto id, auto value) {
-        if (value.has_expired())
+      lstore.foreach([&expired_leases, &lstore](auto id, auto lease) {
+        if (lease.has_expired())
         {
           // if the lease has expired then revoke it in the lease store (remove
           // the entry)
@@ -812,7 +812,7 @@ namespace app
       });
 
       // and remove all keys associated with it in the kvstore
-      auto kvs = store::KVStore(tx);
+      auto kvs = kvstore::KVStore(tx);
       kvs.foreach([&expired_leases, &kvs](auto key, auto value) {
         if (value.lease > 0 && expired_leases.contains(value.lease))
         {

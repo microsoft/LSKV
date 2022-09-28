@@ -11,7 +11,7 @@
 
 #include <nlohmann/json.hpp>
 
-namespace app::store
+namespace app::kvstore
 {
   using json = nlohmann::json;
 
@@ -32,8 +32,7 @@ namespace app::store
   }
 
   DECLARE_JSON_TYPE(Value);
-  DECLARE_JSON_REQUIRED_FIELDS(
-    Value, data, create_revision, mod_revision, version, lease);
+  DECLARE_JSON_REQUIRED_FIELDS(Value, data, create_revision, mod_revision, version, lease);
 
   // using K = std::string;
   // using V = Value;

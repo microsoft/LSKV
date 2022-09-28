@@ -8,20 +8,20 @@
 #include <chrono>
 #include <string>
 
-namespace app::leases
+namespace app::leasestore
 {
-  Value::Value(int64_t ttl_, int64_t start_time_)
+  Lease::Lease(int64_t ttl_, int64_t start_time_)
   {
     ttl = ttl_;
     start_time = start_time_;
   }
 
-  static Value EXPIRED_LEASE = Value(0, 0);
+  static Lease EXPIRED_LEASE = Lease(0, 0);
 
-  Value::Value() = default;
+  Lease::Lease() = default;
 
-  DECLARE_JSON_TYPE(Value);
-  DECLARE_JSON_REQUIRED_FIELDS(Value, ttl, start_time);
+  DECLARE_JSON_TYPE(Lease);
+  DECLARE_JSON_REQUIRED_FIELDS(Lease, ttl, start_time);
 
   int64_t now_seconds()
   {
@@ -32,7 +32,7 @@ namespace app::leases
     return start_time_s;
   }
 
-  int64_t Value::ttl_remaining()
+  int64_t Lease::ttl_remaining()
   {
     auto remaining = (start_time + ttl) - now_seconds();
     if (remaining <= 0)
@@ -46,7 +46,7 @@ namespace app::leases
     }
   }
 
-  bool Value::has_expired()
+  bool Lease::has_expired()
   {
     return ttl_remaining() <= 0;
   }
@@ -75,19 +75,19 @@ namespace app::leases
 
   ReadOnlyLeaseStore::V ReadOnlyLeaseStore::get(const K& id)
   {
-    auto value_opt = inner_map->get(id);
-    if (!value_opt.has_value())
+    auto lease_opt = inner_map->get(id);
+    if (!lease_opt.has_value())
     {
       CCF_APP_DEBUG("actually missing the lease");
       return EXPIRED_LEASE;
     }
     CCF_APP_DEBUG("found lease id");
-    auto value = value_opt.value();
-    if (value.has_expired())
+    auto lease = lease_opt.value();
+    if (lease.has_expired())
     {
       return EXPIRED_LEASE;
     }
-    return value;
+    return lease;
   }
 
   // create and store a new lease with default ttl.
@@ -97,10 +97,10 @@ namespace app::leases
     // randomly generate an id value and write it to a leases map
     // (ignore their lease id for now)
     int64_t id = rand_id();
-    auto value = Value(ttl, now_seconds());
-    inner_map->put(id, value);
+    auto lease = Lease(ttl, now_seconds());
+    inner_map->put(id, lease);
 
-    return std::make_pair(id, value);
+    return std::make_pair(id, lease);
   }
 
   // remove a lease with the given id.
@@ -112,13 +112,13 @@ namespace app::leases
 
   int64_t WriteOnlyLeaseStore::keep_alive(K id)
   {
-    auto value_opt = inner_map->get(id);
-    if (value_opt.has_value())
+    auto lease_opt = inner_map->get(id);
+    if (lease_opt.has_value())
     {
-      auto value = value_opt.value();
-      value.start_time = now_seconds();
-      auto ttl = value.ttl;
-      inner_map->put(id, value);
+      auto lease = lease_opt.value();
+      lease.start_time = now_seconds();
+      auto ttl = lease.ttl;
+      inner_map->put(id, lease);
       return ttl;
     }
     return 0;

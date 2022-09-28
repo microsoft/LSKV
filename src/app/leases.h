@@ -12,13 +12,13 @@ namespace app::leases
 {
   static constexpr auto LEASES = "leases";
 
-  struct Value
+  struct Lease
   {
     int64_t ttl;
     int64_t start_time;
 
-    Value();
-    Value(int64_t ttl, int64_t start_time);
+    Lease();
+    Lease(int64_t ttl, int64_t start_time);
 
     bool has_expired();
     int64_t ttl_remaining();
@@ -28,7 +28,7 @@ namespace app::leases
   {
   public:
     using K = int64_t;
-    using V = Value;
+    using V = Lease;
     using KSerialiser = kv::serialisers::BlitSerialiser<K>;
     using VSerialiser = kv::serialisers::JsonSerialiser<V>;
     using MT = kv::TypedMap<K, V, KSerialiser, VSerialiser>;
@@ -50,7 +50,7 @@ namespace app::leases
   {
   public:
     using K = int64_t;
-    using V = Value;
+    using V = Lease;
     using KSerialiser = kv::serialisers::BlitSerialiser<K>;
     using VSerialiser = kv::serialisers::JsonSerialiser<V>;
     using MT = kv::TypedMap<K, V, KSerialiser, VSerialiser>;
