@@ -347,7 +347,6 @@ namespace app
               "invalid lease {}: hasn't been granted or has expired", lease));
         }
         // continue with normal flow, recording the lease in the kvstore
-        // TODO: maybe track this key with the lease store too for revoke ease?
       }
 
       auto records_map = store::KVStore(ctx.tx);
@@ -694,7 +693,15 @@ namespace app
       auto lstore = leases::LeaseStore(ctx.tx);
       lstore.revoke(id);
 
-      // TODO: also remove the keys associated with it
+        auto kvs = store::KVStore(ctx.tx);
+        kvs.foreach([&id,&kvs](auto key, auto value) {
+          if (value.lease == id) {
+            // remove this key
+            CCF_APP_DEBUG("removing key due to revoke lease {}: {}",value.lease, key);
+            kvs.remove(key);
+          }
+          return true;
+        });
 
       return ccf::grpc::make_success(response);
     }
