@@ -10,5 +10,11 @@ With the implementation of the etcd API benchmark runs can use the [etcd benchma
 2. [Golang](https://go.dev/doc/install) needs to be installed.
 
 ```sh
-make benchmark
+make benchmark-virtual
+```
+
+Or with the SGX benchmarks:
+
+```sh
+make benchmark-sgx
 ```
