@@ -38,7 +38,7 @@ namespace app::leases
     // check whether this lease exists in this store.
     bool contains(K id);
 
-    std::optional<V> get(const K& id);
+    V get(const K& id);
 
     void foreach(const std::function<bool(const K&, const V&)>& fn);
 

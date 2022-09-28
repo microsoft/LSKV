@@ -10,11 +10,15 @@
 
 namespace app::leases
 {
+
+
   Value::Value(int64_t ttl_, int64_t start_time_)
   {
     ttl = ttl_;
     start_time = start_time_;
   }
+
+static Value EXPIRED_LEASE = Value(0, 0);
 
   Value::Value() = default;
 
@@ -32,7 +36,13 @@ namespace app::leases
 
   int64_t Value::ttl_remaining()
   {
-    return (start_time + ttl) - now_seconds();
+    auto remaining =  (start_time + ttl) - now_seconds();
+    if (remaining <= 0) {
+        // expired leases don't indicate how old they are
+        return -1;
+    } else {
+        return remaining;
+    }
   }
 
   bool Value::has_expired()
@@ -59,22 +69,22 @@ namespace app::leases
 
   bool ReadOnlyLeaseStore::contains(K id)
   {
-    return get(id).has_value();
+    return !get(id).has_expired();
   }
 
-  std::optional<ReadOnlyLeaseStore::V> ReadOnlyLeaseStore::get(const K& id)
+  ReadOnlyLeaseStore::V ReadOnlyLeaseStore::get(const K& id)
   {
     auto value_opt = inner_map->get(id);
     if (!value_opt.has_value())
     {
       CCF_APP_DEBUG("actually missing the lease");
-      return std::nullopt;
+      return EXPIRED_LEASE;
     }
     CCF_APP_DEBUG("found lease id");
     auto value = value_opt.value();
     if (value.has_expired())
     {
-      return std::nullopt;
+      return EXPIRED_LEASE;
     }
     return value;
   }

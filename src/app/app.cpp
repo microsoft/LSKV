@@ -743,18 +743,11 @@ namespace app
 
       auto lstore = leases::ReadOnlyLeaseStore(ctx.tx);
 
-      auto value_opt = lstore.get(id);
-      if (!value_opt.has_value())
-      {
-        return ccf::grpc::make_error(
-          GRPC_STATUS_NOT_FOUND, fmt::format("lease {} not found", id));
-      }
-
-      auto value = value_opt.value();
+      auto lease = lstore.get(id);
 
       response.set_id(id);
-      response.set_ttl(value.ttl_remaining());
-      response.set_grantedttl(value.ttl);
+      response.set_ttl(lease.ttl_remaining());
+      response.set_grantedttl(lease.ttl);
 
       return ccf::grpc::make_success(response);
     }
