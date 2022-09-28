@@ -4,6 +4,7 @@
 #pragma once
 
 #include "ccf/app_interface.h"
+#include "exceptions.h"
 
 #include <google/protobuf/util/json_util.h>
 
@@ -18,8 +19,9 @@ namespace app::json_grpc
 
     if (request_content_type != http::headervalues::contenttype::JSON)
     {
-      throw std::logic_error(fmt::format(
-        "Unsupported content type. Only {} is supported ",
+      throw app::exceptions::WrongMediaType(fmt::format(
+        "Unsupported content type {}. Only {} is supported.",
+        request_content_type.value_or(""),
         http::headervalues::contenttype::JSON));
     }
 
@@ -28,7 +30,7 @@ namespace app::json_grpc
     auto status = google::protobuf::util::JsonStringToMessage(input, &in);
     if (!status.ok())
     {
-      throw std::runtime_error(status.ToString());
+      throw app::exceptions::BadRequest(status.ToString());
     }
 
     return in;
@@ -54,7 +56,7 @@ namespace app::json_grpc
           google::protobuf::util::MessageToJsonString(resp, &json_out);
         if (!status.ok())
         {
-          throw std::runtime_error(status.ToString());
+          throw app::exceptions::BadRequest(status.ToString());
         }
 
         ctx->set_response_body(
@@ -92,8 +94,19 @@ namespace app::json_grpc
     const ccf::GrpcReadOnlyEndpoint<In, Out>& f)
   {
     return [f](ccf::endpoints::ReadOnlyEndpointContext& ctx) {
-      set_json_grpc_response<Out>(
-        f(ctx, get_json_grpc_payload<In>(ctx.rpc_ctx)), ctx.rpc_ctx);
+      try
+      {
+        set_json_grpc_response<Out>(
+          f(ctx, get_json_grpc_payload<In>(ctx.rpc_ctx)), ctx.rpc_ctx);
+      }
+      catch (app::exceptions::BadRequest& e)
+      {
+        ctx.rpc_ctx->set_error(std::move(e.error));
+      }
+      catch (app::exceptions::WrongMediaType& e)
+      {
+        ctx.rpc_ctx->set_error(std::move(e.error));
+      }
     };
   }
 }; // namespace app::json_grpc
