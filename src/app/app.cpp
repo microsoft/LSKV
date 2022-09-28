@@ -116,16 +116,14 @@ namespace app
         ccf::no_auth_required)
         .install();
 
-      auto lease_grant = [this](
-                           ccf::endpoints::EndpointContext& ctx,
-                           etcdserverpb::LeaseGrantRequest&& payload) {
-        return this->lease_grant(ctx, std::move(payload));
-      };
-
       make_grpc<
         etcdserverpb::LeaseGrantRequest,
         etcdserverpb::LeaseGrantResponse>(
-        etcdserverpb, lease, "LeaseGrant", lease_grant, ccf::no_auth_required)
+        etcdserverpb,
+        lease,
+        "LeaseGrant",
+        this->lease_grant,
+        ccf::no_auth_required)
         .install();
 
       make_grpc<
@@ -135,6 +133,16 @@ namespace app
         lease,
         "LeaseRevoke",
         this->lease_revoke,
+        ccf::no_auth_required)
+        .install();
+
+      make_grpc<
+        etcdserverpb::LeaseKeepAliveRequest,
+        etcdserverpb::LeaseKeepAliveResponse>(
+        etcdserverpb,
+        lease,
+        "LeaseKeepAlive",
+        this->lease_keep_alive,
         ccf::no_auth_required)
         .install();
     }
@@ -614,7 +622,7 @@ namespace app
       }
     }
 
-    ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseGrantResponse>
+    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseGrantResponse>
     lease_grant(
       ccf::endpoints::EndpointContext& ctx,
       etcdserverpb::LeaseGrantRequest&& payload)
@@ -644,6 +652,24 @@ namespace app
       lstore.revoke(id);
 
       // TODO: also remove the keys associated with it
+
+      return ccf::grpc::make_success(response);
+    }
+
+    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseKeepAliveResponse>
+    lease_keep_alive(
+      ccf::endpoints::EndpointContext& ctx,
+      etcdserverpb::LeaseKeepAliveRequest&& payload)
+    {
+      etcdserverpb::LeaseKeepAliveResponse response;
+      auto id = payload.id();
+      CCF_APP_DEBUG("LEASE KEEPALIVE = {}", id);
+
+      auto lstore = leases::LeaseStore(ctx.tx);
+      auto ttl = lstore.keep_alive(id);
+
+      response.set_id(id);
+      response.set_ttl(ttl);
 
       return ccf::grpc::make_success(response);
     }

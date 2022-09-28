@@ -26,6 +26,13 @@ namespace app::leases
     return dist(rng);
   }
 
+  int64_t now_seconds() {
+    auto start_time = std::chrono::system_clock::now();
+    auto start_time_s = std::chrono::duration_cast<std::chrono::seconds>(start_time.time_since_epoch()).count();
+    return start_time_s;
+  }
+
+
   // create and store a new lease with default ttl.
   std::pair<LeaseStore::K, LeaseStore::V> LeaseStore::grant()
   {
@@ -34,9 +41,7 @@ namespace app::leases
     int64_t id = rand_id();
     // decide whether to use the given ttl or one chosen by us
     int64_t ttl = DEFAULT_TTL_S;
-    auto start_time = std::chrono::system_clock::now();
-    auto start_time_s = std::chrono::duration_cast<std::chrono::seconds>(start_time.time_since_epoch()).count();
-    auto value = Value(ttl, start_time_s);
+    auto value = Value(ttl, now_seconds());
     inner_map->put(id, value);
 
     return std::make_pair(id, value);
@@ -46,5 +51,17 @@ namespace app::leases
   // This just removes the id from the map, not removing any keys.
   void LeaseStore::revoke(K id) {
     inner_map->remove(id);
+  }
+
+  int64_t LeaseStore::keep_alive(K id) {
+    auto value_opt = inner_map->get(id);
+    if (value_opt.has_value()) {
+      auto value = value_opt.value();
+      value.start_time = now_seconds();
+      auto ttl = value.ttl;
+      inner_map->put(id, value);
+      return ttl;
+    }
+    return 0;
   }
 }

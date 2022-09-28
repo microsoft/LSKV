@@ -36,6 +36,9 @@ namespace app::leases
     // This just removes the id from the map, not removing any keys.
     void revoke(K id);
 
+    // refresh a lease to keep it alive.
+    int64_t keep_alive(K id);
+
   private:
     // random number generation for lease ids
     std::random_device rand;
