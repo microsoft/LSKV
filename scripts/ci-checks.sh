@@ -73,3 +73,7 @@ if [ $FIX -ne 0 ]; then
 else
   git ls-files scripts/ | grep -e '\.py$' | xargs black --check
 fi
+
+echo "$CHECK_DELIMITER"
+echo "-- CPP Lint"
+make cpplint
