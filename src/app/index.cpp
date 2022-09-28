@@ -109,4 +109,4 @@ namespace app::index
     }
   }
 
-}; // namespace app
+}; // namespace app::index

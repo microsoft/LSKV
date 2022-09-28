@@ -7,6 +7,10 @@
 #include "exceptions.h"
 
 #include <google/protobuf/util/json_util.h>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace app::json_grpc
 {
