@@ -1,8 +1,53 @@
 #pragma once
 
+#include "ccf/app_interface.h"
+
+#include <random>
 #include <string>
 
 namespace app::leases
 {
-  std::string LEASES = "leases";
+  static constexpr auto LEASES = "leases";
+
+  struct Value
+  {
+    int64_t ttl;
+    int64_t start_time;
+
+    Value();
+    Value(int64_t ttl, int64_t start_time);
+  };
+
+  class LeaseStore
+  {
+  public:
+    using K = int64_t;
+    using V = Value;
+    using KSerialiser = kv::serialisers::BlitSerialiser<K>;
+    using VSerialiser = kv::serialisers::JsonSerialiser<V>;
+    using MT = kv::TypedMap<K, V, KSerialiser, VSerialiser>;
+
+    LeaseStore(kv::Tx& tx);
+
+    // create and store a new lease with default ttl.
+    std::pair<K, V> grant();
+
+    // remove a lease with the given id.
+    // This just removes the id from the map, not removing any keys.
+    void revoke(K id);
+
+  private:
+    // random number generation for lease ids
+    std::random_device rand;
+    std::mt19937 rng;
+    std::uniform_int_distribution<int64_t> dist;
+
+    MT::Handle* inner_map;
+
+    // default time to live (seconds) for leases.
+    // Clients can request a ttl but server can ignore it and use whatever.
+    int64_t DEFAULT_TTL_S = 60;
+
+    int64_t rand_id();
+  };
 }

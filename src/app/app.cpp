@@ -14,8 +14,6 @@
 #include "kvstore.h"
 #include "leases.h"
 
-#include <random>
-
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
 
@@ -26,19 +24,10 @@ namespace app
   private:
     using IndexStrategy = app::index::KVIndexer;
     std::shared_ptr<IndexStrategy> kvindex = nullptr;
-    // default time to live (seconds) for leases.
-    // Clients can request a ttl but server can ignore it and use whatever.
-    int64_t DEFAULT_TTL_S = 60;
-
-    // random number generation for lease ids
-    std::mt19937 rng;
-    std::uniform_int_distribution<int64_t> dist;
 
   public:
     explicit AppHandlers(ccfapp::AbstractNodeContext& context) :
-      ccf::UserEndpointRegistry(context),
-      rng(std::random_device()),
-      dist(1, INT64_MAX)
+      ccf::UserEndpointRegistry(context)
     {
       openapi_info.title = "CCF Sample C++ Key-Value Store";
       openapi_info.description = "Sample Key-Value store built on CCF";
@@ -625,11 +614,6 @@ namespace app
       }
     }
 
-    int64_t rand_id()
-    {
-      return dist(rng);
-    }
-
     ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseGrantResponse>
     lease_grant(
       ccf::endpoints::EndpointContext& ctx,
@@ -638,20 +622,11 @@ namespace app
       etcdserverpb::LeaseGrantResponse response;
       CCF_APP_DEBUG("LEASE GRANT = {} {}", payload.id(), payload.ttl());
 
-      // decide whether to use the given ttl or one chosen by us
-      int64_t ttl = DEFAULT_TTL_S;
+      auto lstore = leases::LeaseStore(ctx.tx);
+      auto res = lstore.grant();
 
-      auto leases =
-        ctx.tx.template rw<kv::Map<int64_t, int64_t>>(app::leases::LEASES);
-
-      // randomly generate an id value and write it to a leases map
-      // (ignore their lease id for now)
-      int64_t id = rand_id();
-
-      leases->put(id, ttl);
-
-      response.set_id(id);
-      response.set_ttl(ttl);
+      response.set_id(res.first);
+      response.set_ttl(res.second.ttl);
 
       return ccf::grpc::make_success(response);
     }
@@ -662,12 +637,13 @@ namespace app
       etcdserverpb::LeaseRevokeRequest&& payload)
     {
       etcdserverpb::LeaseRevokeResponse response;
+      auto id = payload.id();
+      CCF_APP_DEBUG("LEASE REVOKE = {}", id);
 
-      auto leases =
-        ctx.tx.template rw<kv::Map<int64_t, int64_t>>(app::leases::LEASES);
+      auto lstore = leases::LeaseStore(ctx.tx);
+      lstore.revoke(id);
 
       // TODO: also remove the keys associated with it
-      leases->remove(payload.id());
 
       return ccf::grpc::make_success(response);
     }
