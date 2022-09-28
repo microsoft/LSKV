@@ -10,15 +10,13 @@
 
 namespace app::leases
 {
-
-
   Value::Value(int64_t ttl_, int64_t start_time_)
   {
     ttl = ttl_;
     start_time = start_time_;
   }
 
-static Value EXPIRED_LEASE = Value(0, 0);
+  static Value EXPIRED_LEASE = Value(0, 0);
 
   Value::Value() = default;
 
@@ -36,12 +34,15 @@ static Value EXPIRED_LEASE = Value(0, 0);
 
   int64_t Value::ttl_remaining()
   {
-    auto remaining =  (start_time + ttl) - now_seconds();
-    if (remaining <= 0) {
-        // expired leases don't indicate how old they are
-        return -1;
-    } else {
-        return remaining;
+    auto remaining = (start_time + ttl) - now_seconds();
+    if (remaining <= 0)
+    {
+      // expired leases don't indicate how old they are
+      return -1;
+    }
+    else
+    {
+      return remaining;
     }
   }
 

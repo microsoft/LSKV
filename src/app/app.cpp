@@ -157,7 +157,6 @@ namespace app
         ccf::no_auth_required)
         .install();
 
-
       make_grpc<
         etcdserverpb::LeaseKeepAliveRequest,
         etcdserverpb::LeaseKeepAliveResponse>(
@@ -763,7 +762,8 @@ namespace app
       auto lstore = leases::ReadOnlyLeaseStore(ctx.tx);
 
       lstore.foreach([&response](auto id, auto value) {
-        if (!value.has_expired()) {
+        if (!value.has_expired())
+        {
           auto* lease = response.add_leases();
           lease->set_id(id);
         }
