@@ -18,9 +18,31 @@ namespace app::leases
     Value(int64_t ttl, int64_t start_time);
 
     bool has_expired();
+    int64_t ttl_remaining();
   };
 
-  class LeaseStore
+  class ReadOnlyLeaseStore {
+    public:
+    using K = int64_t;
+    using V = Value;
+    using KSerialiser = kv::serialisers::BlitSerialiser<K>;
+    using VSerialiser = kv::serialisers::JsonSerialiser<V>;
+    using MT = kv::TypedMap<K, V, KSerialiser, VSerialiser>;
+
+    ReadOnlyLeaseStore(kv::ReadOnlyTx& tx);
+
+    // check whether this lease exists in this store.
+    bool contains(K id);
+
+    std::optional<V> get(const K& id);
+
+    void foreach(const std::function<bool(const K&, const V&)>& fn);
+
+    private:
+    MT::ReadOnlyHandle* inner_map;
+  };
+
+  class WriteOnlyLeaseStore
   {
   public:
     using K = int64_t;
@@ -29,10 +51,7 @@ namespace app::leases
     using VSerialiser = kv::serialisers::JsonSerialiser<V>;
     using MT = kv::TypedMap<K, V, KSerialiser, VSerialiser>;
 
-    LeaseStore(kv::Tx& tx);
-
-    // check whether this lease exists in this store.
-    bool contains(K id);
+    WriteOnlyLeaseStore(kv::Tx& tx);
 
     // create and store a new lease with default ttl.
     std::pair<K, V> grant();
@@ -57,5 +76,10 @@ namespace app::leases
     int64_t DEFAULT_TTL_S = 60;
 
     int64_t rand_id();
+  };
+
+  class LeaseStore : public ReadOnlyLeaseStore, public WriteOnlyLeaseStore{
+    public :
+    LeaseStore(kv::Tx& tx) : ReadOnlyLeaseStore(tx), WriteOnlyLeaseStore(tx){}
   };
 }

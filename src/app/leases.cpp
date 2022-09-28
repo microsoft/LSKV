@@ -24,36 +24,51 @@ namespace app::leases
     return start_time_s;
   }
 
+    int64_t Value::ttl_remaining(){
+        return (start_time + ttl) - now_seconds();
+    }
+
   bool Value::has_expired() {
-    // check start_time + ttl to current time in seconds
-    return start_time + ttl < now_seconds();
+    return ttl_remaining() <= 0;
   }
 
-  LeaseStore::LeaseStore(kv::Tx& tx) : rng(rand()), dist(1, INT64_MAX)
+  WriteOnlyLeaseStore::WriteOnlyLeaseStore(kv::Tx& tx) : rng(rand()), dist(1, INT64_MAX)
   {
-    inner_map = tx.template rw<LeaseStore::MT>(LEASES);
+    inner_map = tx.template rw<WriteOnlyLeaseStore::MT>(LEASES);
   }
 
-  int64_t LeaseStore::rand_id()
+  ReadOnlyLeaseStore::ReadOnlyLeaseStore(kv::ReadOnlyTx& tx) 
+  {
+    inner_map = tx.template ro<ReadOnlyLeaseStore::MT>(LEASES);
+  }
+
+
+  int64_t WriteOnlyLeaseStore::rand_id()
   {
     return dist(rng);
   }
 
 
-    bool LeaseStore::contains(K id){
+    bool ReadOnlyLeaseStore::contains(K id){
+        return get(id).has_value();
+    }
+
+    std::optional<ReadOnlyLeaseStore::V> ReadOnlyLeaseStore::get(const K& id){
       auto value_opt = inner_map->get(id);
       if (!value_opt.has_value()) {
         CCF_APP_DEBUG("actually missing the lease");
-        return false;
+        return std::nullopt;
       }
       CCF_APP_DEBUG("found lease id");
       auto value = value_opt.value();
-      // TODO: if expired we should handle revoking
-      return !value.has_expired();
+      if (value.has_expired()) {
+        return std::nullopt;
+      }
+      return value;
     }
 
   // create and store a new lease with default ttl.
-  std::pair<LeaseStore::K, LeaseStore::V> LeaseStore::grant()
+  std::pair<WriteOnlyLeaseStore::K, WriteOnlyLeaseStore::V> WriteOnlyLeaseStore::grant()
   {
     // randomly generate an id value and write it to a leases map
     // (ignore their lease id for now)
@@ -68,11 +83,11 @@ namespace app::leases
 
   // remove a lease with the given id.
   // This just removes the id from the map, not removing any keys.
-  void LeaseStore::revoke(K id) {
+  void WriteOnlyLeaseStore::revoke(K id) {
     inner_map->remove(id);
   }
 
-  int64_t LeaseStore::keep_alive(K id) {
+  int64_t WriteOnlyLeaseStore::keep_alive(K id) {
     auto value_opt = inner_map->get(id);
     if (value_opt.has_value()) {
       auto value = value_opt.value();
@@ -83,4 +98,8 @@ namespace app::leases
     }
     return 0;
   }
+
+    void ReadOnlyLeaseStore::foreach(const std::function<bool(const ReadOnlyLeaseStore::K&, const ReadOnlyLeaseStore::V&)>& fn){
+        inner_map->foreach(fn);
+    }
 }
