@@ -3,6 +3,7 @@
 # Licensed under the MIT License.
 
 from subprocess import Popen
+import argparse
 import abc
 import shutil
 import time
@@ -287,6 +288,11 @@ def run_metrics(name: str, cmd: str, file: str):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--sgx", type=bool)
+
+    args = parser.parse_args()
+
     bench_dir = "bench"
     port = 8000
 
@@ -324,9 +330,10 @@ def main():
         run_metrics(store.name(), bench_cmd[0], timings_file)
 
         # sgx
-        store = CCFKVSStore(d, port, True)
-        timings_file = run_benchmark(store, bench_cmd)
-        run_metrics(store.name(), bench_cmd[0], timings_file)
+        if args.sgx:
+            store = CCFKVSStore(d, port, True)
+            timings_file = run_benchmark(store, bench_cmd)
+            run_metrics(store.name(), bench_cmd[0], timings_file)
 
     with cimetrics.upload.metrics():
         pass

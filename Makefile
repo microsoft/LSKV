@@ -59,9 +59,14 @@ $(BIN_DIR)/etcd:
 
 $(BIN_DIR)/etcdctl: $(BIN_DIR)/etcd
 
-.PHONY: benchmark
-benchmark: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual build-sgx .venv certs
+.PHONY: benchmark-virtual
+benchmark-virtual: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual .venv certs
 	. .venv/bin/activate && python3 benchmark.py
+
+
+.PHONY: benchmark-sgx
+benchmark-sgx: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual build-sgx .venv certs
+	. .venv/bin/activate && python3 benchmark.py --sgx
 
 .venv: requirements.txt
 	python3 -m venv .venv
