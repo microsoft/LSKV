@@ -1,7 +1,7 @@
-diff --git a/3rdparty/etcd/pkg/report/report.go b/3rdparty/etcd/pkg/report/report.go
-index 36d09b9d..7db5a1d8 100644
---- a/3rdparty/etcd/pkg/report/report.go
-+++ b/3rdparty/etcd/pkg/report/report.go
+diff --git a/pkg/report/report.go b/pkg/report/report.go
+index 36d09b9d5..7db5a1d83 100644
+--- a/pkg/report/report.go
++++ b/pkg/report/report.go
 @@ -17,8 +17,10 @@
  package report
  
@@ -94,10 +94,10 @@ index 36d09b9d..7db5a1d8 100644
  }
  
  func (r *report) processResults() {
-diff --git a/3rdparty/etcd/pkg/report/weighted.go b/3rdparty/etcd/pkg/report/weighted.go
-index 411214f6..4b5b48f3 100644
---- a/3rdparty/etcd/pkg/report/weighted.go
-+++ b/3rdparty/etcd/pkg/report/weighted.go
+diff --git a/pkg/report/weighted.go b/pkg/report/weighted.go
+index 411214f6d..4b5b48f3a 100644
+--- a/pkg/report/weighted.go
++++ b/pkg/report/weighted.go
 @@ -30,10 +30,10 @@ type weightedReport struct {
  
  // NewWeightedReport returns a report that includes
@@ -111,10 +111,10 @@ index 411214f6..4b5b48f3 100644
  		results:    make(chan Result, 16),
  	}
  }
-diff --git a/3rdparty/etcd/tests/common/kv_test.go b/3rdparty/etcd/tests/common/kv_test.go
-index 23e387bd..ac3d553c 100644
---- a/3rdparty/etcd/tests/common/kv_test.go
-+++ b/3rdparty/etcd/tests/common/kv_test.go
+diff --git a/tests/common/kv_test.go b/tests/common/kv_test.go
+index 23e387bd1..ac3d553c6 100644
+--- a/tests/common/kv_test.go
++++ b/tests/common/kv_test.go
 @@ -25,11 +25,13 @@ import (
  	"go.etcd.io/etcd/tests/v3/framework/testutils"
  )
@@ -198,10 +198,98 @@ index 23e387bd..ac3d553c 100644
  			defer cancel()
  			clus := testRunner.NewCluster(ctx, t, config.ClusterConfig{ClusterSize: 3})
  			defer clus.Close()
-diff --git a/3rdparty/etcd/tests/common/main_test.go b/3rdparty/etcd/tests/common/main_test.go
-index d03f120e..014cfc99 100644
---- a/3rdparty/etcd/tests/common/main_test.go
-+++ b/3rdparty/etcd/tests/common/main_test.go
+diff --git a/tests/common/lease_test.go b/tests/common/lease_test.go
+index 7a424dc38..847686876 100644
+--- a/tests/common/lease_test.go
++++ b/tests/common/lease_test.go
+@@ -32,30 +32,30 @@ func TestLeaseGrantTimeToLive(t *testing.T) {
+ 		name   string
+ 		config config.ClusterConfig
+ 	}{
+-		{
+-			name:   "NoTLS",
+-			config: config.ClusterConfig{ClusterSize: 1},
+-		},
+-		{
+-			name:   "PeerTLS",
+-			config: config.ClusterConfig{ClusterSize: 3, PeerTLS: config.ManualTLS},
+-		},
+-		{
+-			name:   "PeerAutoTLS",
+-			config: config.ClusterConfig{ClusterSize: 3, PeerTLS: config.AutoTLS},
+-		},
++		// {
++		// 	name:   "NoTLS",
++		// 	config: config.ClusterConfig{ClusterSize: 1},
++		// },
++		// {
++		// 	name:   "PeerTLS",
++		// 	config: config.ClusterConfig{ClusterSize: 3, PeerTLS: config.ManualTLS},
++		// },
++		// {
++		// 	name:   "PeerAutoTLS",
++		// 	config: config.ClusterConfig{ClusterSize: 3, PeerTLS: config.AutoTLS},
++		// },
+ 		{
+ 			name:   "ClientTLS",
+ 			config: config.ClusterConfig{ClusterSize: 1, ClientTLS: config.ManualTLS},
+ 		},
+-		{
+-			name:   "ClientAutoTLS",
+-			config: config.ClusterConfig{ClusterSize: 1, ClientTLS: config.AutoTLS},
+-		},
++		// {
++		// 	name:   "ClientAutoTLS",
++		// 	config: config.ClusterConfig{ClusterSize: 1, ClientTLS: config.AutoTLS},
++		// },
+ 	}
+ 	for _, tc := range tcs {
+ 		t.Run(tc.name, func(t *testing.T) {
+-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+ 			defer cancel()
+ 			clus := testRunner.NewCluster(ctx, t, tc.config)
+ 			defer clus.Close()
+@@ -98,7 +98,7 @@ func TestLeaseGrantAndList(t *testing.T) {
+ 
+ 		for _, nc := range nestedCases {
+ 			t.Run(tc.name+"/"+nc.name, func(t *testing.T) {
+-				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++				ctx, cancel := context.WithTimeout(context.Background(), timeout)
+ 				defer cancel()
+ 				t.Logf("Creating cluster...")
+ 				clus := testRunner.NewCluster(ctx, t, tc.config)
+@@ -146,7 +146,7 @@ func TestLeaseGrantTimeToLiveExpired(t *testing.T) {
+ 
+ 	for _, tc := range clusterTestCases {
+ 		t.Run(tc.name, func(t *testing.T) {
+-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+ 			defer cancel()
+ 			clus := testRunner.NewCluster(ctx, t, tc.config)
+ 			defer clus.Close()
+@@ -183,7 +183,7 @@ func TestLeaseGrantKeepAliveOnce(t *testing.T) {
+ 
+ 	for _, tc := range clusterTestCases {
+ 		t.Run(tc.name, func(t *testing.T) {
+-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+ 			defer cancel()
+ 			clus := testRunner.NewCluster(ctx, t, tc.config)
+ 			defer clus.Close()
+@@ -212,7 +212,7 @@ func TestLeaseGrantRevoke(t *testing.T) {
+ 
+ 	for _, tc := range clusterTestCases {
+ 		t.Run(tc.name, func(t *testing.T) {
+-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+ 			defer cancel()
+ 			clus := testRunner.NewCluster(ctx, t, tc.config)
+ 			defer clus.Close()
+diff --git a/tests/common/main_test.go b/tests/common/main_test.go
+index d03f120e0..014cfc99e 100644
+--- a/tests/common/main_test.go
++++ b/tests/common/main_test.go
 @@ -23,26 +23,27 @@ import (
  
  var testRunner = framework.UnitTestRunner
@@ -246,10 +334,10 @@ index d03f120e..014cfc99 100644
  }
  
  func TestMain(m *testing.M) {
-diff --git a/3rdparty/etcd/tests/common/txn_test.go b/3rdparty/etcd/tests/common/txn_test.go
-index 890c0f73..eeeba24d 100644
---- a/3rdparty/etcd/tests/common/txn_test.go
-+++ b/3rdparty/etcd/tests/common/txn_test.go
+diff --git a/tests/common/txn_test.go b/tests/common/txn_test.go
+index 890c0f738..eeeba24d3 100644
+--- a/tests/common/txn_test.go
++++ b/tests/common/txn_test.go
 @@ -18,7 +18,6 @@ import (
  	"context"
  	"fmt"
@@ -276,10 +364,10 @@ index 890c0f73..eeeba24d 100644
  			defer cancel()
  			clus := testRunner.NewCluster(ctx, t, cfg.config)
  			defer clus.Close()
-diff --git a/3rdparty/etcd/tests/framework/integration.go b/3rdparty/etcd/tests/framework/integration.go
-index 92602ac6..84f6229d 100644
---- a/3rdparty/etcd/tests/framework/integration.go
-+++ b/3rdparty/etcd/tests/framework/integration.go
+diff --git a/tests/framework/integration.go b/tests/framework/integration.go
+index 92602ac63..84f6229d9 100644
+--- a/tests/framework/integration.go
++++ b/tests/framework/integration.go
 @@ -43,23 +43,27 @@ func (e integrationRunner) BeforeTest(t testing.TB) {
  }
  
@@ -371,12 +459,12 @@ index 92602ac6..84f6229d 100644
  	if err != nil {
  		c.t.Fatal(err)
  	}
-diff --git a/3rdparty/etcd/tests/framework/integration/ccf.go b/3rdparty/etcd/tests/framework/integration/ccf.go
+diff --git a/tests/framework/integration/ccf.go b/tests/framework/integration/ccf.go
 new file mode 100644
-index 00000000..7db42bb9
+index 000000000..47ce43c76
 --- /dev/null
-+++ b/3rdparty/etcd/tests/framework/integration/ccf.go
-@@ -0,0 +1,132 @@
++++ b/tests/framework/integration/ccf.go
+@@ -0,0 +1,147 @@
 +package integration
 +
 +import (
@@ -431,6 +519,7 @@ index 00000000..7db42bb9
 +	}
 +
 +	waitForPort(net.JoinHostPort(defaultHost, defaultPort))
++	waitForFile("workspace/sandbox_common/user0_cert.pem")
 +	return &CcfCluster{
 +		cmd: cmd,
 +		t:   t,
@@ -451,6 +540,20 @@ index 00000000..7db42bb9
 +		}
 +		time.Sleep(timeout)
 +		fmt.Printf("waiting on port (%v)\n", address)
++	}
++}
++
++// wait for file to be present
++func waitForFile(file string) {
++	timeout := time.Second
++	for {
++		if _, err := os.Stat(file); err == nil {
++			fmt.Printf("file exists (%v)\n", file)
++			time.Sleep(time.Second)
++			return
++		}
++		time.Sleep(timeout)
++		fmt.Printf("waiting on file (%v)\n", file)
 +	}
 +}
 +
@@ -509,10 +612,10 @@ index 00000000..7db42bb9
 +func (c *CcfMember) Stop(t testutil.TB) {
 +	// TODO
 +}
-diff --git a/3rdparty/etcd/tests/framework/integration/testing.go b/3rdparty/etcd/tests/framework/integration/testing.go
-index 4c5c76c3..9d0d2e80 100644
---- a/3rdparty/etcd/tests/framework/integration/testing.go
-+++ b/3rdparty/etcd/tests/framework/integration/testing.go
+diff --git a/tests/framework/integration/testing.go b/tests/framework/integration/testing.go
+index 4c5c76c3e..9d0d2e80c 100644
+--- a/tests/framework/integration/testing.go
++++ b/tests/framework/integration/testing.go
 @@ -15,6 +15,7 @@
  package integration
  
@@ -540,10 +643,10 @@ index 4c5c76c3..9d0d2e80 100644
  }
  
  func assertInTestContext(t testutil.TB) {
-diff --git a/3rdparty/etcd/tests/go.mod b/3rdparty/etcd/tests/go.mod
-index 0ce05f47..c3b749a7 100644
---- a/3rdparty/etcd/tests/go.mod
-+++ b/3rdparty/etcd/tests/go.mod
+diff --git a/tests/go.mod b/tests/go.mod
+index 0ce05f471..c3b749a70 100644
+--- a/tests/go.mod
++++ b/tests/go.mod
 @@ -2,18 +2,6 @@ module go.etcd.io/etcd/tests/v3
  
  go 1.17
@@ -588,10 +691,10 @@ index 0ce05f47..c3b749a7 100644
  	go.uber.org/zap v1.21.0
  	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
  	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
-diff --git a/3rdparty/etcd/tests/go.sum b/3rdparty/etcd/tests/go.sum
-index 3864d334..837488c4 100644
---- a/3rdparty/etcd/tests/go.sum
-+++ b/3rdparty/etcd/tests/go.sum
+diff --git a/tests/go.sum b/tests/go.sum
+index 3864d334f..837488c40 100644
+--- a/tests/go.sum
++++ b/tests/go.sum
 @@ -55,10 +55,7 @@ github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kB
  github.com/cenkalti/backoff/v4 v4.1.3 h1:cFAlzYUlVYDysBEH2T5hyJZMh3+5+WCBvSnK6Q8UtC4=
  github.com/cenkalti/backoff/v4 v4.1.3/go.mod h1:scbssz8iZGpm3xbr14ovlUdkxfGXNInqkPWOWmG2CLw=
@@ -741,10 +844,10 @@ index 3864d334..837488c4 100644
  gopkg.in/errgo.v2 v2.1.0/go.mod h1:hNsd1EY+bozCKY1Ytp96fpM3vjJbqLJn88ws8XvfDNI=
  gopkg.in/natefinch/lumberjack.v2 v2.0.0 h1:1Lc07Kr7qY4U2YPouBjpCLxpiyxIVoxqXgkXLknAOE8=
  gopkg.in/natefinch/lumberjack.v2 v2.0.0/go.mod h1:l0ndWWf7gzL7RNwBG7wST/UCcT4T24xpD6X8LsfU/+k=
-diff --git a/3rdparty/etcd/tools/benchmark/cmd/put.go b/3rdparty/etcd/tools/benchmark/cmd/put.go
-index 7208fd35..d7a28b1a 100644
---- a/3rdparty/etcd/tools/benchmark/cmd/put.go
-+++ b/3rdparty/etcd/tools/benchmark/cmd/put.go
+diff --git a/tools/benchmark/cmd/put.go b/tools/benchmark/cmd/put.go
+index 7208fd352..d7a28b1a5 100644
+--- a/tools/benchmark/cmd/put.go
++++ b/tools/benchmark/cmd/put.go
 @@ -27,7 +27,6 @@ import (
  	v3 "go.etcd.io/etcd/client/v3"
  	"go.etcd.io/etcd/pkg/v3/report"
@@ -779,10 +882,10 @@ index 7208fd35..d7a28b1a 100644
  	fmt.Println(<-rc)
  
  	if checkHashkv {
-diff --git a/3rdparty/etcd/tools/benchmark/cmd/range.go b/3rdparty/etcd/tools/benchmark/cmd/range.go
-index 23000683..bfadc01e 100644
---- a/3rdparty/etcd/tools/benchmark/cmd/range.go
-+++ b/3rdparty/etcd/tools/benchmark/cmd/range.go
+diff --git a/tools/benchmark/cmd/range.go b/tools/benchmark/cmd/range.go
+index 230006836..bfadc01e6 100644
+--- a/tools/benchmark/cmd/range.go
++++ b/tools/benchmark/cmd/range.go
 @@ -24,7 +24,6 @@ import (
  	v3 "go.etcd.io/etcd/client/v3"
  	"go.etcd.io/etcd/pkg/v3/report"
@@ -816,10 +919,10 @@ index 23000683..bfadc01e 100644
 -	bar.Finish()
  	fmt.Printf("%s", <-rc)
  }
-diff --git a/3rdparty/etcd/tools/benchmark/cmd/root.go b/3rdparty/etcd/tools/benchmark/cmd/root.go
-index 0a22e031..26438dd3 100644
---- a/3rdparty/etcd/tools/benchmark/cmd/root.go
-+++ b/3rdparty/etcd/tools/benchmark/cmd/root.go
+diff --git a/tools/benchmark/cmd/root.go b/tools/benchmark/cmd/root.go
+index 0a22e031b..26438dd3a 100644
+--- a/tools/benchmark/cmd/root.go
++++ b/tools/benchmark/cmd/root.go
 @@ -55,6 +55,8 @@ var (
  
  	targetLeader     bool
@@ -836,10 +939,10 @@ index 0a22e031..26438dd3 100644
 +
 +	RootCmd.PersistentFlags().StringVar(&csvFile, "csv-file", "timings.csv", "File to write csv data out to.")
  }
-diff --git a/3rdparty/etcd/tools/benchmark/cmd/txn_put.go b/3rdparty/etcd/tools/benchmark/cmd/txn_put.go
-index bea02f7a..50c40f3a 100644
---- a/3rdparty/etcd/tools/benchmark/cmd/txn_put.go
-+++ b/3rdparty/etcd/tools/benchmark/cmd/txn_put.go
+diff --git a/tools/benchmark/cmd/txn_put.go b/tools/benchmark/cmd/txn_put.go
+index bea02f7ac..50c40f3a3 100644
+--- a/tools/benchmark/cmd/txn_put.go
++++ b/tools/benchmark/cmd/txn_put.go
 @@ -25,7 +25,6 @@ import (
  	v3 "go.etcd.io/etcd/client/v3"
  	"go.etcd.io/etcd/pkg/v3/report"
@@ -873,10 +976,10 @@ index bea02f7a..50c40f3a 100644
 -	bar.Finish()
  	fmt.Println(<-rc)
  }
-diff --git a/3rdparty/etcd/tools/benchmark/cmd/util.go b/3rdparty/etcd/tools/benchmark/cmd/util.go
-index ab644b3d..ca976e9c 100644
---- a/3rdparty/etcd/tools/benchmark/cmd/util.go
-+++ b/3rdparty/etcd/tools/benchmark/cmd/util.go
+diff --git a/tools/benchmark/cmd/util.go b/tools/benchmark/cmd/util.go
+index ab644b3d4..ca976e9cb 100644
+--- a/tools/benchmark/cmd/util.go
++++ b/tools/benchmark/cmd/util.go
 @@ -163,9 +163,9 @@ func newReport() report.Report {
  		p = "%g"
  	}
