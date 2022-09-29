@@ -53,17 +53,25 @@ namespace app
         etcdserverpb::RangeResponse>(
         etcdserverpb, kv, "Range", "/v3/kv/range", range);
 
+      auto put = [this](
+                   ccf::endpoints::EndpointContext& ctx,
+                   etcdserverpb::PutRequest&& payload) {
+        return this->put(ctx, std::move(payload));
+      };
+
       install_endpoint<etcdserverpb::PutRequest, etcdserverpb::PutResponse>(
-        etcdserverpb, kv, "Put", "/v3/kv/put", this->put);
+        etcdserverpb, kv, "Put", "/v3/kv/put", put);
+
+      auto delete_range = [this](
+                            ccf::endpoints::EndpointContext& ctx,
+                            etcdserverpb::DeleteRangeRequest&& payload) {
+        return this->delete_range(ctx, std::move(payload));
+      };
 
       install_endpoint<
         etcdserverpb::DeleteRangeRequest,
         etcdserverpb::DeleteRangeResponse>(
-        etcdserverpb,
-        kv,
-        "DeleteRange",
-        "/v3/kv/delete_range",
-        this->delete_range);
+        etcdserverpb, kv, "DeleteRange", "/v3/kv/delete_range", delete_range);
 
       auto txn = [this](
                    ccf::endpoints::EndpointContext& ctx,
@@ -74,23 +82,34 @@ namespace app
       install_endpoint<etcdserverpb::TxnRequest, etcdserverpb::TxnResponse>(
         etcdserverpb, kv, "Txn", "/v3/kv/txn", txn);
 
+      auto lease_grant = [this](
+                           ccf::endpoints::EndpointContext& ctx,
+                           etcdserverpb::LeaseGrantRequest&& payload) {
+        return this->lease_grant(ctx, std::move(payload));
+      };
+
       install_endpoint<
         etcdserverpb::LeaseGrantRequest,
         etcdserverpb::LeaseGrantResponse>(
-        etcdserverpb,
-        lease,
-        "LeaseGrant",
-        "/v3/lease/grant",
-        this->lease_grant);
+        etcdserverpb, lease, "LeaseGrant", "/v3/lease/grant", lease_grant);
+
+      auto lease_revoke = [this](
+                            ccf::endpoints::EndpointContext& ctx,
+                            etcdserverpb::LeaseRevokeRequest&& payload) {
+        return this->lease_revoke(ctx, std::move(payload));
+      };
 
       install_endpoint<
         etcdserverpb::LeaseRevokeRequest,
         etcdserverpb::LeaseRevokeResponse>(
-        etcdserverpb,
-        lease,
-        "LeaseRevoke",
-        "/v3/lease/revoke",
-        this->lease_revoke);
+        etcdserverpb, lease, "LeaseRevoke", "/v3/lease/revoke", lease_revoke);
+
+      auto lease_time_to_live =
+        [this](
+          ccf::endpoints::ReadOnlyEndpointContext& ctx,
+          etcdserverpb::LeaseTimeToLiveRequest&& payload) {
+          return this->lease_time_to_live(ctx, std::move(payload));
+        };
 
       install_endpoint_ro<
         etcdserverpb::LeaseTimeToLiveRequest,
@@ -99,16 +118,24 @@ namespace app
         lease,
         "LeaseTimeToLive",
         "/v3/lease/timetolive",
-        this->lease_time_to_live);
+        lease_time_to_live);
+
+      auto lease_leases = [this](
+                            ccf::endpoints::ReadOnlyEndpointContext& ctx,
+                            etcdserverpb::LeaseLeasesRequest&& payload) {
+        return this->lease_leases(ctx, std::move(payload));
+      };
 
       install_endpoint_ro<
         etcdserverpb::LeaseLeasesRequest,
         etcdserverpb::LeaseLeasesResponse>(
-        etcdserverpb,
-        lease,
-        "LeaseLeases",
-        "/v3/lease/leases",
-        this->lease_leases);
+        etcdserverpb, lease, "LeaseLeases", "/v3/lease/leases", lease_leases);
+
+      auto lease_keep_alive = [this](
+                                ccf::endpoints::EndpointContext& ctx,
+                                etcdserverpb::LeaseKeepAliveRequest&& payload) {
+        return this->lease_keep_alive(ctx, std::move(payload));
+      };
 
       install_endpoint<
         etcdserverpb::LeaseKeepAliveRequest,
@@ -117,7 +144,7 @@ namespace app
         lease,
         "LeaseKeepAlive",
         "/v3/lease/keepalive",
-        this->lease_keep_alive);
+        lease_keep_alive);
     }
 
     template <typename In, typename Out>
@@ -234,10 +261,11 @@ namespace app
       }
 
       auto count = 0;
+      auto now_s = get_time_s();
       auto add_kv = [&](auto& key, auto& value) {
         // check that the lease for this value has not expired
         // NOTE: contains checks the expiration of the lease too.
-        if (value.lease != 0 && !lstore.contains(value.lease))
+        if (value.lease != 0 && !lstore.contains(value.lease, now_s))
         {
           // it had a lease and that lease is no longer (logically) in the store
           // we can't remove it since this is a read-only endpoint but we can
@@ -312,7 +340,7 @@ namespace app
       return ccf::grpc::make_success(range_response);
     }
 
-    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::PutResponse> put(
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::PutResponse> put(
       ccf::endpoints::EndpointContext& ctx, etcdserverpb::PutRequest&& payload)
     {
       etcdserverpb::PutResponse put_response;
@@ -346,12 +374,14 @@ namespace app
           fmt::format("ignore lease not yet supported"));
       }
 
+      auto now_s = get_time_s();
+
       auto lease = payload.lease();
       if (lease != 0)
       {
         // check lease exists, error if missing
         auto lstore = leasestore::LeaseStore(ctx.tx);
-        auto exists = lstore.contains(lease);
+        auto exists = lstore.contains(lease, now_s);
         if (!exists)
         {
           return ccf::grpc::make_error<etcdserverpb::PutResponse>(
@@ -369,7 +399,7 @@ namespace app
       return ccf::grpc::make_success(put_response);
     }
 
-    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::DeleteRangeResponse>
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::DeleteRangeResponse>
     delete_range(
       ccf::endpoints::EndpointContext& ctx,
       etcdserverpb::DeleteRangeRequest&& payload)
@@ -673,7 +703,7 @@ namespace app
       }
     }
 
-    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseGrantResponse>
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseGrantResponse>
     lease_grant(
       ccf::endpoints::EndpointContext& ctx,
       etcdserverpb::LeaseGrantRequest&& payload)
@@ -681,8 +711,10 @@ namespace app
       etcdserverpb::LeaseGrantResponse response;
       CCF_APP_DEBUG("LEASE GRANT = {} {}", payload.id(), payload.ttl());
 
+      auto now_s = get_time_s();
+
       auto lstore = leasestore::LeaseStore(ctx.tx);
-      auto res = lstore.grant(payload.ttl());
+      auto res = lstore.grant(payload.ttl(), now_s);
 
       auto id = res.first;
       auto ttl = res.second.ttl;
@@ -695,7 +727,7 @@ namespace app
       return ccf::grpc::make_success(response);
     }
 
-    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseRevokeResponse>
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseRevokeResponse>
     lease_revoke(
       ccf::endpoints::EndpointContext& ctx,
       etcdserverpb::LeaseRevokeRequest&& payload)
@@ -722,7 +754,7 @@ namespace app
       return ccf::grpc::make_success(response);
     }
 
-    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseTimeToLiveResponse>
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseTimeToLiveResponse>
     lease_time_to_live(
       ccf::endpoints::ReadOnlyEndpointContext& ctx,
       etcdserverpb::LeaseTimeToLiveRequest&& payload)
@@ -737,18 +769,19 @@ namespace app
           GRPC_STATUS_FAILED_PRECONDITION, "keys is not yet supported");
       }
 
+      auto now_s = get_time_s();
       auto lstore = leasestore::ReadOnlyLeaseStore(ctx.tx);
 
-      auto lease = lstore.get(id);
+      auto lease = lstore.get(id, now_s);
 
       response.set_id(id);
-      response.set_ttl(lease.ttl_remaining());
+      response.set_ttl(lease.ttl_remaining(now_s));
       response.set_grantedttl(lease.ttl);
 
       return ccf::grpc::make_success(response);
     }
 
-    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseLeasesResponse>
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseLeasesResponse>
     lease_leases(
       ccf::endpoints::ReadOnlyEndpointContext& ctx,
       etcdserverpb::LeaseLeasesRequest&& payload)
@@ -756,10 +789,11 @@ namespace app
       etcdserverpb::LeaseLeasesResponse response;
       CCF_APP_DEBUG("LEASE LEASES");
 
+      auto now_s = get_time_s();
       auto lstore = leasestore::ReadOnlyLeaseStore(ctx.tx);
 
-      lstore.foreach([&response](auto id, auto lease) {
-        if (!lease.has_expired())
+      lstore.foreach([&response, &now_s](auto id, auto lease) {
+        if (!lease.has_expired(now_s))
         {
           auto* lease = response.add_leases();
           lease->set_id(id);
@@ -770,7 +804,7 @@ namespace app
       return ccf::grpc::make_success(response);
     }
 
-    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseKeepAliveResponse>
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseKeepAliveResponse>
     lease_keep_alive(
       ccf::endpoints::EndpointContext& ctx,
       etcdserverpb::LeaseKeepAliveRequest&& payload)
@@ -779,8 +813,9 @@ namespace app
       auto id = payload.id();
       CCF_APP_DEBUG("LEASE KEEPALIVE = {}", id);
 
+      auto now_s = get_time_s();
       auto lstore = leasestore::LeaseStore(ctx.tx);
-      auto ttl = lstore.keep_alive(id);
+      auto ttl = lstore.keep_alive(id, now_s);
 
       response.set_id(id);
       response.set_ttl(ttl);
@@ -788,16 +823,17 @@ namespace app
       return ccf::grpc::make_success(response);
     }
 
-    static void revoke_expired_leases(kv::Tx& tx)
+    void revoke_expired_leases(kv::Tx& tx)
     {
       CCF_APP_DEBUG("revoking any expired leases");
       std::set<int64_t> expired_leases;
 
+      auto now_s = get_time_s();
       auto lstore = leasestore::LeaseStore(tx);
 
       // go through all leases in the leasestore
-      lstore.foreach([&expired_leases, &lstore](auto id, auto lease) {
-        if (lease.has_expired())
+      lstore.foreach([&expired_leases, &lstore, &now_s](auto id, auto lease) {
+        if (lease.has_expired(now_s))
         {
           // if the lease has expired then revoke it in the lease store (remove
           // the entry)
@@ -823,7 +859,15 @@ namespace app
 
       CCF_APP_DEBUG("finished revoking leases");
     }
+
+    int64_t get_time_s()
+    {
+      ::timespec time;
+      get_untrusted_host_time_v1(time);
+      return time.tv_sec;
+    }
   };
+
 } // namespace app
 
 namespace ccfapp

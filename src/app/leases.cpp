@@ -23,18 +23,9 @@ namespace app::leasestore
   DECLARE_JSON_TYPE(Lease);
   DECLARE_JSON_REQUIRED_FIELDS(Lease, ttl, start_time);
 
-  int64_t now_seconds()
+  int64_t Lease::ttl_remaining(int64_t now_s)
   {
-    auto start_time = std::chrono::system_clock::now();
-    auto start_time_s = std::chrono::duration_cast<std::chrono::seconds>(
-                          start_time.time_since_epoch())
-                          .count();
-    return start_time_s;
-  }
-
-  int64_t Lease::ttl_remaining()
-  {
-    auto remaining = (start_time + ttl) - now_seconds();
+    auto remaining = (start_time + ttl) - now_s;
     if (remaining <= 0)
     {
       // expired leases don't indicate how old they are
@@ -46,9 +37,9 @@ namespace app::leasestore
     }
   }
 
-  bool Lease::has_expired()
+  bool Lease::has_expired(int64_t now_s)
   {
-    return ttl_remaining() <= 0;
+    return ttl_remaining(now_s) <= 0;
   }
 
   WriteOnlyLeaseStore::WriteOnlyLeaseStore(kv::Tx& tx) :
@@ -68,12 +59,12 @@ namespace app::leasestore
     return dist(rng);
   }
 
-  bool ReadOnlyLeaseStore::contains(K id)
+  bool ReadOnlyLeaseStore::contains(K id, int64_t now_s)
   {
-    return !get(id).has_expired();
+    return !get(id, now_s).has_expired(now_s);
   }
 
-  ReadOnlyLeaseStore::V ReadOnlyLeaseStore::get(const K& id)
+  ReadOnlyLeaseStore::V ReadOnlyLeaseStore::get(const K& id, int64_t now_s)
   {
     auto lease_opt = inner_map->get(id);
     if (!lease_opt.has_value())
@@ -83,7 +74,7 @@ namespace app::leasestore
     }
     CCF_APP_DEBUG("found lease id");
     auto lease = lease_opt.value();
-    if (lease.has_expired())
+    if (lease.has_expired(now_s))
     {
       return EXPIRED_LEASE;
     }
@@ -92,12 +83,12 @@ namespace app::leasestore
 
   // create and store a new lease with default ttl.
   std::pair<WriteOnlyLeaseStore::K, WriteOnlyLeaseStore::V>
-  WriteOnlyLeaseStore::grant(int64_t ttl)
+  WriteOnlyLeaseStore::grant(int64_t ttl, int64_t now_s)
   {
     // randomly generate an id value and write it to a leases map
     // (ignore their lease id for now)
     int64_t id = rand_id();
-    auto lease = Lease(ttl, now_seconds());
+    auto lease = Lease(ttl, now_s);
     inner_map->put(id, lease);
 
     return std::make_pair(id, lease);
@@ -110,13 +101,13 @@ namespace app::leasestore
     inner_map->remove(id);
   }
 
-  int64_t WriteOnlyLeaseStore::keep_alive(K id)
+  int64_t WriteOnlyLeaseStore::keep_alive(K id, int64_t now_s)
   {
     auto lease_opt = inner_map->get(id);
     if (lease_opt.has_value())
     {
       auto lease = lease_opt.value();
-      lease.start_time = now_seconds();
+      lease.start_time = now_s;
       auto ttl = lease.ttl;
       inner_map->put(id, lease);
       return ttl;

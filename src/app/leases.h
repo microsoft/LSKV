@@ -21,8 +21,8 @@ namespace app::leasestore
     Lease();
     Lease(int64_t ttl, int64_t start_time);
 
-    bool has_expired();
-    int64_t ttl_remaining();
+    bool has_expired(int64_t now_s);
+    int64_t ttl_remaining(int64_t now_s);
   };
 
   class ReadOnlyLeaseStore
@@ -37,9 +37,9 @@ namespace app::leasestore
     explicit ReadOnlyLeaseStore(kv::ReadOnlyTx& tx);
 
     // check whether this lease exists in this store.
-    bool contains(K id);
+    bool contains(K id, int64_t now_s);
 
-    V get(const K& id);
+    V get(const K& id, int64_t now_s);
 
     void foreach(const std::function<bool(const K&, const V&)>& fn);
 
@@ -59,14 +59,14 @@ namespace app::leasestore
     explicit WriteOnlyLeaseStore(kv::Tx& tx);
 
     // create and store a new lease with default ttl.
-    std::pair<K, V> grant(int64_t ttl);
+    std::pair<K, V> grant(int64_t ttl, int64_t now_s);
 
     // remove a lease with the given id.
     // This just removes the id from the map, not removing any keys.
     void revoke(K id);
 
     // refresh a lease to keep it alive.
-    int64_t keep_alive(K id);
+    int64_t keep_alive(K id, int64_t now_s);
 
   private:
     // random number generation for lease ids
