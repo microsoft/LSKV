@@ -73,6 +73,51 @@ namespace app
 
       install_endpoint<etcdserverpb::TxnRequest, etcdserverpb::TxnResponse>(
         etcdserverpb, kv, "Txn", "/v3/kv/txn", txn);
+
+      install_endpoint<
+        etcdserverpb::LeaseGrantRequest,
+        etcdserverpb::LeaseGrantResponse>(
+        etcdserverpb,
+        lease,
+        "LeaseGrant",
+        "/v3/lease/grant",
+        this->lease_grant);
+
+      install_endpoint<
+        etcdserverpb::LeaseRevokeRequest,
+        etcdserverpb::LeaseRevokeResponse>(
+        etcdserverpb,
+        lease,
+        "LeaseRevoke",
+        "/v3/lease/revoke",
+        this->lease_revoke);
+
+      install_endpoint_ro<
+        etcdserverpb::LeaseTimeToLiveRequest,
+        etcdserverpb::LeaseTimeToLiveResponse>(
+        etcdserverpb,
+        lease,
+        "LeaseTimeToLive",
+        "/v3/lease/timetolive",
+        this->lease_time_to_live);
+
+      install_endpoint_ro<
+        etcdserverpb::LeaseLeasesRequest,
+        etcdserverpb::LeaseLeasesResponse>(
+        etcdserverpb,
+        lease,
+        "LeaseLeases",
+        "/v3/lease/leases",
+        this->lease_leases);
+
+      install_endpoint<
+        etcdserverpb::LeaseKeepAliveRequest,
+        etcdserverpb::LeaseKeepAliveResponse>(
+        etcdserverpb,
+        lease,
+        "LeaseKeepAlive",
+        "/v3/lease/keepalive",
+        this->lease_keep_alive);
     }
 
     template <typename In, typename Out>
@@ -114,56 +159,6 @@ namespace app
         path,
         HTTP_POST,
         app::json_grpc::json_grpc_adapter<In, Out>(f),
-        ccf::no_auth_required)
-        .install();
-
-      make_grpc<
-        etcdserverpb::LeaseGrantRequest,
-        etcdserverpb::LeaseGrantResponse>(
-        etcdserverpb,
-        lease,
-        "LeaseGrant",
-        this->lease_grant,
-        ccf::no_auth_required)
-        .install();
-
-      make_grpc<
-        etcdserverpb::LeaseRevokeRequest,
-        etcdserverpb::LeaseRevokeResponse>(
-        etcdserverpb,
-        lease,
-        "LeaseRevoke",
-        this->lease_revoke,
-        ccf::no_auth_required)
-        .install();
-
-      make_grpc_ro<
-        etcdserverpb::LeaseTimeToLiveRequest,
-        etcdserverpb::LeaseTimeToLiveResponse>(
-        etcdserverpb,
-        lease,
-        "LeaseTimeToLive",
-        this->lease_time_to_live,
-        ccf::no_auth_required)
-        .install();
-
-      make_grpc_ro<
-        etcdserverpb::LeaseLeasesRequest,
-        etcdserverpb::LeaseLeasesResponse>(
-        etcdserverpb,
-        lease,
-        "LeaseLeases",
-        this->lease_leases,
-        ccf::no_auth_required)
-        .install();
-
-      make_grpc<
-        etcdserverpb::LeaseKeepAliveRequest,
-        etcdserverpb::LeaseKeepAliveResponse>(
-        etcdserverpb,
-        lease,
-        "LeaseKeepAlive",
-        this->lease_keep_alive,
         ccf::no_auth_required)
         .install();
     }
