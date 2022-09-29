@@ -355,12 +355,6 @@ namespace app
       // TODO(#62): move to compact endpoint
       revoke_expired_leases(ctx.tx);
 
-      if (payload.prev_kv())
-      {
-        return ccf::grpc::make_error<etcdserverpb::PutResponse>(
-          GRPC_STATUS_FAILED_PRECONDITION,
-          fmt::format("prev_kv not yet supported"));
-      }
       if (payload.ignore_value())
       {
         return ccf::grpc::make_error<etcdserverpb::PutResponse>(
@@ -391,10 +385,20 @@ namespace app
         }
         // continue with normal flow, recording the lease in the kvstore
       }
-
+      
       auto records_map = kvstore::KVStore(ctx.tx);
-      records_map.put(payload.key(), kvstore::Value(payload.value(), lease));
-      ctx.rpc_ctx->set_response_status(HTTP_STATUS_OK);
+      auto old = records_map.put(payload.key(), kvstore::Value(payload.value(), lease));
+      if (payload.prev_kv() && old.has_value())
+      {
+        auto* prev_kv = put_response.mutable_prev_kv();
+        auto& value = old.value();
+        prev_kv->set_key(payload.key());
+        prev_kv->set_value(value.get_data());
+        prev_kv->set_create_revision(value.create_revision);
+        prev_kv->set_mod_revision(value.mod_revision);
+        prev_kv->set_version(value.version);
+        prev_kv->set_lease(value.lease);
+      }
 
       return ccf::grpc::make_success(put_response);
     }
