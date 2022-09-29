@@ -1,3 +1,116 @@
+diff --git a/3rdparty/etcd/pkg/report/report.go b/3rdparty/etcd/pkg/report/report.go
+index 36d09b9d..7db5a1d8 100644
+--- a/3rdparty/etcd/pkg/report/report.go
++++ b/3rdparty/etcd/pkg/report/report.go
+@@ -17,8 +17,10 @@
+ package report
+ 
+ import (
++	"bufio"
+ 	"fmt"
+ 	"math"
++	"os"
+ 	"sort"
+ 	"strings"
+ 	"time"
+@@ -44,6 +46,9 @@ type report struct {
+ 
+ 	stats Stats
+ 	sps   *secondPoints
++
++	csvFile   *os.File
++	csvBuffer *bufio.Writer
+ }
+ 
+ // Stats exposes results raw data.
+@@ -79,19 +84,31 @@ type Report interface {
+ 	Stats() <-chan Stats
+ }
+ 
+-func NewReport(precision string) Report { return newReport(precision) }
++func NewReport(precision string, csvFile string) Report { return newReport(precision, csvFile) }
+ 
+-func newReport(precision string) *report {
++func newReport(precision string, csvFile string) *report {
+ 	r := &report{
+ 		results:   make(chan Result, 16),
+ 		precision: precision,
+ 	}
+ 	r.stats.ErrorDist = make(map[string]int)
++
++	if csvFile != "" {
++		f, err := os.Create(csvFile)
++		if err != nil {
++			panic(err)
++		}
++		b := bufio.NewWriter(f)
++		r.csvFile = f
++		r.csvBuffer = b
++		fmt.Fprintln(r.csvFile, "start_micros,end_micros")
++	}
++
+ 	return r
+ }
+ 
+-func NewReportSample(precision string) Report {
+-	r := NewReport(precision).(*report)
++func NewReportSample(precision string, csvFile string) Report {
++	r := NewReport(precision, csvFile).(*report)
+ 	r.sps = newSecondPoints()
+ 	return r
+ }
+@@ -101,6 +118,12 @@ func (r *report) Results() chan<- Result { return r.results }
+ func (r *report) Run() <-chan string {
+ 	donec := make(chan string, 1)
+ 	go func() {
++		if r.csvFile != nil {
++			defer func() {
++				r.csvBuffer.Flush()
++				r.csvFile.Close()
++			}()
++		}
+ 		defer close(donec)
+ 		r.processResults()
+ 		donec <- r.String()
+@@ -161,8 +184,8 @@ func (r *report) sec2str(sec float64) string { return fmt.Sprintf(r.precision+"
+ 
+ type reportRate struct{ *report }
+ 
+-func NewReportRate(precision string) Report {
+-	return &reportRate{NewReport(precision).(*report)}
++func NewReportRate(precision string, csvFile string) Report {
++	return &reportRate{NewReport(precision, csvFile).(*report)}
+ }
+ 
+ func (r *reportRate) String() string {
+@@ -180,6 +203,10 @@ func (r *report) processResult(res *Result) {
+ 	if r.sps != nil {
+ 		r.sps.Add(res.Start, dur)
+ 	}
++	if r.csvBuffer != nil {
++		r.csvBuffer.WriteString(fmt.Sprintf("%v,%v\n", res.Start.UnixMicro(), res.End.UnixMicro()))
++
++	}
+ }
+ 
+ func (r *report) processResults() {
+diff --git a/3rdparty/etcd/pkg/report/weighted.go b/3rdparty/etcd/pkg/report/weighted.go
+index 411214f6..4b5b48f3 100644
+--- a/3rdparty/etcd/pkg/report/weighted.go
++++ b/3rdparty/etcd/pkg/report/weighted.go
+@@ -30,10 +30,10 @@ type weightedReport struct {
+ 
+ // NewWeightedReport returns a report that includes
+ // both weighted and unweighted statistics.
+-func NewWeightedReport(r Report, precision string) Report {
++func NewWeightedReport(r Report, precision string, csvFile string) Report {
+ 	return &weightedReport{
+ 		baseReport: r,
+-		report:     newReport(precision),
++		report:     newReport(precision, csvFile),
+ 		results:    make(chan Result, 16),
+ 	}
+ }
 diff --git a/3rdparty/etcd/tests/common/kv_test.go b/3rdparty/etcd/tests/common/kv_test.go
 index 23e387bd..ac3d553c 100644
 --- a/3rdparty/etcd/tests/common/kv_test.go
@@ -628,3 +741,161 @@ index 3864d334..837488c4 100644
  gopkg.in/errgo.v2 v2.1.0/go.mod h1:hNsd1EY+bozCKY1Ytp96fpM3vjJbqLJn88ws8XvfDNI=
  gopkg.in/natefinch/lumberjack.v2 v2.0.0 h1:1Lc07Kr7qY4U2YPouBjpCLxpiyxIVoxqXgkXLknAOE8=
  gopkg.in/natefinch/lumberjack.v2 v2.0.0/go.mod h1:l0ndWWf7gzL7RNwBG7wST/UCcT4T24xpD6X8LsfU/+k=
+diff --git a/3rdparty/etcd/tools/benchmark/cmd/put.go b/3rdparty/etcd/tools/benchmark/cmd/put.go
+index 7208fd35..d7a28b1a 100644
+--- a/3rdparty/etcd/tools/benchmark/cmd/put.go
++++ b/3rdparty/etcd/tools/benchmark/cmd/put.go
+@@ -27,7 +27,6 @@ import (
+ 	v3 "go.etcd.io/etcd/client/v3"
+ 	"go.etcd.io/etcd/pkg/v3/report"
+ 
+-	"github.com/cheggaaa/pb/v3"
+ 	"github.com/dustin/go-humanize"
+ 	"github.com/spf13/cobra"
+ 	"golang.org/x/time/rate"
+@@ -85,9 +84,6 @@ func putFunc(cmd *cobra.Command, args []string) {
+ 	clients := mustCreateClients(totalClients, totalConns)
+ 	k, v := make([]byte, keySize), string(mustRandBytes(valSize))
+ 
+-	bar = pb.New(putTotal)
+-	bar.Start()
+-
+ 	r := newReport()
+ 	for i := range clients {
+ 		wg.Add(1)
+@@ -99,7 +95,6 @@ func putFunc(cmd *cobra.Command, args []string) {
+ 				st := time.Now()
+ 				_, err := c.Do(context.Background(), op)
+ 				r.Results() <- report.Result{Err: err, Start: st, End: time.Now()}
+-				bar.Increment()
+ 			}
+ 		}(clients[i])
+ 	}
+@@ -128,7 +123,6 @@ func putFunc(cmd *cobra.Command, args []string) {
+ 	rc := r.Run()
+ 	wg.Wait()
+ 	close(r.Results())
+-	bar.Finish()
+ 	fmt.Println(<-rc)
+ 
+ 	if checkHashkv {
+diff --git a/3rdparty/etcd/tools/benchmark/cmd/range.go b/3rdparty/etcd/tools/benchmark/cmd/range.go
+index 23000683..bfadc01e 100644
+--- a/3rdparty/etcd/tools/benchmark/cmd/range.go
++++ b/3rdparty/etcd/tools/benchmark/cmd/range.go
+@@ -24,7 +24,6 @@ import (
+ 	v3 "go.etcd.io/etcd/client/v3"
+ 	"go.etcd.io/etcd/pkg/v3/report"
+ 
+-	"github.com/cheggaaa/pb/v3"
+ 	"github.com/spf13/cobra"
+ 	"golang.org/x/time/rate"
+ )
+@@ -79,9 +78,6 @@ func rangeFunc(cmd *cobra.Command, args []string) {
+ 	requests := make(chan v3.Op, totalClients)
+ 	clients := mustCreateClients(totalClients, totalConns)
+ 
+-	bar = pb.New(rangeTotal)
+-	bar.Start()
+-
+ 	r := newReport()
+ 	for i := range clients {
+ 		wg.Add(1)
+@@ -93,7 +89,6 @@ func rangeFunc(cmd *cobra.Command, args []string) {
+ 				st := time.Now()
+ 				_, err := c.Do(context.Background(), op)
+ 				r.Results() <- report.Result{Err: err, Start: st, End: time.Now()}
+-				bar.Increment()
+ 			}
+ 		}(clients[i])
+ 	}
+@@ -113,6 +108,5 @@ func rangeFunc(cmd *cobra.Command, args []string) {
+ 	rc := r.Run()
+ 	wg.Wait()
+ 	close(r.Results())
+-	bar.Finish()
+ 	fmt.Printf("%s", <-rc)
+ }
+diff --git a/3rdparty/etcd/tools/benchmark/cmd/root.go b/3rdparty/etcd/tools/benchmark/cmd/root.go
+index 0a22e031..26438dd3 100644
+--- a/3rdparty/etcd/tools/benchmark/cmd/root.go
++++ b/3rdparty/etcd/tools/benchmark/cmd/root.go
+@@ -55,6 +55,8 @@ var (
+ 
+ 	targetLeader     bool
+ 	autoSyncInterval time.Duration
++
++	csvFile string
+ )
+ 
+ func init() {
+@@ -73,4 +75,6 @@ func init() {
+ 
+ 	RootCmd.PersistentFlags().BoolVar(&targetLeader, "target-leader", false, "connect only to the leader node")
+ 	RootCmd.PersistentFlags().DurationVar(&autoSyncInterval, "auto-sync-interval", time.Duration(0), "AutoSyncInterval is the interval to update endpoints with its latest members")
++
++	RootCmd.PersistentFlags().StringVar(&csvFile, "csv-file", "timings.csv", "File to write csv data out to.")
+ }
+diff --git a/3rdparty/etcd/tools/benchmark/cmd/txn_put.go b/3rdparty/etcd/tools/benchmark/cmd/txn_put.go
+index bea02f7a..50c40f3a 100644
+--- a/3rdparty/etcd/tools/benchmark/cmd/txn_put.go
++++ b/3rdparty/etcd/tools/benchmark/cmd/txn_put.go
+@@ -25,7 +25,6 @@ import (
+ 	v3 "go.etcd.io/etcd/client/v3"
+ 	"go.etcd.io/etcd/pkg/v3/report"
+ 
+-	"github.com/cheggaaa/pb/v3"
+ 	"github.com/spf13/cobra"
+ 	"golang.org/x/time/rate"
+ )
+@@ -75,9 +74,6 @@ func txnPutFunc(cmd *cobra.Command, args []string) {
+ 	clients := mustCreateClients(totalClients, totalConns)
+ 	k, v := make([]byte, keySize), string(mustRandBytes(valSize))
+ 
+-	bar = pb.New(txnPutTotal)
+-	bar.Start()
+-
+ 	r := newReport()
+ 	for i := range clients {
+ 		wg.Add(1)
+@@ -88,7 +84,6 @@ func txnPutFunc(cmd *cobra.Command, args []string) {
+ 				st := time.Now()
+ 				_, err := c.Txn(context.TODO()).Then(ops...).Commit()
+ 				r.Results() <- report.Result{Err: err, Start: st, End: time.Now()}
+-				bar.Increment()
+ 			}
+ 		}(clients[i])
+ 	}
+@@ -108,6 +103,5 @@ func txnPutFunc(cmd *cobra.Command, args []string) {
+ 	rc := r.Run()
+ 	wg.Wait()
+ 	close(r.Results())
+-	bar.Finish()
+ 	fmt.Println(<-rc)
+ }
+diff --git a/3rdparty/etcd/tools/benchmark/cmd/util.go b/3rdparty/etcd/tools/benchmark/cmd/util.go
+index ab644b3d..ca976e9c 100644
+--- a/3rdparty/etcd/tools/benchmark/cmd/util.go
++++ b/3rdparty/etcd/tools/benchmark/cmd/util.go
+@@ -163,9 +163,9 @@ func newReport() report.Report {
+ 		p = "%g"
+ 	}
+ 	if sample {
+-		return report.NewReportSample(p)
++		return report.NewReportSample(p, csvFile)
+ 	}
+-	return report.NewReport(p)
++	return report.NewReport(p, csvFile)
+ }
+ 
+ func newWeightedReport() report.Report {
+@@ -174,7 +174,7 @@ func newWeightedReport() report.Report {
+ 		p = "%g"
+ 	}
+ 	if sample {
+-		return report.NewReportSample(p)
++		return report.NewReportSample(p, csvFile)
+ 	}
+-	return report.NewWeightedReport(report.NewReport(p), p)
++	return report.NewWeightedReport(report.NewReport(p, csvFile), p, csvFile)
+ }

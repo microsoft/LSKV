@@ -10,4 +10,11 @@ node_modules/
 bin/
 .vscode/
 
+/bench/
 default.etcd/
+
+/.venv/
+/certs/
+
+/.ipynb_checkpoints/
+/plots/

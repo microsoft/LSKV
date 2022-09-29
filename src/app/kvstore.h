@@ -1,14 +1,21 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma once
+
 #include "ccf/app_interface.h"
 #include "ccf/common_auth_policies.h"
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
 #include "kv/untyped_map.h" // TODO(#22): private header
 
+#include <string>
+#include <vector>
+
 namespace app::store
 {
+  static constexpr auto RECORDS = "records";
+
   struct Value
   {
     // the actual value that the client wants written stored as a list of bytes
@@ -23,7 +30,7 @@ namespace app::store
     // the id of the lease associated with this key, 0 if no lease.
     int64_t lease;
 
-    Value(std::string v);
+    explicit Value(const std::string& v);
     Value();
 
     std::string get_data();
@@ -37,14 +44,16 @@ namespace app::store
     using KSerialiser = kv::serialisers::BlitSerialiser<K>;
     using VSerialiser = kv::serialisers::JsonSerialiser<V>;
     using MT = kv::untyped::Map;
-    KVStore(kv::Tx& tx);
-    KVStore(kv::ReadOnlyTx& tx);
+    explicit KVStore(kv::Tx& tx);
+    explicit KVStore(kv::ReadOnlyTx& tx);
     /// @brief get retrieves the value stored for the given key. It hydrates the
     /// value with up-to-date information as values may not store all
     /// information about revisions.
     /// @param key the key to get.
     /// @return The value, if present.
     std::optional<V> get(const K& key);
+
+    void foreach(const std::function<bool(const K&, const V&)>& fn);
 
     void range(
       const std::function<void(K&, V&)>& fn, const K& from, const K& to);
@@ -70,4 +79,4 @@ namespace app::store
     MT::Handle* inner_map;
     void hydrate_value(const K& key, V& value);
   };
-};
+}; // namespace app::store
