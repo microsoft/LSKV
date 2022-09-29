@@ -265,7 +265,8 @@ namespace app
 
       auto records_map = store::KVStore(ctx.tx);
       auto old = records_map.put(payload.key(), store::Value(payload.value()));
-      if (payload.prev_kv() && old.has_value()) {
+      if (payload.prev_kv() && old.has_value())
+      {
         auto* prev_kv = put_response.mutable_prev_kv();
         auto value = old.value();
         prev_kv->set_key(payload.key());
