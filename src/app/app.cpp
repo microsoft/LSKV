@@ -324,6 +324,7 @@ namespace app
         payload.value(),
         payload.lease());
 
+      // TODO(#62): move to compact endpoint
       revoke_expired_leases(ctx.tx);
 
       if (payload.prev_kv())
@@ -382,6 +383,7 @@ namespace app
         payload.prev_kv());
       etcdserverpb::DeleteRangeResponse delete_range_response;
 
+      // TODO(#62): move to compact endpoint
       revoke_expired_leases(ctx.tx);
 
       auto records_map = kvstore::KVStore(ctx.tx);
