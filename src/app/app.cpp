@@ -25,7 +25,7 @@ namespace app
     std::shared_ptr<IndexStrategy> kvindex = nullptr;
 
   public:
-    AppHandlers(ccfapp::AbstractNodeContext& context) :
+    explicit AppHandlers(ccfapp::AbstractNodeContext& context) :
       ccf::UserEndpointRegistry(context)
     {
       openapi_info.title = "CCF Sample C++ Key-Value Store";

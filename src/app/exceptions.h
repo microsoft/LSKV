@@ -3,13 +3,15 @@
 
 #pragma once
 
+#include <string>
+
 namespace app::exceptions
 {
   struct BadRequest : public std::exception
   {
     ccf::ErrorDetails error;
 
-    BadRequest(std::string&& msg) :
+    explicit BadRequest(std::string&& msg) :
       error{HTTP_STATUS_BAD_REQUEST, ccf::errors::InvalidInput, msg}
     {}
 
@@ -23,7 +25,7 @@ namespace app::exceptions
   {
     ccf::ErrorDetails error;
 
-    WrongMediaType(std::string&& msg) :
+    explicit WrongMediaType(std::string&& msg) :
       error{
         HTTP_STATUS_UNSUPPORTED_MEDIA_TYPE,
         ccf::errors::UnsupportedContentType,
@@ -36,4 +38,4 @@ namespace app::exceptions
     }
   };
 
-}
+}; // namespace app::exceptions

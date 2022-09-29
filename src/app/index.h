@@ -6,6 +6,10 @@
 #include "ccf/indexing/strategy.h"
 #include "kvstore.h"
 
+#include <map>
+#include <string>
+#include <vector>
+
 namespace app::index
 {
   class KVIndexer : public ccf::indexing::Strategy
@@ -27,7 +31,7 @@ namespace app::index
     std::map<K, std::vector<V>> keys_to_values;
 
   public:
-    KVIndexer(const std::string& map_name);
+    explicit KVIndexer(const std::string& map_name);
 
     void handle_committed_transaction(
       const ccf::TxID& tx_id, const kv::ReadOnlyStorePtr& store) override;
@@ -42,4 +46,4 @@ namespace app::index
       const K& from,
       const K& to);
   };
-}; // namespace app
+}; // namespace app::index

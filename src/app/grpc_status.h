@@ -84,4 +84,4 @@ namespace ccf::grpc
   {
     return make_grpc_status(GRPC_STATUS_OK);
   }
-}
+} // namespace ccf::grpc
