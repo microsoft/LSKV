@@ -7,6 +7,7 @@
 #include "kvstore.h"
 
 #include <map>
+#include <shared_mutex>
 #include <string>
 #include <vector>
 
@@ -29,6 +30,8 @@ namespace app::index
 
     // a mapping from keys to the values those keys had at certain points.
     std::map<K, std::vector<V>> keys_to_values;
+
+    std::shared_mutex mutex;
 
   public:
     explicit KVIndexer(const std::string& map_name);
