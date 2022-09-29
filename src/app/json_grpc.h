@@ -88,8 +88,19 @@ namespace app::json_grpc
     const ccf::GrpcEndpoint<In, Out>& f)
   {
     return [f](ccf::endpoints::EndpointContext& ctx) {
-      set_json_grpc_response<Out>(
-        f(ctx, get_json_grpc_payload<In>(ctx.rpc_ctx)), ctx.rpc_ctx);
+      try
+      {
+        set_json_grpc_response<Out>(
+          f(ctx, get_json_grpc_payload<In>(ctx.rpc_ctx)), ctx.rpc_ctx);
+      }
+      catch (app::exceptions::BadRequest& e)
+      {
+        ctx.rpc_ctx->set_error(std::move(e.error));
+      }
+      catch (app::exceptions::WrongMediaType& e)
+      {
+        ctx.rpc_ctx->set_error(std::move(e.error));
+      }
     };
   }
 
