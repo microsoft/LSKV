@@ -7,6 +7,7 @@
 
 #include <random>
 #include <string>
+#include <utility>
 
 namespace app::leasestore
 {
@@ -33,7 +34,7 @@ namespace app::leasestore
     using VSerialiser = kv::serialisers::JsonSerialiser<V>;
     using MT = kv::TypedMap<K, V, KSerialiser, VSerialiser>;
 
-    ReadOnlyLeaseStore(kv::ReadOnlyTx& tx);
+    explicit ReadOnlyLeaseStore(kv::ReadOnlyTx& tx);
 
     // check whether this lease exists in this store.
     bool contains(K id);
@@ -55,7 +56,7 @@ namespace app::leasestore
     using VSerialiser = kv::serialisers::JsonSerialiser<V>;
     using MT = kv::TypedMap<K, V, KSerialiser, VSerialiser>;
 
-    WriteOnlyLeaseStore(kv::Tx& tx);
+    explicit WriteOnlyLeaseStore(kv::Tx& tx);
 
     // create and store a new lease with default ttl.
     std::pair<K, V> grant(int64_t ttl);
@@ -69,7 +70,7 @@ namespace app::leasestore
 
   private:
     // random number generation for lease ids
-    std::random_device rand;
+    std::random_device rand_dev;
     std::mt19937 rng;
     std::uniform_int_distribution<int64_t> dist;
 
@@ -85,6 +86,9 @@ namespace app::leasestore
   class LeaseStore : public ReadOnlyLeaseStore, public WriteOnlyLeaseStore
   {
   public:
-    LeaseStore(kv::Tx& tx) : ReadOnlyLeaseStore(tx), WriteOnlyLeaseStore(tx) {}
+    explicit LeaseStore(kv::Tx& tx) :
+      ReadOnlyLeaseStore(tx),
+      WriteOnlyLeaseStore(tx)
+    {}
   };
-}
+} // namespace app::leasestore

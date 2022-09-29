@@ -182,4 +182,4 @@ namespace app::kvstore
     // and always set the mod_revision
     value.mod_revision = revision;
   }
-}; // namespace app::store
+}; // namespace app::kvstore

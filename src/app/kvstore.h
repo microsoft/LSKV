@@ -79,4 +79,4 @@ namespace app::kvstore
     MT::Handle* inner_map;
     void hydrate_value(const K& key, V& value);
   };
-}; // namespace app::store
+}; // namespace app::kvstore

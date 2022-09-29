@@ -5,7 +5,7 @@
 
 #include "leases.h"
 
-#include <chrono>
+#include <chrono> // NOLINT(build/c++11)
 #include <string>
 
 namespace app::leasestore
@@ -52,7 +52,7 @@ namespace app::leasestore
   }
 
   WriteOnlyLeaseStore::WriteOnlyLeaseStore(kv::Tx& tx) :
-    rng(rand()),
+    rng(rand_dev()),
     dist(1, INT64_MAX)
   {
     inner_map = tx.template rw<WriteOnlyLeaseStore::MT>(LEASES);
@@ -130,4 +130,4 @@ namespace app::leasestore
   {
     inner_map->foreach(fn);
   }
-}
+} // namespace app::leasestore
