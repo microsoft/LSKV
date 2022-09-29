@@ -25,7 +25,7 @@ namespace app
     std::shared_ptr<IndexStrategy> kvindex = nullptr;
 
   public:
-    AppHandlers(ccfapp::AbstractNodeContext& context) :
+    explicit AppHandlers(ccfapp::AbstractNodeContext& context) :
       ccf::UserEndpointRegistry(context)
     {
       openapi_info.title = "CCF Sample C++ Key-Value Store";
@@ -45,50 +45,22 @@ namespace app
         return this->range(kvs, std::move(payload));
       };
 
-      make_grpc_ro<etcdserverpb::RangeRequest, etcdserverpb::RangeResponse>(
-        etcdserverpb, kv, "Range", range, ccf::no_auth_required)
-        .install();
+      install_endpoint_ro<
+        etcdserverpb::RangeRequest,
+        etcdserverpb::RangeResponse>(
+        etcdserverpb, kv, "Range", "/v3/kv/range", range);
 
-      make_read_only_endpoint(
-        "/v3/kv/range",
-        HTTP_POST,
-        app::json_grpc::json_grpc_adapter_ro<
-          etcdserverpb::RangeRequest,
-          etcdserverpb::RangeResponse>(range),
-        ccf::no_auth_required)
-        .install();
+      install_endpoint<etcdserverpb::PutRequest, etcdserverpb::PutResponse>(
+        etcdserverpb, kv, "Put", "/v3/kv/put", this->put);
 
-      make_grpc<etcdserverpb::PutRequest, etcdserverpb::PutResponse>(
-        etcdserverpb, kv, "Put", this->put, ccf::no_auth_required)
-        .install();
-
-      make_endpoint(
-        "/v3/kv/put",
-        HTTP_POST,
-        app::json_grpc::json_grpc_adapter<
-          etcdserverpb::PutRequest,
-          etcdserverpb::PutResponse>(put),
-        ccf::no_auth_required)
-        .install();
-
-      make_grpc<
+      install_endpoint<
         etcdserverpb::DeleteRangeRequest,
         etcdserverpb::DeleteRangeResponse>(
         etcdserverpb,
         kv,
         "DeleteRange",
-        this->delete_range,
-        ccf::no_auth_required)
-        .install();
-
-      make_endpoint(
         "/v3/kv/delete_range",
-        HTTP_POST,
-        app::json_grpc::json_grpc_adapter<
-          etcdserverpb::DeleteRangeRequest,
-          etcdserverpb::DeleteRangeResponse>(delete_range),
-        ccf::no_auth_required)
-        .install();
+        this->delete_range);
 
       auto txn = [this](
                    ccf::endpoints::EndpointContext& ctx,
@@ -96,8 +68,50 @@ namespace app
         return this->txn(ctx, std::move(payload));
       };
 
-      make_grpc<etcdserverpb::TxnRequest, etcdserverpb::TxnResponse>(
-        etcdserverpb, kv, "Txn", txn, ccf::no_auth_required)
+      install_endpoint<etcdserverpb::TxnRequest, etcdserverpb::TxnResponse>(
+        etcdserverpb, kv, "Txn", "/v3/kv/txn", txn);
+    }
+
+    template <typename In, typename Out>
+    void install_endpoint_ro(
+      const std::string& package,
+      const std::string& service,
+      const std::string& rpc,
+      const std::string& path,
+      const ccf::GrpcReadOnlyEndpoint<In, Out>& f)
+    {
+      auto grpc_path = fmt::format("/{}.{}/{}", package, service, rpc);
+      make_read_only_endpoint(
+        grpc_path,
+        HTTP_POST,
+        ccf::grpc_read_only_adapter(f),
+        ccf::no_auth_required)
+        .install();
+      make_read_only_endpoint(
+        path,
+        HTTP_POST,
+        app::json_grpc::json_grpc_adapter_ro<In, Out>(f),
+        ccf::no_auth_required)
+        .install();
+    }
+
+    template <typename In, typename Out>
+    void install_endpoint(
+      const std::string& package,
+      const std::string& service,
+      const std::string& rpc,
+      const std::string& path,
+      const ccf::GrpcEndpoint<In, Out>& f)
+    {
+      auto grpc_path = fmt::format("/{}.{}/{}", package, service, rpc);
+      make_endpoint(
+        grpc_path, HTTP_POST, ccf::grpc_adapter(f), ccf::no_auth_required)
+        .install();
+      make_endpoint(
+        path,
+        HTTP_POST,
+        app::json_grpc::json_grpc_adapter<In, Out>(f),
+        ccf::no_auth_required)
         .install();
     }
 
@@ -543,31 +557,6 @@ namespace app
       return ccf::grpc::make_success(txn_response);
     }
 
-    template <typename In, typename Out>
-    ccf::endpoints::Endpoint make_grpc_ro(
-      const std::string& package,
-      const std::string& service,
-      const std::string& method,
-      const ccf::GrpcReadOnlyEndpoint<In, Out>& f,
-      const ccf::AuthnPolicies& ap)
-    {
-      auto path = fmt::format("/{}.{}/{}", package, service, method);
-      return make_read_only_endpoint(
-        path, HTTP_POST, ccf::grpc_read_only_adapter(f), ap);
-    }
-
-    template <typename In, typename Out>
-    ccf::endpoints::Endpoint make_grpc(
-      const std::string& package,
-      const std::string& service,
-      const std::string& method,
-      const ccf::GrpcEndpoint<In, Out>& f,
-      const ccf::AuthnPolicies& ap)
-    {
-      auto path = fmt::format("/{}.{}/{}", package, service, method);
-      return make_endpoint(path, HTTP_POST, ccf::grpc_adapter(f), ap);
-    }
-
     /// @brief Compare a stored value with the given target using the result
     /// operator.
     /// @tparam T the type of the values to compare
@@ -605,7 +594,6 @@ namespace app
       }
     }
   };
-
 } // namespace app
 
 namespace ccfapp
