@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the Apache 2.0 License.
 
 todos=$(git grep --line-number -o -E 'TODO\(#[0-9]+\)' -- ':!3rdparty/protobuf')
 
