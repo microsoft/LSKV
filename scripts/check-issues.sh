@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-todos=$(git grep --line-number -o -E  'TODO\(#[0-9]+\)' -- ':!3rdparty/protobuf')
+todos=$(git grep --line-number -o -E 'TODO\(#[0-9]+\)' -- ':!3rdparty/protobuf')
 
 ex_code=0
 
@@ -21,7 +21,7 @@ for todo in $todos; do
 
     issue_no=$(echo "$todo_text" | grep -o -e '[[:digit:]]*')
 
-    issue_state=$(gh issue view --repo $repo $issue_no --json state --jq '.state' 2>/dev/null)
+    issue_state=$(gh issue view --repo $repo "$issue_no" --json state --jq '.state' 2>/dev/null)
     if [[ $issue_state != "OPEN" ]]; then
         if [[ $issue_state = "" ]]; then
             issue_state="MISSING"
