@@ -9,6 +9,9 @@
 #include "ccf/json_handler.h"
 #include "kv/untyped_map.h" // TODO(#22): private header
 
+#include <string>
+#include <vector>
+
 namespace app::store
 {
   static constexpr auto RECORDS = "records";
@@ -27,7 +30,7 @@ namespace app::store
     // the id of the lease associated with this key, 0 if no lease.
     int64_t lease;
 
-    Value(const std::string& v);
+    explicit Value(const std::string& v);
     Value();
 
     std::string get_data();
@@ -41,8 +44,8 @@ namespace app::store
     using KSerialiser = kv::serialisers::BlitSerialiser<K>;
     using VSerialiser = kv::serialisers::JsonSerialiser<V>;
     using MT = kv::untyped::Map;
-    KVStore(kv::Tx& tx);
-    KVStore(kv::ReadOnlyTx& tx);
+    explicit KVStore(kv::Tx& tx);
+    explicit KVStore(kv::ReadOnlyTx& tx);
     /// @brief get retrieves the value stored for the given key. It hydrates the
     /// value with up-to-date information as values may not store all
     /// information about revisions.
@@ -76,4 +79,4 @@ namespace app::store
     MT::Handle* inner_map;
     void hydrate_value(const K& key, V& value);
   };
-};
+}; // namespace app::store

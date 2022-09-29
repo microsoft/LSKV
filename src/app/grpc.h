@@ -6,6 +6,8 @@
 #include "grpc_status.h"
 
 #include <arpa/inet.h>
+#include <memory>
+#include <string>
 #include <variant>
 #include <vector>
 
@@ -39,7 +41,7 @@ namespace ccf::grpc
       serialized::write(data, size, compressed_flag);
       serialized::write(data, size, htonl(message_size));
     }
-  }
+  } // namespace impl
 
   struct EmptyResponse
   {};
@@ -59,7 +61,7 @@ namespace ccf::grpc
   struct ErrorResponse
   {
     ccf::Status status;
-    ErrorResponse(ccf::Status status_) : status(status_) {}
+    explicit ErrorResponse(ccf::Status status_) : status(status_) {}
   };
 
   template <typename T>
@@ -169,7 +171,7 @@ namespace ccf::grpc
         "grpc-message", error_response.status.message());
     }
   }
-}
+} // namespace ccf::grpc
 
 namespace ccf
 {
@@ -199,4 +201,4 @@ namespace ccf
         f(ctx, grpc::get_grpc_payload<In>(ctx.rpc_ctx)), ctx.rpc_ctx);
     };
   }
-}
+} // namespace ccf

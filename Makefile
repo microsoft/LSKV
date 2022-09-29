@@ -7,6 +7,9 @@ CXX="/opt/oe_lvi/clang++-10"
 ETCD_VER="v3.5.4"
 ETCD_DOWNLOAD_URL=https://github.com/etcd-io/etcd/releases/download
 
+CPP_FILES=$(wildcard src/**/*.cpp)
+H_FILES=$(wildcard src/**/*.h)
+
 BIN_DIR=bin
 
 .PHONY: build-virtual
@@ -96,6 +99,10 @@ certs: $(BIN_DIR)/cfssl $(BIN_DIR)/cfssljson
 	cd certs && ../$(BIN_DIR)/cfssl gencert -initca ../certs-config/ca-csr.json | ../$(BIN_DIR)/cfssljson -bare ca -
 	cd certs && ../$(BIN_DIR)/cfssl gencert -ca ../certs/ca.pem -ca-key ../certs/ca-key.pem -config ../certs-config/ca-config.json -profile server ../certs-config/server.json | ../$(BIN_DIR)/cfssljson -bare server -
 	cd certs && ../$(BIN_DIR)/cfssl gencert -ca ../certs/ca.pem -ca-key ../certs/ca-key.pem -config ../certs-config/ca-config.json -profile client ../certs-config/client.json | ../$(BIN_DIR)/cfssljson -bare client -
+
+.PHONY: cpplint
+cpplint: $(CPP_FILES) $(H_FILES)
+	cpplint --filter=-whitespace/braces,-whitespace/indent,-whitespace/comments,-whitespace/newline,-build/include_order,-build/include_subdir,-runtime/references,-runtime/indentation_namespace $(CPP_FILES) $(H_FILES)
 
 .PHONY: clean
 clean:
