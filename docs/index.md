@@ -7,20 +7,24 @@
 ```mermaid
 sequenceDiagram
     autonumber
-    participant client
-    participant app
-    participant index
-    participant framework
+    participant User
+    participant App
+    participant KV
+    participant Index
+    participant CCF
+    participant Nodes as Other Nodes
 
-    client->>app: /etcdserverpb.KV/Put
-    app->>app: parse grpc payload
-    app->>framework: load records map 
-    framework->>app: loaded records map
-    app->>app: create kvstore wrapper
-    app->>app: write keyvalue into store 
-    app->>framework: transaction commit
-    app->>client: send response
-    framework--)index: handle_committed_transaction
+    User->>App: /etcdserverpb.KV/Put
+    rect rgba(191, 223, 255, 0.5)
+    note over App,CCF: Inside single CCF node
+    App->>App: parse grpc payload
+    App->>App: create kvstore wrapper
+    App->>KV: kvstore.put(key, value)
+    App->>CCF: transaction commit
+    CCF--)Index: handle_committed_transaction
+    end
+    App->>User: send response
+    CCF--)Nodes: Consensus
 ```
 
 ### Range
@@ -28,23 +32,26 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     autonumber
-    participant client
-    participant app
-    participant index
-    participant framework
+    participant User
+    participant App
+    participant KV
+    participant Index
+    participant CCF
 
-    client->>app: /etcdserverpb.KV/Range
-    app->>app: parse grpc payload
-    app->>framework: load records map 
-    framework->>app: loaded records map
-    app->>app: create kvstore wrapper
+    User->>App: /etcdserverpb.KV/Range
+    rect rgba(191, 223, 255, 0.5)
+    note over App,CCF: Inside single CCF node
+    App->>App: parse grpc payload
+    App->>App: create kvstore wrapper
     alt latest (revision == 0)
-        app->>app: get values from records map
-        note over app: this reads from the local map so may <br>observe values that have not been committed
+        App->>KV: kvstore.range(...)/kvstore.get(...)
+        KV->>App: return KVs
+        note over App: this reads from the local map so may <br>observe values that have not been committed
     else historical (revision > 0)
-        app->>index: get values at historical revision
-        index->>app: return values
-        note over app: this reads from the index so only observes values<br> that have been committed but may be stale
+        App->>Index: index.range(...)/index.get(...)
+        Index->>App: return KVs
+        note over App: this reads from the index so only observes values<br> that have been committed but may be stale
     end
-    app->>client: send response
+    end
+    App->>User: send response
 ```
