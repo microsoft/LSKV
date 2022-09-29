@@ -385,9 +385,10 @@ namespace app
         }
         // continue with normal flow, recording the lease in the kvstore
       }
-      
+
       auto records_map = kvstore::KVStore(ctx.tx);
-      auto old = records_map.put(payload.key(), kvstore::Value(payload.value(), lease));
+      auto old =
+        records_map.put(payload.key(), kvstore::Value(payload.value(), lease));
       if (payload.prev_kv() && old.has_value())
       {
         auto* prev_kv = put_response.mutable_prev_kv();
