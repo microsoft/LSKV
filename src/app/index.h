@@ -45,5 +45,7 @@ namespace app::index
       const std::function<void(const K&, V&)>& fn,
       const K& from,
       const K& to);
+
+    void compact(int64_t at);
   };
 }; // namespace app::index

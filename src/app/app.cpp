@@ -82,6 +82,17 @@ namespace app
       install_endpoint<etcdserverpb::TxnRequest, etcdserverpb::TxnResponse>(
         etcdserverpb, kv, "Txn", "/v3/kv/txn", txn);
 
+      auto compact = [this](
+                       ccf::endpoints::EndpointContext& ctx,
+                       etcdserverpb::CompactionRequest&& payload) {
+        return this->compact(ctx, std::move(payload));
+      };
+
+      install_endpoint<
+        etcdserverpb::CompactionRequest,
+        etcdserverpb::CompactionResponse>(
+        etcdserverpb, kv, "Compact", "/v3/kv/compact", compact);
+
       auto lease_grant = [this](
                            ccf::endpoints::EndpointContext& ctx,
                            etcdserverpb::LeaseGrantRequest&& payload) {
@@ -352,9 +363,6 @@ namespace app
         payload.value(),
         payload.lease());
 
-      // TODO(#62): move to compact endpoint
-      revoke_expired_leases(ctx.tx);
-
       if (payload.prev_kv())
       {
         return ccf::grpc::make_error<etcdserverpb::PutResponse>(
@@ -412,9 +420,6 @@ namespace app
         payload.range_end(),
         payload.prev_kv());
       etcdserverpb::DeleteRangeResponse delete_range_response;
-
-      // TODO(#62): move to compact endpoint
-      revoke_expired_leases(ctx.tx);
 
       auto records_map = kvstore::KVStore(ctx.tx);
       auto& key = payload.key();
@@ -703,6 +708,29 @@ namespace app
       }
     }
 
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::CompactionResponse> compact(
+      ccf::endpoints::EndpointContext& ctx,
+      etcdserverpb::CompactionRequest&& payload)
+    {
+      CCF_APP_DEBUG(
+        "COMPACT = revision:{} physical:{}",
+        payload.revision(),
+        payload.physical());
+
+      if (payload.physical())
+      {
+        return ccf::grpc::make_error(
+          GRPC_STATUS_FAILED_PRECONDITION, "physical is not yet supported");
+      }
+
+      etcdserverpb::CompactionResponse response;
+
+      revoke_expired_leases(ctx.tx);
+      kvindex->compact(payload.revision());
+
+      return ccf::grpc::make_success(response);
+    }
+
     ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseGrantResponse>
     lease_grant(
       ccf::endpoints::EndpointContext& ctx,
@@ -867,7 +895,6 @@ namespace app
       return time.tv_sec;
     }
   };
-
 } // namespace app
 
 namespace ccfapp

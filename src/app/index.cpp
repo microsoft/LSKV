@@ -109,4 +109,8 @@ namespace app::index
     }
   }
 
+  void KVIndexer::compact(int64_t at)
+  {
+    // TODO(#63): compact entries before `at`
+  }
 }; // namespace app::index
