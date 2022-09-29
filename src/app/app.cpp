@@ -268,7 +268,7 @@ namespace app
       if (payload.prev_kv() && old.has_value())
       {
         auto* prev_kv = put_response.mutable_prev_kv();
-        auto value = old.value();
+        auto& value = old.value();
         prev_kv->set_key(payload.key());
         prev_kv->set_value(value.get_data());
         prev_kv->set_create_revision(value.create_revision);
