@@ -11,7 +11,12 @@
 
 namespace app::leasestore
 {
+
+#ifdef PUBLIC_MAPS
+  static constexpr auto LEASES = "public:leases";
+#else
   static constexpr auto LEASES = "leases";
+#endif
 
   struct Lease
   {
@@ -25,7 +30,7 @@ namespace app::leasestore
     int64_t ttl_remaining(int64_t now_s);
   };
 
-  class ReadOnlyLeaseStore
+  class BaseLeaseStore
   {
   public:
     using K = int64_t;
@@ -33,7 +38,11 @@ namespace app::leasestore
     using KSerialiser = kv::serialisers::BlitSerialiser<K>;
     using VSerialiser = kv::serialisers::JsonSerialiser<V>;
     using MT = kv::TypedMap<K, V, KSerialiser, VSerialiser>;
+  };
 
+  class ReadOnlyLeaseStore : public BaseLeaseStore
+  {
+  public:
     explicit ReadOnlyLeaseStore(kv::ReadOnlyTx& tx);
 
     // check whether this lease exists in this store.
@@ -47,15 +56,9 @@ namespace app::leasestore
     MT::ReadOnlyHandle* inner_map;
   };
 
-  class WriteOnlyLeaseStore
+  class WriteOnlyLeaseStore : public BaseLeaseStore
   {
   public:
-    using K = int64_t;
-    using V = Lease;
-    using KSerialiser = kv::serialisers::BlitSerialiser<K>;
-    using VSerialiser = kv::serialisers::JsonSerialiser<V>;
-    using MT = kv::TypedMap<K, V, KSerialiser, VSerialiser>;
-
     explicit WriteOnlyLeaseStore(kv::Tx& tx);
 
     // create and store a new lease with default ttl.

@@ -3,6 +3,7 @@
 # Licensed under the MIT License.
 
 from subprocess import Popen
+import argparse
 import abc
 import shutil
 import time
@@ -16,28 +17,30 @@ from typing import List, Tuple
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
 
 
-def wait_for_port(port, tries=60):
+def wait_for_port(port, tries=60) -> bool:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     for i in range(0, tries):
         try:
             s.connect(("127.0.0.1", port))
             logging.info(f"finished waiting for port ({port}) to be open, try {i}")
             time.sleep(1)
-            return
+            return True
         except:
             logging.info(f"waiting for port ({port}) to be open, try {i}")
             time.sleep(1)
     logging.error(f"took too long waiting for port {port} ({tries}s)")
+    return False
 
 
-def wait_for_file(file: str, tries=60):
+def wait_for_file(file: str, tries=60) -> bool:
     for i in range(0, tries):
         if os.path.exists(file):
             logging.info(f"finished waiting for file ({file}) to exist, try {i}")
-            return
+            return True
         logging.info(f"waiting for file ({file}) to exist, try {i}")
         time.sleep(1)
     logging.error(f"took too long waiting for file {file} ({tries}s)")
+    return False
 
 
 class Store(abc.ABC):
@@ -140,31 +143,54 @@ class EtcdStore(Store):
 
 
 class CCFKVSStore(Store):
+    def __init__(self, bench_dir: str, port: int, sgx: bool):
+        Store.__init__(self, bench_dir, port)
+        self.sgx = sgx
+
     def spawn(self) -> Popen:
         logging.info(f"spawning {self.name()}")
         with open(os.path.join(self.output_dir(), "node.out"), "w") as out:
             with open(os.path.join(self.output_dir(), "node.err"), "w") as err:
-                kvs_cmd = [
-                    "/opt/ccf/bin/sandbox.sh",
-                    "-p",
-                    "build/libccf_kvs.virtual.so",
-                    "--workspace",
-                    self.workspace(),
-                    "--node",
-                    f"local://127.0.0.1:{self.port}",
-                    "--verbose",
-                    "--http2",
-                ]
+                libargs = ["build/libccf_kvs.virtual.so"]
+                if self.sgx:
+                    libargs = ["build/libccf_kvs.enclave.so.signed", "-e", "release"]
+                kvs_cmd = (
+                    ["/opt/ccf/bin/sandbox.sh", "-p"]
+                    + libargs
+                    + [
+                        "--workspace",
+                        self.workspace(),
+                        "--node",
+                        f"local://127.0.0.1:{self.port}",
+                        "--verbose",
+                        "--http2",
+                    ]
+                )
                 return Popen(kvs_cmd, stdout=out, stderr=err)
 
     def workspace(self):
         return os.path.join(os.getcwd(), self.output_dir(), "workspace")
 
     def wait_for_ready(self):
-        wait_for_port(self.port)
-        wait_for_file(
+        def show_logs():
+            out = "\n".join(
+                open(os.path.join(self.output_dir(), "node.out"), "r").readlines()
+            )
+            print("node.out: ", out)
+            print()
+            err = "\n".join(
+                open(os.path.join(self.output_dir(), "node.err"), "r").readlines()
+            )
+            print("node.err: ", err)
+
+        if not wait_for_port(self.port):
+            show_logs()
+            return
+        if not wait_for_file(
             os.path.join(self.workspace(), "sandbox_common", "user0_cert.pem")
-        )
+        ):
+            show_logs()
+            return
 
     def bench(self, bench_cmd: List[str]) -> Tuple[Popen, str]:
         with open(os.path.join(self.output_dir(), "bench.out"), "w") as out:
@@ -186,7 +212,10 @@ class CCFKVSStore(Store):
                 return p, timings_file
 
     def name(self) -> str:
-        return "ccfkvs-tls-virtual"
+        if self.sgx:
+            return "ccfkvs-tls-sgx"
+        else:
+            return "ccfkvs-tls-virtual"
 
 
 def wait_with_timeout(process: Popen, duration_seconds=90):
@@ -259,6 +288,11 @@ def run_metrics(name: str, cmd: str, file: str):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--sgx", type=bool)
+
+    args = parser.parse_args()
+
     bench_dir = "bench"
     port = 8000
 
@@ -280,17 +314,26 @@ def main():
         d = os.path.join(bench_dir, bench_cmd_string)
         os.makedirs(d)
 
+        # plain
         store = EtcdStore(d, port, False)
         timings_file = run_benchmark(store, bench_cmd)
         run_metrics(store.name(), bench_cmd[0], timings_file)
 
+        # tls
         store = EtcdStore(d, port, True)
         timings_file = run_benchmark(store, bench_cmd)
         run_metrics(store.name(), bench_cmd[0], timings_file)
 
-        store = CCFKVSStore(d, port)
+        # virtual
+        store = CCFKVSStore(d, port, False)
         timings_file = run_benchmark(store, bench_cmd)
         run_metrics(store.name(), bench_cmd[0], timings_file)
+
+        # sgx
+        if args.sgx:
+            store = CCFKVSStore(d, port, True)
+            timings_file = run_benchmark(store, bench_cmd)
+            run_metrics(store.name(), bench_cmd[0], timings_file)
 
     with cimetrics.upload.metrics():
         pass
