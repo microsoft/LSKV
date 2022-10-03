@@ -279,6 +279,21 @@ message TxnResponse {
   repeated ResponseOp responses = 3;
 }
 
+// CompactionRequest compacts the key-value store up to a given revision. All superseded keys
+// with a revision less than the compaction revision will be removed.
+message CompactionRequest {
+  // revision is the key-value store revision for the compaction operation.
+  int64 revision = 1;
+  // physical is set so the RPC will wait until the compaction is physically
+  // applied to the local database such that compacted entries are totally
+  // removed from the backend database.
+  bool physical = 2;
+}
+
+message CompactionResponse {
+  ResponseHeader header = 1;
+}
+
 message LeaseGrantRequest {
   // TTL is the advisory time-to-live in seconds. Expired lease will return -1.
   int64 TTL = 1;
