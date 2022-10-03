@@ -16,6 +16,7 @@ PREFIXES_CCF = [
 ]
 PREFIXES_CCF.append("#!/bin/bash" + os.linesep + "#")
 PREFIXES_CCF.append("#!/usr/bin/env sh" + os.linesep + "#")
+PREFIXES_CCF.append("#!/usr/bin/env bash" + os.linesep + "#")
 PREFIXES_CCF.append("#!/usr/bin/env python3" + os.linesep + "#")
 
 
@@ -51,7 +52,14 @@ def gitignored(path):
 
 def check_ccf():
     missing = []
-    excluded = ["3rdparty", ".git", "build", "env"] + submodules()
+    excluded = [
+        "3rdparty",
+        ".git",
+        "build",
+        "env",
+        ".venv",
+        ".venv_ccf_sandbox",
+    ] + submodules()
     for root, dirs, files in os.walk("."):
         for edir in excluded:
             if edir in dirs:
