@@ -630,10 +630,10 @@ namespace app
       auto bytes = ds::from_hex(node_id.value());
 
       // and get the first 8 bytes to convert to a int64_t
-      constexpr auto bytes_in_int64_t = sizeof(int64_t);
-      uint8_t member_id_bytes[bytes_in_int64_t];
+      constexpr auto kBytesInInt64 = sizeof(int64_t);
+      uint8_t member_id_bytes[kBytesInInt64];
       auto nth = bytes.begin();
-      std::advance(nth, bytes_in_int64_t);
+      std::advance(nth, kBytesInInt64);
       std::copy(bytes.begin(), nth, member_id_bytes);
 
       // and convert those 8 bytes to the int64_t
