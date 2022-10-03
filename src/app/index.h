@@ -16,8 +16,8 @@ namespace app::index
   class KVIndexer : public ccf::indexing::Strategy
   {
   public:
-    using K = app::store::KVStore::K;
-    using V = app::store::KVStore::V;
+    using K = app::kvstore::KVStore::K;
+    using V = app::kvstore::KVStore::V;
 
   protected:
     ccf::TxID current_txid = {};

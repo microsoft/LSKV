@@ -11,17 +11,17 @@
 
 #include <nlohmann/json.hpp>
 
-namespace app::store
+namespace app::kvstore
 {
   using json = nlohmann::json;
 
-  Value::Value(const std::string& v)
+  Value::Value(const std::string& v, int64_t lease_id)
   {
     data = std::vector<uint8_t>(v.begin(), v.end());
     create_revision = 0;
     mod_revision = 0;
     version = 1;
-    lease = 0;
+    lease = lease_id;
   }
 
   Value::Value() = default;
@@ -32,7 +32,8 @@ namespace app::store
   }
 
   DECLARE_JSON_TYPE(Value);
-  DECLARE_JSON_REQUIRED_FIELDS(Value, data, create_revision, version);
+  DECLARE_JSON_REQUIRED_FIELDS(
+    Value, data, create_revision, mod_revision, version, lease);
 
   // using K = std::string;
   // using V = Value;
@@ -181,4 +182,4 @@ namespace app::store
     // and always set the mod_revision
     value.mod_revision = revision;
   }
-}; // namespace app::store
+}; // namespace app::kvstore

@@ -12,12 +12,18 @@ endif()
 add_subdirectory(3rdparty)
 add_subdirectory(proto)
 
+option(
+  PUBLIC_MAPS
+  "If enabled, all keys and values are recorded in plaintext in the ledger (insecure!)"
+  OFF)
+
 add_ccf_app(
   ccf_kvs
   SRCS
   src/app/app.cpp
   src/app/kvstore.cpp
   src/app/index.cpp
+  src/app/leases.cpp
   INCLUDE_DIRS
   "${CMAKE_BINARY_DIR}/proto"
   "${CCF_DIR}/include/ccf/_private"

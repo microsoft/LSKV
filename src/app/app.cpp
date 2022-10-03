@@ -12,6 +12,7 @@
 #include "index.h"
 #include "json_grpc.h"
 #include "kvstore.h"
+#include "leases.h"
 
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
@@ -32,17 +33,19 @@ namespace app
       openapi_info.description = "Sample Key-Value store built on CCF";
       openapi_info.document_version = "0.0.1";
 
-      kvindex = std::make_shared<IndexStrategy>(app::store::RECORDS);
+      kvindex = std::make_shared<IndexStrategy>(app::kvstore::RECORDS);
       context.get_indexing_strategies().install_strategy(kvindex);
 
       const auto etcdserverpb = "etcdserverpb";
       const auto kv = "KV";
+      const auto lease = "Lease";
 
       auto range = [this](
                      ccf::endpoints::ReadOnlyEndpointContext& ctx,
                      etcdserverpb::RangeRequest&& payload) {
-        auto kvs = store::KVStore(ctx.tx);
-        return this->range(kvs, std::move(payload));
+        auto kvs = kvstore::KVStore(ctx.tx);
+        auto lstore = leasestore::ReadOnlyLeaseStore(ctx.tx);
+        return this->range(kvs, lstore, std::move(payload));
       };
 
       install_endpoint_ro<
@@ -50,17 +53,25 @@ namespace app
         etcdserverpb::RangeResponse>(
         etcdserverpb, kv, "Range", "/v3/kv/range", range);
 
+      auto put = [this](
+                   ccf::endpoints::EndpointContext& ctx,
+                   etcdserverpb::PutRequest&& payload) {
+        return this->put(ctx, std::move(payload));
+      };
+
       install_endpoint<etcdserverpb::PutRequest, etcdserverpb::PutResponse>(
-        etcdserverpb, kv, "Put", "/v3/kv/put", this->put);
+        etcdserverpb, kv, "Put", "/v3/kv/put", put);
+
+      auto delete_range = [this](
+                            ccf::endpoints::EndpointContext& ctx,
+                            etcdserverpb::DeleteRangeRequest&& payload) {
+        return this->delete_range(ctx, std::move(payload));
+      };
 
       install_endpoint<
         etcdserverpb::DeleteRangeRequest,
         etcdserverpb::DeleteRangeResponse>(
-        etcdserverpb,
-        kv,
-        "DeleteRange",
-        "/v3/kv/delete_range",
-        this->delete_range);
+        etcdserverpb, kv, "DeleteRange", "/v3/kv/delete_range", delete_range);
 
       auto txn = [this](
                    ccf::endpoints::EndpointContext& ctx,
@@ -70,6 +81,70 @@ namespace app
 
       install_endpoint<etcdserverpb::TxnRequest, etcdserverpb::TxnResponse>(
         etcdserverpb, kv, "Txn", "/v3/kv/txn", txn);
+
+      auto lease_grant = [this](
+                           ccf::endpoints::EndpointContext& ctx,
+                           etcdserverpb::LeaseGrantRequest&& payload) {
+        return this->lease_grant(ctx, std::move(payload));
+      };
+
+      install_endpoint<
+        etcdserverpb::LeaseGrantRequest,
+        etcdserverpb::LeaseGrantResponse>(
+        etcdserverpb, lease, "LeaseGrant", "/v3/lease/grant", lease_grant);
+
+      auto lease_revoke = [this](
+                            ccf::endpoints::EndpointContext& ctx,
+                            etcdserverpb::LeaseRevokeRequest&& payload) {
+        return this->lease_revoke(ctx, std::move(payload));
+      };
+
+      install_endpoint<
+        etcdserverpb::LeaseRevokeRequest,
+        etcdserverpb::LeaseRevokeResponse>(
+        etcdserverpb, lease, "LeaseRevoke", "/v3/lease/revoke", lease_revoke);
+
+      auto lease_time_to_live =
+        [this](
+          ccf::endpoints::ReadOnlyEndpointContext& ctx,
+          etcdserverpb::LeaseTimeToLiveRequest&& payload) {
+          return this->lease_time_to_live(ctx, std::move(payload));
+        };
+
+      install_endpoint_ro<
+        etcdserverpb::LeaseTimeToLiveRequest,
+        etcdserverpb::LeaseTimeToLiveResponse>(
+        etcdserverpb,
+        lease,
+        "LeaseTimeToLive",
+        "/v3/lease/timetolive",
+        lease_time_to_live);
+
+      auto lease_leases = [this](
+                            ccf::endpoints::ReadOnlyEndpointContext& ctx,
+                            etcdserverpb::LeaseLeasesRequest&& payload) {
+        return this->lease_leases(ctx, std::move(payload));
+      };
+
+      install_endpoint_ro<
+        etcdserverpb::LeaseLeasesRequest,
+        etcdserverpb::LeaseLeasesResponse>(
+        etcdserverpb, lease, "LeaseLeases", "/v3/lease/leases", lease_leases);
+
+      auto lease_keep_alive = [this](
+                                ccf::endpoints::EndpointContext& ctx,
+                                etcdserverpb::LeaseKeepAliveRequest&& payload) {
+        return this->lease_keep_alive(ctx, std::move(payload));
+      };
+
+      install_endpoint<
+        etcdserverpb::LeaseKeepAliveRequest,
+        etcdserverpb::LeaseKeepAliveResponse>(
+        etcdserverpb,
+        lease,
+        "LeaseKeepAlive",
+        "/v3/lease/keepalive",
+        lease_keep_alive);
     }
 
     template <typename In, typename Out>
@@ -116,7 +191,9 @@ namespace app
     }
 
     ccf::grpc::GrpcAdapterResponse<etcdserverpb::RangeResponse> range(
-      store::KVStore records_map, etcdserverpb::RangeRequest&& payload)
+      kvstore::KVStore records_map,
+      leasestore::ReadOnlyLeaseStore lstore,
+      etcdserverpb::RangeRequest&& payload)
     {
       etcdserverpb::RangeResponse range_response;
       CCF_APP_DEBUG(
@@ -184,7 +261,22 @@ namespace app
       }
 
       auto count = 0;
+      auto now_s = get_time_s();
       auto add_kv = [&](auto& key, auto& value) {
+        // check that the lease for this value has not expired
+        // NOTE: contains checks the expiration of the lease too.
+        if (value.lease != 0 && !lstore.contains(value.lease, now_s))
+        {
+          // it had a lease and that lease is no longer (logically) in the store
+          // we can't remove it since this is a read-only endpoint but we can
+          // mimick the behaviour
+          CCF_APP_DEBUG(
+            "filtering out kv from range return as lease {} is missing or "
+            "expired",
+            value.lease);
+          return;
+        }
+
         count++;
 
         // add the kv to the response
@@ -194,12 +286,13 @@ namespace app
         kv->set_create_revision(value.create_revision);
         kv->set_mod_revision(value.mod_revision);
         kv->set_version(value.version);
+        kv->set_lease(value.lease);
       };
 
       if (payload.range_end().empty())
       {
         // empty range end so just query for a single key
-        std::optional<app::store::KVStore::V> value_option;
+        std::optional<app::kvstore::KVStore::V> value_option;
         if (payload.revision() > 0)
         {
           // historical, use the index of commited values
@@ -247,23 +340,21 @@ namespace app
       return ccf::grpc::make_success(range_response);
     }
 
-    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::PutResponse> put(
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::PutResponse> put(
       ccf::endpoints::EndpointContext& ctx, etcdserverpb::PutRequest&& payload)
     {
       etcdserverpb::PutResponse put_response;
       CCF_APP_DEBUG(
-        "Put = [{}]{}:[{}]{}",
+        "Put = [{}]{}:[{}]{} lease:{}",
         payload.key().size(),
         payload.key(),
         payload.value().size(),
-        payload.value());
+        payload.value(),
+        payload.lease());
 
-      if (payload.lease() != 0)
-      {
-        return ccf::grpc::make_error<etcdserverpb::PutResponse>(
-          GRPC_STATUS_FAILED_PRECONDITION,
-          fmt::format("lease {} not yet supported", payload.lease()));
-      }
+      // TODO(#62): move to compact endpoint
+      revoke_expired_leases(ctx.tx);
+
       if (payload.ignore_value())
       {
         return ccf::grpc::make_error<etcdserverpb::PutResponse>(
@@ -277,8 +368,27 @@ namespace app
           fmt::format("ignore lease not yet supported"));
       }
 
-      auto records_map = store::KVStore(ctx.tx);
-      auto old = records_map.put(payload.key(), store::Value(payload.value()));
+      auto now_s = get_time_s();
+
+      auto lease = payload.lease();
+      if (lease != 0)
+      {
+        // check lease exists, error if missing
+        auto lstore = leasestore::LeaseStore(ctx.tx);
+        auto exists = lstore.contains(lease, now_s);
+        if (!exists)
+        {
+          return ccf::grpc::make_error<etcdserverpb::PutResponse>(
+            GRPC_STATUS_FAILED_PRECONDITION,
+            fmt::format(
+              "invalid lease {}: hasn't been granted or has expired", lease));
+        }
+        // continue with normal flow, recording the lease in the kvstore
+      }
+
+      auto records_map = kvstore::KVStore(ctx.tx);
+      auto old =
+        records_map.put(payload.key(), kvstore::Value(payload.value(), lease));
       if (payload.prev_kv() && old.has_value())
       {
         auto* prev_kv = put_response.mutable_prev_kv();
@@ -294,7 +404,7 @@ namespace app
       return ccf::grpc::make_success(put_response);
     }
 
-    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::DeleteRangeResponse>
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::DeleteRangeResponse>
     delete_range(
       ccf::endpoints::EndpointContext& ctx,
       etcdserverpb::DeleteRangeRequest&& payload)
@@ -308,7 +418,10 @@ namespace app
         payload.prev_kv());
       etcdserverpb::DeleteRangeResponse delete_range_response;
 
-      auto records_map = store::KVStore(ctx.tx);
+      // TODO(#62): move to compact endpoint
+      revoke_expired_leases(ctx.tx);
+
+      auto records_map = kvstore::KVStore(ctx.tx);
       auto& key = payload.key();
 
       if (payload.range_end().empty())
@@ -397,7 +510,8 @@ namespace app
         payload.failure().size());
 
       bool success = true;
-      auto records_map = store::KVStore(ctx.tx);
+      auto records_map = kvstore::KVStore(ctx.tx);
+      auto lstore = leasestore::ReadOnlyLeaseStore(ctx.tx);
       // evaluate each comparison in the transaction and report the success
       for (auto const& cmp : payload.compare())
       {
@@ -420,7 +534,7 @@ namespace app
         auto value_option = records_map.get(key);
         // get the value if there was one, otherwise use a default entry to
         // compare against
-        auto value = value_option.value_or(store::Value());
+        auto value = value_option.value_or(kvstore::Value());
 
         // got the key to check against, now do the check
         std::optional<bool> outcome = std::nullopt;
@@ -491,7 +605,7 @@ namespace app
         if (req.has_request_range())
         {
           auto request = req.request_range();
-          auto response = range(records_map, std::move(request));
+          auto response = range(records_map, lstore, std::move(request));
           auto success_response = std::get_if<
             ccf::grpc::SuccessResponse<etcdserverpb::RangeResponse>>(&response);
           if (success_response == nullptr)
@@ -593,7 +707,172 @@ namespace app
         return std::nullopt;
       }
     }
+
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseGrantResponse>
+    lease_grant(
+      ccf::endpoints::EndpointContext& ctx,
+      etcdserverpb::LeaseGrantRequest&& payload)
+    {
+      etcdserverpb::LeaseGrantResponse response;
+      CCF_APP_DEBUG("LEASE GRANT = {} {}", payload.id(), payload.ttl());
+
+      auto now_s = get_time_s();
+
+      auto lstore = leasestore::LeaseStore(ctx.tx);
+      auto res = lstore.grant(payload.ttl(), now_s);
+
+      auto id = res.first;
+      auto ttl = res.second.ttl;
+
+      CCF_APP_DEBUG("granted lease with id {} and ttl {}", id, ttl);
+
+      response.set_id(id);
+      response.set_ttl(ttl);
+
+      return ccf::grpc::make_success(response);
+    }
+
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseRevokeResponse>
+    lease_revoke(
+      ccf::endpoints::EndpointContext& ctx,
+      etcdserverpb::LeaseRevokeRequest&& payload)
+    {
+      etcdserverpb::LeaseRevokeResponse response;
+      auto id = payload.id();
+      CCF_APP_DEBUG("LEASE REVOKE = {}", id);
+
+      auto lstore = leasestore::LeaseStore(ctx.tx);
+      lstore.revoke(id);
+
+      auto kvs = kvstore::KVStore(ctx.tx);
+      kvs.foreach([&id, &kvs](auto key, auto value) {
+        if (value.lease == id)
+        {
+          // remove this key
+          CCF_APP_DEBUG(
+            "removing key due to revoke lease {}: {}", value.lease, key);
+          kvs.remove(key);
+        }
+        return true;
+      });
+
+      return ccf::grpc::make_success(response);
+    }
+
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseTimeToLiveResponse>
+    lease_time_to_live(
+      ccf::endpoints::ReadOnlyEndpointContext& ctx,
+      etcdserverpb::LeaseTimeToLiveRequest&& payload)
+    {
+      etcdserverpb::LeaseTimeToLiveResponse response;
+      auto id = payload.id();
+      CCF_APP_DEBUG("LEASE TIMETOLIVE = {}", id);
+
+      if (payload.keys())
+      {
+        return ccf::grpc::make_error(
+          GRPC_STATUS_FAILED_PRECONDITION, "keys is not yet supported");
+      }
+
+      auto now_s = get_time_s();
+      auto lstore = leasestore::ReadOnlyLeaseStore(ctx.tx);
+
+      auto lease = lstore.get(id, now_s);
+
+      response.set_id(id);
+      response.set_ttl(lease.ttl_remaining(now_s));
+      response.set_grantedttl(lease.ttl);
+
+      return ccf::grpc::make_success(response);
+    }
+
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseLeasesResponse>
+    lease_leases(
+      ccf::endpoints::ReadOnlyEndpointContext& ctx,
+      etcdserverpb::LeaseLeasesRequest&& payload)
+    {
+      etcdserverpb::LeaseLeasesResponse response;
+      CCF_APP_DEBUG("LEASE LEASES");
+
+      auto now_s = get_time_s();
+      auto lstore = leasestore::ReadOnlyLeaseStore(ctx.tx);
+
+      lstore.foreach([&response, &now_s](auto id, auto lease) {
+        if (!lease.has_expired(now_s))
+        {
+          auto* lease = response.add_leases();
+          lease->set_id(id);
+        }
+        return true;
+      });
+
+      return ccf::grpc::make_success(response);
+    }
+
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::LeaseKeepAliveResponse>
+    lease_keep_alive(
+      ccf::endpoints::EndpointContext& ctx,
+      etcdserverpb::LeaseKeepAliveRequest&& payload)
+    {
+      etcdserverpb::LeaseKeepAliveResponse response;
+      auto id = payload.id();
+      CCF_APP_DEBUG("LEASE KEEPALIVE = {}", id);
+
+      auto now_s = get_time_s();
+      auto lstore = leasestore::LeaseStore(ctx.tx);
+      auto ttl = lstore.keep_alive(id, now_s);
+
+      response.set_id(id);
+      response.set_ttl(ttl);
+
+      return ccf::grpc::make_success(response);
+    }
+
+    void revoke_expired_leases(kv::Tx& tx)
+    {
+      CCF_APP_DEBUG("revoking any expired leases");
+      std::set<int64_t> expired_leases;
+
+      auto now_s = get_time_s();
+      auto lstore = leasestore::LeaseStore(tx);
+
+      // go through all leases in the leasestore
+      lstore.foreach([&expired_leases, &lstore, &now_s](auto id, auto lease) {
+        if (lease.has_expired(now_s))
+        {
+          // if the lease has expired then revoke it in the lease store (remove
+          // the entry)
+          CCF_APP_DEBUG("found expired lease {}", id);
+          expired_leases.insert(id);
+          lstore.revoke(id);
+        }
+        return true;
+      });
+
+      // and remove all keys associated with it in the kvstore
+      auto kvs = kvstore::KVStore(tx);
+      kvs.foreach([&expired_leases, &kvs](auto key, auto value) {
+        if (value.lease > 0 && expired_leases.contains(value.lease))
+        {
+          // remove this key
+          CCF_APP_DEBUG(
+            "removing key due to expired lease {}: {}", value.lease, key);
+          kvs.remove(key);
+        }
+        return true;
+      });
+
+      CCF_APP_DEBUG("finished revoking leases");
+    }
+
+    int64_t get_time_s()
+    {
+      ::timespec time;
+      get_untrusted_host_time_v1(time);
+      return time.tv_sec;
+    }
   };
+
 } // namespace app
 
 namespace ccfapp

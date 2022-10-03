@@ -12,6 +12,6 @@ ccf_kvs_dir=$(realpath ./.)
 echo "changing dir to $test_dir"
 cd "$test_dir" || exit 1
 
-cmd="env ETCD_VERIFY=all CCF_KVS_DIR=$ccf_kvs_dir VENV_DIR=$ccf_kvs_dir/.venv_ccf_sandbox go test --tags=integration --timeout=10m -p=$parallelism -run=TestTxn|TestKV $test_dir/common/... $*"
+cmd="env ETCD_VERIFY=all CCF_KVS_DIR=$ccf_kvs_dir VENV_DIR=$ccf_kvs_dir/.venv_ccf_sandbox go test --tags=integration --timeout=10m -p=$parallelism -run=TestTxn|TestKV|TestLease $test_dir/common/... $*"
 echo "$cmd"
 $cmd

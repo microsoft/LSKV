@@ -43,7 +43,7 @@ patched-etcd:
 	rm -rf $(BUILD)/3rdparty/etcd
 	mkdir -p $(BUILD)/3rdparty
 	cp -r 3rdparty/etcd $(BUILD)/3rdparty/.
-	git apply --directory=$(BUILD) patches/*
+	git apply --directory=$(BUILD)/3rdparty/etcd patches/*
 
 $(BIN_DIR)/benchmark: patched-etcd
 	cd $(BUILD)/3rdparty/etcd && go build -buildvcs=false ./tools/benchmark
