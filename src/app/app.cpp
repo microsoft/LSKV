@@ -5,6 +5,7 @@
 
 #include "ccf/app_interface.h"
 #include "ccf/common_auth_policies.h"
+#include "ccf/ds/hex.h"
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
 #include "etcd.pb.h"
@@ -50,17 +51,25 @@ namespace app
         etcdserverpb::RangeResponse>(
         etcdserverpb, kv, "Range", "/v3/kv/range", range);
 
+      auto put = [this](
+                   ccf::endpoints::EndpointContext& ctx,
+                   etcdserverpb::PutRequest&& payload) {
+        return this->put(ctx, std::move(payload));
+      };
+
       install_endpoint<etcdserverpb::PutRequest, etcdserverpb::PutResponse>(
-        etcdserverpb, kv, "Put", "/v3/kv/put", this->put);
+        etcdserverpb, kv, "Put", "/v3/kv/put", put);
+
+      auto delete_range = [this](
+                            ccf::endpoints::EndpointContext& ctx,
+                            etcdserverpb::DeleteRangeRequest&& payload) {
+        return this->delete_range(ctx, std::move(payload));
+      };
 
       install_endpoint<
         etcdserverpb::DeleteRangeRequest,
         etcdserverpb::DeleteRangeResponse>(
-        etcdserverpb,
-        kv,
-        "DeleteRange",
-        "/v3/kv/delete_range",
-        this->delete_range);
+        etcdserverpb, kv, "DeleteRange", "/v3/kv/delete_range", delete_range);
 
       auto txn = [this](
                    ccf::endpoints::EndpointContext& ctx,
@@ -244,10 +253,13 @@ namespace app
 
       range_response.set_count(count);
 
+      auto* header = range_response.mutable_header();
+      fill_header(*header);
+
       return ccf::grpc::make_success(range_response);
     }
 
-    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::PutResponse> put(
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::PutResponse> put(
       ccf::endpoints::EndpointContext& ctx, etcdserverpb::PutRequest&& payload)
     {
       etcdserverpb::PutResponse put_response;
@@ -291,10 +303,13 @@ namespace app
         prev_kv->set_lease(value.lease);
       }
 
+      auto* header = put_response.mutable_header();
+      fill_header(*header);
+
       return ccf::grpc::make_success(put_response);
     }
 
-    static ccf::grpc::GrpcAdapterResponse<etcdserverpb::DeleteRangeResponse>
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::DeleteRangeResponse>
     delete_range(
       ccf::endpoints::EndpointContext& ctx,
       etcdserverpb::DeleteRangeRequest&& payload)
@@ -383,6 +398,9 @@ namespace app
 
         delete_range_response.set_deleted(deleted);
       }
+
+      auto* header = delete_range_response.mutable_header();
+      fill_header(*header);
 
       return ccf::grpc::make_success(delete_range_response);
     }
@@ -554,6 +572,9 @@ namespace app
         }
       }
 
+      auto* header = txn_response.mutable_header();
+      fill_header(*header);
+
       return ccf::grpc::make_success(txn_response);
     }
 
@@ -592,6 +613,40 @@ namespace app
       {
         return std::nullopt;
       }
+    }
+
+    void fill_header(etcdserverpb::ResponseHeader& header)
+    {
+      header.set_member_id(member_id());
+    }
+
+    int64_t member_id()
+    {
+      // get the node id
+      ccf::NodeId node_id;
+      get_id_for_this_node_v1(node_id);
+
+      // it is a hex encoded string by default so unhex it
+      auto bytes = ds::from_hex(node_id.value());
+
+      // and get the first 8 bytes to convert to a int64_t
+      constexpr auto bytes_in_int64_t = sizeof(int64_t);
+      uint8_t member_id_bytes[bytes_in_int64_t];
+      auto nth = bytes.begin();
+      std::advance(nth, bytes_in_int64_t);
+      std::copy(bytes.begin(), nth, member_id_bytes);
+
+      // and convert those 8 bytes to the int64_t
+      return bytes_to_int64_t(member_id_bytes);
+    }
+
+    int64_t bytes_to_int64_t(uint8_t bytes[8])
+    {
+      int64_t out;
+      // we don't care about endianness here, it will always be the same for
+      // this machine.
+      memcpy(&out, bytes, sizeof out);
+      return out;
     }
   };
 } // namespace app
