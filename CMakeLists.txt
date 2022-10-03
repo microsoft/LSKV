@@ -12,9 +12,7 @@ endif()
 add_subdirectory(3rdparty)
 add_subdirectory(proto)
 
-if(PUBLIC_MAPS)
-  add_definitions(-DPUBLIC_MAPS)
-endif(PUBLIC_MAPS)
+option(PUBLIC_MAPS "If enabled, all keys and values are recorded in plaintext in the ledger (insecure!)" OFF)
 
 add_ccf_app(
   ccf_kvs
