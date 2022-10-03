@@ -14,7 +14,11 @@
 
 namespace app::kvstore
 {
+#ifdef PUBLIC_MAPS
+  static constexpr auto RECORDS = "public:records";
+#else
   static constexpr auto RECORDS = "records";
+#endif
 
   struct Value
   {

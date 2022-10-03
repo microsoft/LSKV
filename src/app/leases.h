@@ -11,7 +11,11 @@
 
 namespace app::leasestore
 {
+#ifdef PUBLIC_MAPS
+  static constexpr auto LEASES = "public:leases";
+#else
   static constexpr auto LEASES = "leases";
+#endif
 
   struct Lease
   {

@@ -26,6 +26,7 @@ In the local checkout of this repository:
 $ cd ccf-kvs
 $ mkdir build
 $ cd build
+# to build with public maps (more debuggable) add -DPUBLIC_MAPS
 $ CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja ..
 $ ninja
 $ ls
