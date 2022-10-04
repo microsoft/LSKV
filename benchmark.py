@@ -143,9 +143,10 @@ class EtcdStore(Store):
 
 
 class CCFKVSStore(Store):
-    def __init__(self, bench_dir: str, port: int, sgx: bool):
+    def __init__(self, bench_dir: str, port: int, sgx: bool, worker_threads: int):
         Store.__init__(self, bench_dir, port)
         self.sgx = sgx
+        self.worker_threads = worker_threads
 
     def spawn(self) -> Popen:
         logging.info(f"spawning {self.name()}")
@@ -158,6 +159,8 @@ class CCFKVSStore(Store):
                     ["/opt/ccf/bin/sandbox.sh", "-p"]
                     + libargs
                     + [
+                        "--worker-threads",
+                        str(self.worker_threads),
                         "--workspace",
                         self.workspace(),
                         "--node",
@@ -213,9 +216,9 @@ class CCFKVSStore(Store):
 
     def name(self) -> str:
         if self.sgx:
-            return "ccfkvs-tls-sgx"
+            return f"ccfkvs-tls-sgx-{self.worker_threads}"
         else:
-            return "ccfkvs-tls-virtual"
+            return f"ccfkvs-tls-virtual-{self.worker_threads}"
 
 
 def wait_with_timeout(process: Popen, duration_seconds=90):
@@ -324,16 +327,17 @@ def main():
         timings_file = run_benchmark(store, bench_cmd)
         run_metrics(store.name(), bench_cmd[0], timings_file)
 
-        # virtual
-        store = CCFKVSStore(d, port, False)
-        timings_file = run_benchmark(store, bench_cmd)
-        run_metrics(store.name(), bench_cmd[0], timings_file)
-
-        # sgx
-        if args.sgx:
-            store = CCFKVSStore(d, port, True)
+        for worker_threads in [0, 1, 2, 3]:
+            # virtual
+            store = CCFKVSStore(d, port, False, worker_threads)
             timings_file = run_benchmark(store, bench_cmd)
             run_metrics(store.name(), bench_cmd[0], timings_file)
+
+            # sgx
+            if args.sgx:
+                store = CCFKVSStore(d, port, True, worker_threads)
+                timings_file = run_benchmark(store, bench_cmd)
+                run_metrics(store.name(), bench_cmd[0], timings_file)
 
     with cimetrics.upload.metrics():
         pass
