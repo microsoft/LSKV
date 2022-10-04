@@ -947,6 +947,7 @@ namespace app
         // leave the node_id as default value
         CCF_APP_FAIL(
           "Failed to get id for node: {}", ccf::api_result_to_str(result));
+        return 0;
       }
 
       // it is a hex encoded string by default so unhex it
