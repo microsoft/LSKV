@@ -6,7 +6,7 @@ todos=$(git grep --line-number -o -E 'TODO\(#[0-9]+\)' -- ':!3rdparty/protobuf')
 
 ex_code=0
 
-repo="microsoft/ccf-kvs"
+repo="microsoft/LSKV"
 
 # check can see the issues on the repo
 if ! gh issue list --repo $repo --limit 1 >/dev/null 2>&1; then
