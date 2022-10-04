@@ -16,6 +16,7 @@ from dataclasses import asdict, dataclass
 from subprocess import Popen
 from typing import Callable, List, TypeVar
 
+# pylint: disable=import-error
 import cimetrics.upload  # type: ignore
 import typing_extensions
 

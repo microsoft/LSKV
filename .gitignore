@@ -20,3 +20,5 @@ default.etcd/
 /plots/
 
 *.pyc
+
+/.direnv/

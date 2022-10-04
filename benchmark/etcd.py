@@ -11,15 +11,15 @@ import logging
 import os
 import subprocess
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from subprocess import Popen
 from typing import List
 
+# pylint: disable=import-error
 import cimetrics.upload  # type: ignore
-import pandas as pd  # type: ignore
-
 import common
-from common import Store, DESIRED_DURATION_S
+import pandas as pd  # type: ignore
+from common import DESIRED_DURATION_S, Store
 from stores import EtcdStore, LSKVStore
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
@@ -263,6 +263,7 @@ def get_arguments():
     if not args.rate:
         args.rate = [1000]
 
+    # pylint: disable=no-member
     args.bench_args = [s.split() for s in args.bench_args]
     if not args.bench_args:
         args.bench_args = [

@@ -10,6 +10,7 @@ import argparse
 import logging
 from typing import List
 
+# pylint: disable=duplicate-code
 import common
 import etcd
 import ycsb
