@@ -19,6 +19,7 @@ from subprocess import Popen
 import subprocess
 from typing import Callable, List, TypeVar
 
+# pylint: disable=import-error
 import cimetrics.upload  # type: ignore
 import typing_extensions
 from loguru import logger

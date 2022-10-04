@@ -25,3 +25,5 @@ bin/
 *.err
 
 /docker-workspace/
+
+/.direnv/
