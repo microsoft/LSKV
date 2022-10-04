@@ -1,0 +1,42 @@
+diff --git a/3rdparty/CMakeLists.txt b/3rdparty/CMakeLists.txt
+index 24aeb0698..b1e17c862 100644
+--- a/3rdparty/CMakeLists.txt
++++ b/3rdparty/CMakeLists.txt
+@@ -111,7 +111,7 @@ if (OE_TRUSTZONE)
+       teec
+       INTERFACE
+         $<BUILD_INTERFACE:teec_imported>
+-        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_LIBDIR}/openenclave/optee/libteec/libteec.a>
++        $<INSTALL_INTERFACE:${CMAKE_INSTALL_LIBDIR}/openenclave/optee/libteec/libteec.a>
+     )
+ 
+     install(TARGETS teec EXPORT openenclave-targets)
+diff --git a/3rdparty/musl/CMakeLists.txt b/3rdparty/musl/CMakeLists.txt
+index 548542535..74ceea39a 100644
+--- a/3rdparty/musl/CMakeLists.txt
++++ b/3rdparty/musl/CMakeLists.txt
+@@ -117,9 +117,9 @@ target_include_directories(
+   oelibc_includes
+   INTERFACE
+     $<BUILD_INTERFACE:$<$<COMPILE_LANGUAGE:CXX>:${LIBCXX_INCLUDES}>>
+-    $<INSTALL_INTERFACE:$<$<COMPILE_LANGUAGE:CXX>:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}/openenclave/3rdparty/libcxx>>
++    $<INSTALL_INTERFACE:$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_INSTALL_INCLUDEDIR}/openenclave/3rdparty/libcxx>>
+     $<BUILD_INTERFACE:${MUSL_INCLUDES}>
+-    $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}/openenclave/3rdparty/libc>
++    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/openenclave/3rdparty/libc>
+ )
+ 
+ if (CMAKE_C_COMPILER_ID MATCHES GNU AND CMAKE_C_COMPILER_VERSION
+diff --git a/include/CMakeLists.txt b/include/CMakeLists.txt
+index 4bb3468ba..5dbfbb1d5 100644
+--- a/include/CMakeLists.txt
++++ b/include/CMakeLists.txt
+@@ -8,7 +8,7 @@ target_include_directories(
+   oe_includes
+   INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+             $<BUILD_INTERFACE:${OE_INCDIR}>
+-            $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}>)
++            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+ install(
+   DIRECTORY openenclave/bits
+   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/openenclave/

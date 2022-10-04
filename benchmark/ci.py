@@ -9,6 +9,7 @@ Run ci pull_request configurations of the benchmarks
 import argparse
 from typing import List
 
+# pylint: disable=duplicate-code
 import common
 import etcd
 import k6

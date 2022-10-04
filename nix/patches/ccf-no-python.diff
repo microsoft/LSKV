@@ -1,0 +1,28 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index f44c51e5..a4333529 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -208,23 +208,6 @@ install(
+   PATTERN "*.h"
+ )
+ 
+-# Install CCF Python infrastructure
+-install(
+-  DIRECTORY tests/infra/
+-  DESTINATION bin/infra
+-  FILES_MATCHING
+-  PATTERN "*.py"
+-  PATTERN "*/__pycache__*" EXCLUDE
+-)
+-
+-install(PROGRAMS tests/sandbox/sandbox.sh DESTINATION bin)
+-install(FILES samples/constitutions/default/actions.js DESTINATION bin)
+-install(FILES samples/constitutions/default/validate.js DESTINATION bin)
+-install(FILES samples/constitutions/sandbox/resolve.js DESTINATION bin)
+-install(FILES samples/constitutions/default/apply.js DESTINATION bin)
+-install(FILES tests/start_network.py DESTINATION bin)
+-install(FILES tests/requirements.txt DESTINATION bin)
+-
+ # Generate an ephemeral signing key
+ add_custom_command(
+   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/signing_key.pem
