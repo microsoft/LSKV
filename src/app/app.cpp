@@ -624,28 +624,27 @@ namespace app
     {
       // get the node id
       ccf::NodeId node_id;
-      get_id_for_this_node_v1(node_id);
+      auto result = get_id_for_this_node_v1(node_id);
+      if (result != ccf::ApiResult::OK)
+      {
+        // leave the node_id as default value
+        CCF_APP_FAIL(
+          "Failed to get id for node: {}", ccf::api_result_to_str(result));
+      }
 
       // it is a hex encoded string by default so unhex it
       auto bytes = ds::from_hex(node_id.value());
 
-      // and get the first 8 bytes to convert to a int64_t
-      constexpr auto kBytesInInt64 = sizeof(int64_t);
-      uint8_t member_id_bytes[kBytesInInt64];
-      auto nth = bytes.begin();
-      std::advance(nth, kBytesInInt64);
-      std::copy(bytes.begin(), nth, member_id_bytes);
-
-      // and convert those 8 bytes to the int64_t
-      return bytes_to_int64_t(member_id_bytes);
+      // and convert the first 8 bytes to the int64_t
+      return bytes_to_int64_t(bytes);
     }
 
-    int64_t bytes_to_int64_t(uint8_t bytes[8])
+    int64_t bytes_to_int64_t(std::vector<uint8_t> bytes)
     {
       int64_t out;
       // we don't care about endianness here, it will always be the same for
       // this machine.
-      memcpy(&out, bytes, sizeof out);
+      memcpy(&out, bytes.data(), sizeof out);
       return out;
     }
   };
