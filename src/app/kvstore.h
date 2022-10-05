@@ -12,9 +12,13 @@
 #include <string>
 #include <vector>
 
-namespace app::store
+namespace app::kvstore
 {
+#ifdef PUBLIC_MAPS
+  static constexpr auto RECORDS = "public:records";
+#else
   static constexpr auto RECORDS = "records";
+#endif
 
   struct Value
   {
@@ -30,7 +34,7 @@ namespace app::store
     // the id of the lease associated with this key, 0 if no lease.
     int64_t lease;
 
-    explicit Value(const std::string& v);
+    explicit Value(const std::string& v, int64_t lease_id);
     Value();
 
     std::string get_data();
@@ -79,4 +83,4 @@ namespace app::store
     MT::Handle* inner_map;
     void hydrate_value(const K& key, V& value);
   };
-}; // namespace app::store
+}; // namespace app::kvstore

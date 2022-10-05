@@ -7,6 +7,7 @@
 #include "kvstore.h"
 
 #include <map>
+#include <shared_mutex>
 #include <string>
 #include <vector>
 
@@ -15,8 +16,8 @@ namespace app::index
   class KVIndexer : public ccf::indexing::Strategy
   {
   public:
-    using K = app::store::KVStore::K;
-    using V = app::store::KVStore::V;
+    using K = app::kvstore::KVStore::K;
+    using V = app::kvstore::KVStore::V;
 
   protected:
     ccf::TxID current_txid = {};
@@ -29,6 +30,8 @@ namespace app::index
 
     // a mapping from keys to the values those keys had at certain points.
     std::map<K, std::vector<V>> keys_to_values;
+
+    std::shared_mutex mutex;
 
   public:
     explicit KVIndexer(const std::string& map_name);
@@ -45,5 +48,7 @@ namespace app::index
       const std::function<void(const K&, V&)>& fn,
       const K& from,
       const K& to);
+
+    void compact(int64_t at);
   };
 }; // namespace app::index

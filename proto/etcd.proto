@@ -278,3 +278,88 @@ message TxnResponse {
   // success if succeeded is true or failure if succeeded is false.
   repeated ResponseOp responses = 3;
 }
+
+// CompactionRequest compacts the key-value store up to a given revision. All superseded keys
+// with a revision less than the compaction revision will be removed.
+message CompactionRequest {
+  // revision is the key-value store revision for the compaction operation.
+  int64 revision = 1;
+  // physical is set so the RPC will wait until the compaction is physically
+  // applied to the local database such that compacted entries are totally
+  // removed from the backend database.
+  bool physical = 2;
+}
+
+message CompactionResponse {
+  ResponseHeader header = 1;
+}
+
+message LeaseGrantRequest {
+  // TTL is the advisory time-to-live in seconds. Expired lease will return -1.
+  int64 TTL = 1;
+  // ID is the requested ID for the lease. If ID is set to 0, the lessor chooses an ID.
+  int64 ID = 2;
+}
+
+message LeaseGrantResponse {
+  ResponseHeader header = 1;
+  // ID is the lease ID for the granted lease.
+  int64 ID = 2;
+  // TTL is the server chosen lease time-to-live in seconds.
+  int64 TTL = 3;
+  string error = 4;
+}
+
+message LeaseRevokeRequest {
+  // ID is the lease ID to revoke. When the ID is revoked, all associated keys will be deleted.
+  int64 ID = 1;
+}
+
+message LeaseRevokeResponse {
+  ResponseHeader header = 1;
+}
+
+message LeaseKeepAliveRequest {
+  // ID is the lease ID for the lease to keep alive.
+  int64 ID = 1;
+}
+
+message LeaseKeepAliveResponse {
+  ResponseHeader header = 1;
+  // ID is the lease ID from the keep alive request.
+  int64 ID = 2;
+  // TTL is the new time-to-live for the lease.
+  int64 TTL = 3;
+}
+
+message LeaseTimeToLiveRequest {
+  // ID is the lease ID for the lease.
+  int64 ID = 1;
+  // keys is true to query all the keys attached to this lease.
+  bool keys = 2;
+}
+
+message LeaseTimeToLiveResponse {
+  ResponseHeader header = 1;
+  // ID is the lease ID from the keep alive request.
+  int64 ID = 2;
+  // TTL is the remaining TTL in seconds for the lease; the lease will expire in under TTL+1 seconds.
+  int64 TTL = 3;
+  // GrantedTTL is the initial granted time in seconds upon lease creation/renewal.
+  int64 grantedTTL = 4;
+  // Keys is the list of keys attached to this lease.
+  repeated bytes keys = 5;
+}
+
+message LeaseLeasesRequest {
+}
+
+message LeaseStatus {
+  int64 ID = 1;
+  // TODO: int64 TTL = 2;
+}
+
+message LeaseLeasesResponse {
+  ResponseHeader header = 1;
+  repeated LeaseStatus leases = 2;
+}

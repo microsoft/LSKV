@@ -28,11 +28,13 @@ namespace app::index
   void KVIndexer::handle_committed_transaction(
     const ccf::TxID& tx_id, const kv::ReadOnlyStorePtr& store_ptr)
   {
+    std::unique_lock lock(mutex);
+
     // TODO(#47): handle deleted kvs
     CCF_APP_DEBUG("index: handling committed transaction {}", tx_id.seqno);
     current_txid = tx_id;
     auto tx = store_ptr->create_read_only_tx();
-    auto kvs = store::KVStore(tx);
+    auto kvs = kvstore::KVStore(tx);
     auto revision = tx_id.seqno;
 
     kvs.foreach([this, &revision](const auto& k, const auto& v) {
@@ -48,6 +50,7 @@ namespace app::index
 
   std::optional<ccf::SeqNo> KVIndexer::next_requested()
   {
+    std::shared_lock lock(mutex);
     return current_txid.seqno + 1;
   };
 
@@ -68,6 +71,8 @@ namespace app::index
 
   std::optional<KVIndexer::V> KVIndexer::get(const int64_t at, const K& key)
   {
+    std::shared_lock lock(mutex);
+
     CCF_APP_DEBUG("getting value from index with key {}", key);
     if (keys_to_values.contains(key))
     {
@@ -86,6 +91,7 @@ namespace app::index
     const KVIndexer::K& from,
     const KVIndexer::K& to)
   {
+    std::shared_lock lock(mutex);
     // iterate over the keys in keys_to_values
     auto lb = keys_to_values.lower_bound(from);
     auto ub = keys_to_values.lower_bound(to);
@@ -109,4 +115,8 @@ namespace app::index
     }
   }
 
+  void KVIndexer::compact(int64_t at)
+  {
+    // TODO(#63): compact entries before `at`
+  }
 }; // namespace app::index
