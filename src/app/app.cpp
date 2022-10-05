@@ -40,6 +40,7 @@ namespace app
       const auto etcdserverpb = "etcdserverpb";
       const auto kv = "KV";
       const auto lease = "Lease";
+      const auto watch = "Watch";
 
       auto range = [this](
                      ccf::endpoints::ReadOnlyEndpointContext& ctx,
@@ -157,6 +158,15 @@ namespace app
         "LeaseKeepAlive",
         "/v3/lease/keepalive",
         lease_keep_alive);
+
+      auto watch_handler = [this](
+                     ccf::endpoints::EndpointContext& ctx,
+                     etcdserverpb::WatchRequest&& payload) {
+        return this->watch(ctx, std::move(payload));
+      };
+
+      install_endpoint<etcdserverpb::WatchRequest, etcdserverpb::WatchResponse>(
+        etcdserverpb, watch, "Watch", "/v3/watch", watch_handler);
     }
 
     template <typename In, typename Out>
@@ -885,6 +895,16 @@ namespace app
       auto* header = response.mutable_header();
       fill_header(*header);
 
+      return ccf::grpc::make_success(response);
+    }
+
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::WatchResponse> watch(
+      ccf::endpoints::EndpointContext& ctx,
+      etcdserverpb::WatchRequest&& payload)
+    {
+      // TODO: implement, or at least log
+      CCF_APP_DEBUG("WATCH");
+      etcdserverpb::WatchResponse response;
       return ccf::grpc::make_success(response);
     }
 
