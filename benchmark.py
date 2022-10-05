@@ -296,8 +296,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--sgx", type=bool)
     parser.add_argument("--no-tls", type=bool)
+    parser.add_argument("--worker-threads", action="extend", nargs="+", type=int)
 
     args = parser.parse_args()
+    if not args.worker_threads:
+        args.worker_threads = [0]
 
     bench_dir = "bench"
     port = 8000
@@ -333,7 +336,7 @@ def main():
                 timings_file = run_benchmark(store, bench_cmd)
                 run_metrics(store.config.to_str(), bench_cmd[0], timings_file)
 
-                for worker_threads in [0, 1, 2, 3]:
+                for worker_threads in args.worker_threads:
                     lskv_config = Config(
                         "lskv", port, tls=True, sgx=False, worker_threads=worker_threads, clients=clients, connections=conns
                     )
