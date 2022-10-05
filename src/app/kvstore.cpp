@@ -93,7 +93,8 @@ namespace app::kvstore
     const std::optional<KVStore::K>& to_opt)
   {
     std::optional<kv::serialisers::SerialisedEntry> to = std::nullopt;
-    if (to_opt.has_value()) {
+    if (to_opt.has_value())
+    {
       to = KVStore::KSerialiser::to_serialised(to_opt.value());
     }
     inner_map->range(
