@@ -297,10 +297,18 @@ def main():
     parser.add_argument("--sgx", type=bool)
     parser.add_argument("--no-tls", type=bool)
     parser.add_argument("--worker-threads", action="extend", nargs="+", type=int)
+    parser.add_argument("--clients", action="extend", nargs="+", type=int)
+    parser.add_argument("--connections", action="extend", nargs="+", type=int)
 
     args = parser.parse_args()
+
+    # set default if not set
     if not args.worker_threads:
         args.worker_threads = [0]
+    if not args.clients:
+        args.clients = [1]
+    if not args.connections:
+        args.connections = [1]
 
     bench_dir = "bench"
     port = 8000
@@ -323,8 +331,8 @@ def main():
         d = os.path.join(bench_dir, bench_cmd_string)
         os.makedirs(d)
 
-        for clients in [1, 10, 100]:
-            for conns in [1, 10, 100]:
+        for clients in args.clients:
+            for conns in args.connections:
                 if args.no_tls:
                     etcd_config = Config("etcd", port, tls=False, sgx=False, worker_threads=0, clients=clients, connections=conns)
                     store = EtcdStore(d, etcd_config)
