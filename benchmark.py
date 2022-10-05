@@ -319,7 +319,7 @@ def main():
 
         for worker_threads in [0, 1, 2, 3]:
             lskv_config = Config(
-                "lskv", port, tls=False, sgx=False, worker_threads=worker_threads
+                "lskv", port, tls=True, sgx=False, worker_threads=worker_threads
             )
             # virtual
             store = CCFKVSStore(d, lskv_config)
