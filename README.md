@@ -6,7 +6,7 @@ Ledger-backed Secure Key-Value Stored app sample based on [CCF](https://github.c
 
 ## Install Dependencies
 
-This repository and its dependencies can be checked out by clicking: [![Open in VSCode](https://img.shields.io/static/v1?label=Open+in&message=VSCode&logo=visualstudiocode&color=007ACC&logoColor=007ACC&labelColor=2C2C32)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/LSKV) 
+This repository and its dependencies can be checked out by clicking: [![Open in VSCode](https://img.shields.io/static/v1?label=Open+in&message=VSCode&logo=visualstudiocode&color=007ACC&logoColor=007ACC&labelColor=2C2C32)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/LSKV)
 
 Alternatively, CCF and its dependencies can be installed manually:
 
