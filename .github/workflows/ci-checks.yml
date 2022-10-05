@@ -17,7 +17,4 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install cpplint
-        run: sudo apt-get install -y python3-pip && pip3 install cpplint
-
       - run: ./scripts/ci-checks.sh

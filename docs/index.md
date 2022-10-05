@@ -1,4 +1,4 @@
-# CCF KVS
+# LSKV
 
 ## Request flows
 
