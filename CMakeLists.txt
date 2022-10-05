@@ -36,6 +36,10 @@ add_ccf_app(
   status.virtual
   protobuf.virtual)
 
+if(PUBLIC_MAPS)
+  add_compile_definitions(PUBLIC_MAPS)
+endif()
+
 # Generate an ephemeral signing key
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/signing_key.pem
