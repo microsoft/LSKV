@@ -1,6 +1,6 @@
 {
   "enclave": {
-    "file": "/app/libccf_kvs.enclave.so.signed",
+    "file": "/app/liblskv.enclave.so.signed",
     "type": "Release"
   },
   "network": {
