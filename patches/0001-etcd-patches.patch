@@ -496,13 +496,13 @@ index 000000000..47ce43c76
 +	if _, err := os.Stat(sandbox); err != nil {
 +		t.Fatalf("failed to find sandbox: %v", err)
 +	}
-+	ccfkvsdir_var := "CCF_KVS_DIR"
-+	ccf_kvs_dir := os.Getenv(ccfkvsdir_var)
-+	if ccf_kvs_dir == "" {
-+		t.Fatalf("failed to get %v env variable", ccfkvsdir_var)
++	lskvdir_var := "lskv_DIR"
++	lskv_dir := os.Getenv(lskvdir_var)
++	if lskv_dir == "" {
++		t.Fatalf("failed to get %v env variable", lskvdir_var)
 +	}
 +
-+	enclave := fmt.Sprintf("%v/build/libccf_kvs.virtual.so", ccf_kvs_dir)
++	enclave := fmt.Sprintf("%v/build/liblskv.virtual.so", lskv_dir)
 +	if _, err := os.Stat(enclave); err != nil {
 +		fmt.Printf("current dir: %v\n", os.Getenv("PWD"))
 +		t.Fatalf("failed to find enclave: %v", err)

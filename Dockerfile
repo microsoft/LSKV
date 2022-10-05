@@ -8,7 +8,7 @@ RUN CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja /src &&
 # Run
 FROM mcr.microsoft.com/ccf/app/dev:3.0.0-dev3-sgx
 
-COPY --from=builder /build/libccf_kvs.enclave.so.signed /app/
+COPY --from=builder /build/liblskv.enclave.so.signed /app/
 COPY --from=builder /opt/ccf/bin/*.js /app/
 COPY --from=builder /opt/ccf/bin/keygenerator.sh /app/ 
 COPY ./config/cchost_config.json /app/
