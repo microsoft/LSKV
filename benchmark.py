@@ -146,14 +146,18 @@ class EtcdStore(Store):
         shutil.rmtree("default.etcd", ignore_errors=True)
 
 
-class CCFKVSStore(Store):
+class LSKVStore(Store):
+    def __init__(self, bench_dir: str, port: int, sgx: bool):
+        Store.__init__(self, bench_dir, port)
+        self.sgx = sgx
+
     def spawn(self) -> Popen:
         logging.info(f"spawning {self.config.to_str()}")
         with open(os.path.join(self.output_dir(), "node.out"), "w") as out:
             with open(os.path.join(self.output_dir(), "node.err"), "w") as err:
-                libargs = ["build/libccf_kvs.virtual.so"]
+                libargs = ["build/liblskv.virtual.so"]
                 if self.config.sgx:
-                    libargs = ["build/libccf_kvs.enclave.so.signed", "-e", "release"]
+                    libargs = ["build/liblskv.enclave.so.signed", "-e", "release"]
                 kvs_cmd = (
                     ["/opt/ccf/bin/sandbox.sh", "-p"]
                     + libargs
@@ -212,7 +216,6 @@ class CCFKVSStore(Store):
                 ] + bench_cmd
                 p = Popen(bench, stdout=out, stderr=err)
                 return p, timings_file
-
 
 def wait_with_timeout(process: Popen, duration_seconds=90):
     for i in range(0, duration_seconds):
@@ -322,14 +325,14 @@ def main():
                 "lskv", port, tls=False, sgx=False, worker_threads=worker_threads
             )
             # virtual
-            store = CCFKVSStore(d, lskv_config)
+            store = LSKVStore(d, lskv_config)
             timings_file = run_benchmark(store, bench_cmd)
             run_metrics(store.config.to_str(), bench_cmd[0], timings_file)
 
             # sgx
             if args.sgx:
                 lskv_config.sgx = True
-                store = CCFKVSStore(d, lskv_config)
+                store = LSKVStore(d, lskv_config)
                 timings_file = run_benchmark(store, bench_cmd)
                 run_metrics(store.config.to_str(), bench_cmd[0], timings_file)
 

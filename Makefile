@@ -28,11 +28,11 @@ build-sgx:
 
 .PHONY: run-virtual
 run-virtual: build-virtual
-	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/libccf_kvs.virtual.so --http2 --verbose
+	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2 --verbose
 
 .PHONY: run-sgx
 run-sgx: build-sgx
-	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/libccf_kvs.enclave.so.signed -e release --http2 --verbose
+	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.enclave.so.signed -e release --http2 --verbose
 
 .PHONY: test-virtual
 test-virtual: build-virtual patched-etcd

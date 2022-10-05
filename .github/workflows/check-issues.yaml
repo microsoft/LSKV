@@ -1,4 +1,4 @@
-name: "CCF KVS Issue checking"
+name: "LSKV Issue checking"
 
 on:
   pull_request:
