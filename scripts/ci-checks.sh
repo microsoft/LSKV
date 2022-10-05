@@ -37,7 +37,7 @@ echo "$CHECK_DELIMITER"
 echo "-- TypeScript, JavaScript, Markdown, YAML and JSON format"
 npm install --loglevel=error --no-save prettier 1>/dev/null
 if [ $FIX -ne 0 ]; then
-  git ls-files | grep -e '\.ts$' -e '\.js$' -e '\.md$' -e '\.yaml$' -e '\.yml$' -e '\.json$' | xargs npx prettier --write
+  git ls-files -- . ':!:3rdparty/' | grep -e '\.ts$' -e '\.js$' -e '\.md$' -e '\.yaml$' -e '\.yml$' -e '\.json$' | xargs npx prettier --write
 else
   git ls-files -- . ':!:3rdparty/' | grep -e '\.ts$' -e '\.js$' -e '\.md$' -e '\.yaml$' -e '\.yml$' -e '\.json$' | xargs npx prettier --check
 fi
