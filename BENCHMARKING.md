@@ -1,4 +1,4 @@
-# Benchmarking the KVS
+# Benchmarking LSKV
 
 With the implementation of the etcd API benchmark runs can use the [etcd benchmark tool](https://github.com/etcd-io/etcd/tree/main/tools/benchmark) quite easily.
 

@@ -30,8 +30,8 @@ $ cd build
 $ CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja ..
 $ ninja
 $ ls
-libccf_kvs.enclave.so.signed # SGX-enabled application
-libccf_kvs.virtual.so # Virtual application (i.e. insecure!)
+liblskv.enclave.so.signed # SGX-enabled application
+liblskv.virtual.so # Virtual application (i.e. insecure!)
 ```
 
 ## Test
@@ -39,20 +39,20 @@ libccf_kvs.virtual.so # Virtual application (i.e. insecure!)
 ### Manual
 
 ```bash
-$ /opt/ccf/bin/sandbox.sh -p ./libccf_kvs.virtual.so
+$ /opt/ccf/bin/sandbox.sh -p ./liblskv.virtual.so
 Setting up Python environment...
 Python environment successfully setup
 [12:00:00.000] Virtual mode enabled
 [12:00:00.000] Starting 1 CCF node...
 [12:00:00.000] Started CCF network with the following nodes:
 [12:00:00.000]   Node [0] = https://127.0.0.1:8000
-[12:00:00.000] You can now issue business transactions to the ./libccf_kvs.virtual.so application
+[12:00:00.000] You can now issue business transactions to the ./liblskv.virtual.so application
 [12:00:00.000] Keys and certificates have been copied to the common folder: .../LSKV/build/workspace/sandbox_common
 [12:00:00.000] See https://microsoft.github.io/CCF/main/use_apps/issue_commands.html for more information
 [12:00:00.000] Press Ctrl+C to shutdown the network
 ```
 
-Or, for an SGX-enabled application: `$ /opt/ccf/bin/sandbox.sh -p ./libccf_kvs.enclave.so.signed -e release`
+Or, for an SGX-enabled application: `$ /opt/ccf/bin/sandbox.sh -p ./liblskv.enclave.so.signed -e release`
 
 ### Etcd integration
 
@@ -78,7 +78,7 @@ $ docker run --device /dev/sgx_enclave:/dev/sgx_enclave --device /dev/sgx_provis
 
 ```bash
 # run the datastore from the project root
-$ /opt/ccf/bin/sandbox.sh -p build/libccf_kvs.virtual.so --http2
+$ /opt/ccf/bin/sandbox.sh -p build/liblskv.virtual.so --http2
 ...
 
 # In another terminal, from the project root

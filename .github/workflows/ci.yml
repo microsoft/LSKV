@@ -1,4 +1,4 @@
-name: "CCF KVS CI"
+name: "LSKV CI"
 
 on:
   push:
@@ -47,4 +47,4 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Build container
-        run: docker build -t ccf-kvs .
+        run: docker build -t lskv .
