@@ -147,10 +147,6 @@ class EtcdStore(Store):
 
 
 class LSKVStore(Store):
-    def __init__(self, bench_dir: str, port: int, sgx: bool):
-        Store.__init__(self, bench_dir, port)
-        self.sgx = sgx
-
     def spawn(self) -> Popen:
         logging.info(f"spawning {self.config.to_str()}")
         with open(os.path.join(self.output_dir(), "node.out"), "w") as out:
