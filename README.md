@@ -1,4 +1,4 @@
-# Ledger-backed Secure Key-Value Store (LSKV)
+# Ledger-backed Secure Key-Value Store (LSKV) [![Open in VSCode](https://img.shields.io/static/v1?label=Open+in&message=VSCode&logo=visualstudiocode&color=007ACC&logoColor=007ACC&labelColor=2C2C32)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/LSKV)
 
 [![LSKV CI](https://github.com/microsoft/LSKV/actions/workflows/ci.yml/badge.svg)](https://github.com/microsoft/LSKV/actions/workflows/ci.yml)
 
@@ -6,7 +6,9 @@ Ledger-backed Secure Key-Value Stored app sample based on [CCF](https://github.c
 
 ## Install Dependencies
 
-Install CCF and its dependencies:
+This repository and its dependencies can be checked out by clicking: [![Open in VSCode](https://img.shields.io/static/v1?label=Open+in&message=VSCode&logo=visualstudiocode&color=007ACC&logoColor=007ACC&labelColor=2C2C32)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/LSKV) 
+
+Alternatively, CCF and its dependencies can be installed manually:
 
 ```bash
 $ wget https://github.com/microsoft/CCF/releases/download/ccf-3.0.0-dev3/ccf_3.0.0_dev3_amd64.deb
@@ -16,7 +18,7 @@ ccf-3.0.0-dev3
 $ /opt/ccf/getting_started/setup_vm/run.sh /opt/ccf/getting_started/setup_vm/app-dev.yml  # Install dependencies
 ```
 
-Alternatively, you can checkout this repository in a [VSCode development container](https://code.visualstudio.com/docs/remote/containers).
+If your organisation supports it, you can also checkout this repository in a Github codespace: [![Open in Github codespace](https://img.shields.io/static/v1?label=Open+in&message=GitHub+codespace&logo=github&color=2F363D&logoColor=white&labelColor=2C2C32)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=534240617&machine=basicLinux32gb&devcontainer_path=.devcontainer.json&location=WestEurope)
 
 ## Build
 
