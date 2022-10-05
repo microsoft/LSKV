@@ -1,8 +1,8 @@
-# CCF Key-Value Store Sample App
+# Ledger-backed Secure Key-Value Store (LSKV)
 
-[![CCF KVS CI](https://github.com/microsoft/ccf-kvs/actions/workflows/ci.yml/badge.svg)](https://github.com/microsoft/ccf-kvs/actions/workflows/ci.yml)
+[![LSKV CI](https://github.com/microsoft/LSKV/actions/workflows/ci.yml/badge.svg)](https://github.com/microsoft/LSKV/actions/workflows/ci.yml)
 
-CCF sample application of a key-value store.
+Ledger-backed Secure Key-Value Stored app sample based on [CCF](https://github.com/microsoft/ccf).
 
 ## Install Dependencies
 
@@ -23,15 +23,15 @@ Alternatively, you can checkout this repository in a [VSCode development contain
 In the local checkout of this repository:
 
 ```bash
-$ cd ccf-kvs
+$ cd LSKV
 $ mkdir build
 $ cd build
 # to build with public maps (more debuggable) add -DPUBLIC_MAPS
 $ CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja ..
 $ ninja
 $ ls
-libccf_kvs.enclave.so.signed # SGX-enabled application
-libccf_kvs.virtual.so # Virtual application (i.e. insecure!)
+liblskv.enclave.so.signed # SGX-enabled application
+liblskv.virtual.so # Virtual application (i.e. insecure!)
 ```
 
 ## Test
@@ -39,20 +39,20 @@ libccf_kvs.virtual.so # Virtual application (i.e. insecure!)
 ### Manual
 
 ```bash
-$ /opt/ccf/bin/sandbox.sh -p ./libccf_kvs.virtual.so
+$ /opt/ccf/bin/sandbox.sh -p ./liblskv.virtual.so
 Setting up Python environment...
 Python environment successfully setup
 [12:00:00.000] Virtual mode enabled
 [12:00:00.000] Starting 1 CCF node...
 [12:00:00.000] Started CCF network with the following nodes:
 [12:00:00.000]   Node [0] = https://127.0.0.1:8000
-[12:00:00.000] You can now issue business transactions to the ./libccf_kvs.virtual.so application
-[12:00:00.000] Keys and certificates have been copied to the common folder: .../ccf-kvs/build/workspace/sandbox_common
+[12:00:00.000] You can now issue business transactions to the ./liblskv.virtual.so application
+[12:00:00.000] Keys and certificates have been copied to the common folder: .../LSKV/build/workspace/sandbox_common
 [12:00:00.000] See https://microsoft.github.io/CCF/main/use_apps/issue_commands.html for more information
 [12:00:00.000] Press Ctrl+C to shutdown the network
 ```
 
-Or, for an SGX-enabled application: `$ /opt/ccf/bin/sandbox.sh -p ./libccf_kvs.enclave.so.signed -e release`
+Or, for an SGX-enabled application: `$ /opt/ccf/bin/sandbox.sh -p ./liblskv.enclave.so.signed -e release`
 
 ### Etcd integration
 
@@ -67,8 +67,8 @@ make test-virtual
 Alternatively, it is possible to build a runtime image of this application via docker:
 
 ```bash
-$ docker build -t ccf-kvs .
-$ docker run --device /dev/sgx_enclave:/dev/sgx_enclave --device /dev/sgx_provision:/dev/sgx_provision -v /dev/sgx:/dev/sgx ccf-kvs
+$ docker build -t lskv .
+$ docker run --device /dev/sgx_enclave:/dev/sgx_enclave --device /dev/sgx_provision:/dev/sgx_provision -v /dev/sgx:/dev/sgx lskv
 ...
 2022-01-01T12:00:00.000000Z -0.000 0   [info ] ../src/node/node_state.h:1790        | Network TLS connections now accepted
 # It is then possible to interact with the service
@@ -78,7 +78,7 @@ $ docker run --device /dev/sgx_enclave:/dev/sgx_enclave --device /dev/sgx_provis
 
 ```bash
 # run the datastore from the project root
-$ /opt/ccf/bin/sandbox.sh -p build/libccf_kvs.virtual.so --http2
+$ /opt/ccf/bin/sandbox.sh -p build/liblskv.virtual.so --http2
 ...
 
 # In another terminal, from the project root
@@ -93,7 +93,7 @@ value
 ### JSON API
 
 We also allow calling with the [JSON API](https://etcd.io/docs/v3.5/dev-guide/api_grpc_gateway/) for some endpoints.
-See [the status of the JSON API](https://github.com/microsoft/ccf-kvs/issues/50) for which endpoints have JSON API implementations.
+See [the status of the JSON API](https://github.com/microsoft/LSKV/issues/50) for which endpoints have JSON API implementations.
 
 To call an endpoint with curl:
 
