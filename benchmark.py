@@ -299,6 +299,7 @@ def main():
     parser.add_argument("--worker-threads", action="extend", nargs="+", type=int)
     parser.add_argument("--clients", action="extend", nargs="+", type=int)
     parser.add_argument("--connections", action="extend", nargs="+", type=int)
+    parser.add_argument("--bench-cmds", action="extend", nargs="+", type=str, default=[])
 
     args = parser.parse_args()
 
@@ -310,6 +311,15 @@ def main():
     if not args.connections:
         args.connections = [1]
 
+    args.bench_cmds = [s.split() for s in args.bench_cmds]
+    if not args.bench_cmds:
+        args.bench_cmds = [
+            ["put"],
+            ["range", "range-key"],
+            ["txn-put"],
+            ["txn-mixed", "txn-mixed-key"],
+        ]
+
     bench_dir = "bench"
     port = 8000
 
@@ -318,13 +328,7 @@ def main():
     os.makedirs(bench_dir)
 
     # TODO(#40): write a kv into the store for the range query benchmark
-    bench_cmds = [
-        ["put"],
-        ["range", "range-key"],
-        ["txn-put"],
-        ["txn-mixed", "txn-mixed-key"],
-    ]
-    for bench_cmd in bench_cmds:
+    for bench_cmd in args.bench_cmds:
         logging.info(f"benching with extra args {bench_cmd}")
 
         bench_cmd_string = "_".join(bench_cmd)
