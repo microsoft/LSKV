@@ -9,7 +9,6 @@ if(NOT TARGET ccf)
   find_package(ccf REQUIRED)
 endif()
 
-add_subdirectory(3rdparty)
 add_subdirectory(proto)
 
 option(
