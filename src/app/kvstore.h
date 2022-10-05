@@ -60,7 +60,7 @@ namespace app::kvstore
     void foreach(const std::function<bool(const K&, const V&)>& fn);
 
     void range(
-      const std::function<void(K&, V&)>& fn, const K& from, const K& to);
+      const std::function<void(K&, V&)>& fn, const K& from, const std::optional<K>& to);
 
     /// @brief Associate a value with a key in the store, replacing existing
     /// entries for that key.

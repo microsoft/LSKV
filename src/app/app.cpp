@@ -323,15 +323,14 @@ namespace app
       }
       else
       {
-        auto end = payload.range_end();
+        auto end = std::make_optional(payload.range_end());
         // If range_end is '\0', the range is all keys greater than or equal
         // to the key argument.
-        if (end == std::string(1, '\0'))
+        if (*end == std::string(1, '\0'))
         {
           CCF_APP_DEBUG("found empty end, making it work with range");
-          // TODO(#23): should change the range to make sure we get all keys
-          // greater than the start but this works for enough cases now
-          end = std::string(16, '\255');
+          // make sure we get all keys greater than the start
+          end = std::nullopt;
         }
 
         // range end is non-empty so perform a range scan
@@ -470,24 +469,33 @@ namespace app
         auto deleted = 0;
 
         auto& start = payload.key();
-        auto end = payload.range_end();
+        auto end = std::make_optional(payload.range_end());
 
         // If range_end is '\0', the range is all keys greater than or equal
         // to the key argument.
-        if (end == std::string(1, '\0'))
+        if (*end == std::string(1, '\0'))
         {
           CCF_APP_DEBUG("found empty end, making it work with range");
-          // TODO(#23): should change the range to make sure we get all keys
-          // greater than the start but this works for enough cases now
-          end = std::string(16, '\255');
+          // make sure we get all keys greater than the start
+          end = std::nullopt;
         }
 
-        CCF_APP_DEBUG(
-          "calling range for deletion with [{}]{} -> [{}]{}",
-          start.size(),
-          start,
-          end.size(),
-          end);
+        if (end.has_value())
+        {
+          CCF_APP_DEBUG(
+            "calling range for deletion with [{}]{} -> [{}]{}",
+            start.size(),
+            start,
+            end.value().size(),
+            end.value());
+        }
+        else
+        {
+          CCF_APP_DEBUG(
+            "calling range for deletion with [{}]{} to the end",
+            start.size(),
+            start);
+        }
         records_map.range(
           [&](auto& key, auto& old) {
             records_map.remove(key);

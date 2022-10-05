@@ -89,14 +89,26 @@ namespace app::index
     const int64_t at,
     const std::function<void(const KVIndexer::K&, KVIndexer::V&)>& fn,
     const KVIndexer::K& from,
-    const KVIndexer::K& to)
+    const std::optional<KVIndexer::K>& to)
   {
     std::shared_lock lock(mutex);
     // iterate over the keys in keys_to_values
     auto lb = keys_to_values.lower_bound(from);
-    auto ub = keys_to_values.lower_bound(to);
+    auto ub = keys_to_values.end();
+    if (to.has_value())
+    {
+      ub = keys_to_values.lower_bound(to.value());
+    }
 
-    CCF_APP_DEBUG("ranging over index from {} to {}", from, to);
+    if (to.has_value())
+    {
+      CCF_APP_DEBUG("ranging over index from {} to {}", from, to.value());
+    }
+    else
+    {
+      CCF_APP_DEBUG("ranging over index from {} to the end", from);
+    }
+
     for (auto it = lb; it != ub; ++it)
     {
       CCF_APP_DEBUG("index range found key: {}", it->first);
