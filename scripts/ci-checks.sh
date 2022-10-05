@@ -64,7 +64,7 @@ fi
 
 source scripts/env/bin/activate
 pip install -U pip
-pip install -U wheel black pylint mypy 1>/dev/null
+pip install -U wheel black pylint mypy cpplint 1>/dev/null
 
 echo "$CHECK_DELIMITER"
 echo "-- Python format"
