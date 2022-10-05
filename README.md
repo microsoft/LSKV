@@ -9,10 +9,10 @@ Ledger-backed Secure Key-Value Stored app sample based on [CCF](https://github.c
 Install CCF and its dependencies:
 
 ```bash
-$ wget https://github.com/microsoft/CCF/releases/download/ccf-3.0.0-dev3/ccf_3.0.0_dev3_amd64.deb
-$ sudo dpkg -i ccf_3.0.0_dev3_amd64.deb # Install CCF under /opt/ccf
+$ wget https://github.com/microsoft/CCF/releases/download/ccf-3.0.0-dev5/ccf_3.0.0_dev5_amd64.deb
+$ sudo dpkg -i ccf_3.0.0_dev5_amd64.deb # Install CCF under /opt/ccf
 $ cat /opt/ccf/share/VERSION_LONG
-ccf-3.0.0-dev3
+ccf-3.0.0-dev5
 $ /opt/ccf/getting_started/setup_vm/run.sh /opt/ccf/getting_started/setup_vm/app-dev.yml  # Install dependencies
 ```
 

@@ -10,7 +10,7 @@ else()
     message(FATAL_ERROR "Cannot find protobuf compiler: ${PROTOC_BINARY_PATH}")
 endif()
 
-set(PROTOBUF_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/3rdparty/protobuf/src/)
+set(PROTOBUF_INCLUDE_DIR ${CCF_DIR}/include/3rdparty/protobuf/src/)
 
 file(GLOB PROTO_FILES ${CMAKE_CURRENT_SOURCE_DIR}/*.proto)
 

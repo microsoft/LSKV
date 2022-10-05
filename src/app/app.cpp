@@ -8,8 +8,8 @@
 #include "ccf/ds/hex.h"
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
+#include "endpoints/grpc.h" // TODO(#22): private header
 #include "etcd.pb.h"
-#include "grpc.h" // TODO(#25): use grpc from ccf
 #include "index.h"
 #include "json_grpc.h"
 #include "kvstore.h"
