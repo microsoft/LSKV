@@ -90,8 +90,13 @@ namespace app::kvstore
   void KVStore::range(
     const std::function<void(KVStore::K&, KVStore::V&)>& fn,
     const KVStore::K& from,
-    const KVStore::K& to)
+    const std::optional<KVStore::K>& to_opt)
   {
+    std::optional<kv::serialisers::SerialisedEntry> to = std::nullopt;
+    if (to_opt.has_value())
+    {
+      to = KVStore::KSerialiser::to_serialised(to_opt.value());
+    }
     inner_map->range(
       [&](auto& key, auto& value) {
         auto k = KVStore::KSerialiser::from_serialised(key);
@@ -100,7 +105,7 @@ namespace app::kvstore
         fn(k, v);
       },
       KVStore::KSerialiser::to_serialised(from),
-      KVStore::KSerialiser::to_serialised(to));
+      to);
   }
 
   /// @brief Associate a value with a key in the store, replacing existing
