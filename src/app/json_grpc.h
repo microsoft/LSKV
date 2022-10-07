@@ -84,6 +84,54 @@ namespace app::json_grpc
     }
   }
 
+  template <typename In>
+  using GrpcEndpointInOnlyReadOnly =
+    std::function<void(ccf::endpoints::ReadOnlyEndpointContext& ctx, In&& payload)>;
+
+  template <typename In>
+  ccf::endpoints::ReadOnlyEndpointFunction json_grpc_adapter_in_only_ro(
+    const GrpcEndpointInOnlyReadOnly<In>& f)
+  {
+    return [f](ccf::endpoints::ReadOnlyEndpointContext& ctx) {
+      try
+      {
+        f(ctx, get_json_grpc_payload<In>(ctx.rpc_ctx)), ctx.rpc_ctx;
+      }
+      catch (app::exceptions::BadRequest& e)
+      {
+        ctx.rpc_ctx->set_error(std::move(e.error));
+      }
+      catch (app::exceptions::WrongMediaType& e)
+      {
+        ctx.rpc_ctx->set_error(std::move(e.error));
+      }
+    };
+  }
+
+  template <typename In>
+  using GrpcEndpointInOnly =
+    std::function<void(ccf::endpoints::EndpointContext& ctx, In&& payload)>;
+
+  template <typename In>
+  ccf::endpoints::EndpointFunction json_grpc_adapter_in_only(
+    const GrpcEndpointInOnly<In>& f)
+  {
+    return [f](ccf::endpoints::EndpointContext& ctx) {
+      try
+      {
+        f(ctx, get_json_grpc_payload<In>(ctx.rpc_ctx)), ctx.rpc_ctx;
+      }
+      catch (app::exceptions::BadRequest& e)
+      {
+        ctx.rpc_ctx->set_error(std::move(e.error));
+      }
+      catch (app::exceptions::WrongMediaType& e)
+      {
+        ctx.rpc_ctx->set_error(std::move(e.error));
+      }
+    };
+  }
+
   template <typename In, typename Out>
   ccf::endpoints::EndpointFunction json_grpc_adapter(
     const ccf::GrpcEndpoint<In, Out>& f)

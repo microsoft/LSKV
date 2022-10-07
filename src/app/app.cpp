@@ -200,13 +200,12 @@ namespace app
       make_read_only_endpoint_with_local_commit_handler(
         path,
         HTTP_POST,
-        app::json_grpc::json_grpc_adapter_ro<In, Out>(
+        app::json_grpc::json_grpc_adapter_in_only_ro<In>(
           [f](auto& ctx, In&& payload) {
             auto res = f(ctx, std::move(payload));
             auto res_p =
               std::make_shared<ccf::grpc::GrpcAdapterResponse<Out>>(res);
             ctx.rpc_ctx->set_user_data(res_p);
-            return res;
           }),
         [this](auto& ctx, const auto& tx_id) {
           auto res = static_cast<ccf::grpc::GrpcAdapterResponse<Out>*>(
@@ -266,13 +265,12 @@ namespace app
       make_endpoint_with_local_commit_handler(
         path,
         HTTP_POST,
-        app::json_grpc::json_grpc_adapter<In, Out>(
+        app::json_grpc::json_grpc_adapter_in_only<In>(
           [f](auto& ctx, In&& payload) {
             auto res = f(ctx, std::move(payload));
             auto res_p =
               std::make_shared<ccf::grpc::GrpcAdapterResponse<Out>>(res);
             ctx.rpc_ctx->set_user_data(res_p);
-            return res;
           }),
         [this](auto& ctx, const auto& tx_id) {
           auto res = static_cast<ccf::grpc::GrpcAdapterResponse<Out>*>(
