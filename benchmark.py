@@ -152,7 +152,6 @@ class EtcdStore(Store):
                 p = Popen(bench, stdout=out, stderr=err)
                 return p, timings_file
 
-
     def cleanup(self):
         shutil.rmtree("default.etcd", ignore_errors=True)
 
