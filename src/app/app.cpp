@@ -49,7 +49,7 @@ namespace app
         return this->range(kvs, lstore, std::move(payload));
       };
 
-      install_endpoint_ro<
+      install_endpoint_with_header_ro<
         etcdserverpb::RangeRequest,
         etcdserverpb::RangeResponse>(
         etcdserverpb, kv, "Range", "/v3/kv/range", range);
@@ -60,8 +60,9 @@ namespace app
         return this->put(ctx, std::move(payload));
       };
 
-      install_endpoint<etcdserverpb::PutRequest, etcdserverpb::PutResponse>(
-        etcdserverpb, kv, "Put", "/v3/kv/put", put);
+      install_endpoint_with_header<
+        etcdserverpb::PutRequest,
+        etcdserverpb::PutResponse>(etcdserverpb, kv, "Put", "/v3/kv/put", put);
 
       auto delete_range = [this](
                             ccf::endpoints::EndpointContext& ctx,
@@ -69,7 +70,7 @@ namespace app
         return this->delete_range(ctx, std::move(payload));
       };
 
-      install_endpoint<
+      install_endpoint_with_header<
         etcdserverpb::DeleteRangeRequest,
         etcdserverpb::DeleteRangeResponse>(
         etcdserverpb, kv, "DeleteRange", "/v3/kv/delete_range", delete_range);
@@ -80,8 +81,9 @@ namespace app
         return this->txn(ctx, std::move(payload));
       };
 
-      install_endpoint<etcdserverpb::TxnRequest, etcdserverpb::TxnResponse>(
-        etcdserverpb, kv, "Txn", "/v3/kv/txn", txn);
+      install_endpoint_with_header<
+        etcdserverpb::TxnRequest,
+        etcdserverpb::TxnResponse>(etcdserverpb, kv, "Txn", "/v3/kv/txn", txn);
 
       auto compact = [this](
                        ccf::endpoints::EndpointContext& ctx,
@@ -89,7 +91,7 @@ namespace app
         return this->compact(ctx, std::move(payload));
       };
 
-      install_endpoint<
+      install_endpoint_with_header<
         etcdserverpb::CompactionRequest,
         etcdserverpb::CompactionResponse>(
         etcdserverpb, kv, "Compact", "/v3/kv/compact", compact);
@@ -100,7 +102,7 @@ namespace app
         return this->lease_grant(ctx, std::move(payload));
       };
 
-      install_endpoint<
+      install_endpoint_with_header<
         etcdserverpb::LeaseGrantRequest,
         etcdserverpb::LeaseGrantResponse>(
         etcdserverpb, lease, "LeaseGrant", "/v3/lease/grant", lease_grant);
@@ -111,7 +113,7 @@ namespace app
         return this->lease_revoke(ctx, std::move(payload));
       };
 
-      install_endpoint<
+      install_endpoint_with_header<
         etcdserverpb::LeaseRevokeRequest,
         etcdserverpb::LeaseRevokeResponse>(
         etcdserverpb, lease, "LeaseRevoke", "/v3/lease/revoke", lease_revoke);
@@ -123,7 +125,7 @@ namespace app
           return this->lease_time_to_live(ctx, std::move(payload));
         };
 
-      install_endpoint_ro<
+      install_endpoint_with_header_ro<
         etcdserverpb::LeaseTimeToLiveRequest,
         etcdserverpb::LeaseTimeToLiveResponse>(
         etcdserverpb,
@@ -138,7 +140,7 @@ namespace app
         return this->lease_leases(ctx, std::move(payload));
       };
 
-      install_endpoint_ro<
+      install_endpoint_with_header_ro<
         etcdserverpb::LeaseLeasesRequest,
         etcdserverpb::LeaseLeasesResponse>(
         etcdserverpb, lease, "LeaseLeases", "/v3/lease/leases", lease_leases);
@@ -149,7 +151,7 @@ namespace app
         return this->lease_keep_alive(ctx, std::move(payload));
       };
 
-      install_endpoint<
+      install_endpoint_with_header<
         etcdserverpb::LeaseKeepAliveRequest,
         etcdserverpb::LeaseKeepAliveResponse>(
         etcdserverpb,
@@ -178,6 +180,138 @@ namespace app
         path,
         HTTP_POST,
         app::json_grpc::json_grpc_adapter_ro<In, Out>(f),
+        ccf::no_auth_required)
+        .install();
+    }
+
+    template <typename In, typename Out>
+    void install_endpoint_with_header_ro(
+      const std::string& package,
+      const std::string& service,
+      const std::string& rpc,
+      const std::string& path,
+      const ccf::GrpcReadOnlyEndpoint<In, Out>& f)
+    {
+      auto grpc_path = fmt::format("/{}.{}/{}", package, service, rpc);
+      make_read_only_endpoint_with_local_commit_handler(
+        grpc_path,
+        HTTP_POST,
+        ccf::grpc_read_only_adapter<In, Out>([f](auto& ctx, In&& payload) {
+          auto res = f(ctx, std::move(payload));
+          auto res_p =
+            std::make_shared<ccf::grpc::GrpcAdapterResponse<Out>>(res);
+          ctx.rpc_ctx->set_user_data(res_p);
+          return res;
+        }),
+        [this](auto& ctx, const auto& tx_id) {
+          auto res = static_cast<ccf::grpc::GrpcAdapterResponse<Out>*>(
+            ctx.rpc_ctx->get_user_data());
+          if (res == nullptr)
+          {
+            throw std::runtime_error("user data was null");
+          }
+          if (
+            auto success = std::get_if<ccf::grpc::SuccessResponse<Out>>(&*res))
+          {
+            auto* header = success->body.mutable_header();
+            fill_header(*header);
+          } // else just leave the response
+          ccf::grpc::set_grpc_response(*res, ctx.rpc_ctx);
+        },
+        ccf::no_auth_required)
+        .install();
+      make_read_only_endpoint_with_local_commit_handler(
+        path,
+        HTTP_POST,
+        app::json_grpc::json_grpc_adapter_ro<In, Out>(
+          [f](auto& ctx, In&& payload) {
+            auto res = f(ctx, std::move(payload));
+            auto res_p =
+              std::make_shared<ccf::grpc::GrpcAdapterResponse<Out>>(res);
+            ctx.rpc_ctx->set_user_data(res_p);
+            return res;
+          }),
+        [this](auto& ctx, const auto& tx_id) {
+          auto res = static_cast<ccf::grpc::GrpcAdapterResponse<Out>*>(
+            ctx.rpc_ctx->get_user_data());
+          if (res == nullptr)
+          {
+            throw std::runtime_error("user data was null");
+          }
+          if (
+            auto success = std::get_if<ccf::grpc::SuccessResponse<Out>>(&*res))
+          {
+            auto* header = success->body.mutable_header();
+            fill_header(*header);
+          } // else just leave the response
+          app::json_grpc::set_json_grpc_response(*res, ctx.rpc_ctx);
+        },
+        ccf::no_auth_required)
+        .install();
+    }
+
+    template <typename In, typename Out>
+    void install_endpoint_with_header(
+      const std::string& package,
+      const std::string& service,
+      const std::string& rpc,
+      const std::string& path,
+      const ccf::GrpcEndpoint<In, Out>& f)
+    {
+      auto grpc_path = fmt::format("/{}.{}/{}", package, service, rpc);
+      make_endpoint_with_local_commit_handler(
+        grpc_path,
+        HTTP_POST,
+        ccf::grpc_adapter<In, Out>([f](auto& ctx, In&& payload) {
+          auto res = f(ctx, std::move(payload));
+          auto res_p =
+            std::make_shared<ccf::grpc::GrpcAdapterResponse<Out>>(res);
+          ctx.rpc_ctx->set_user_data(res_p);
+          return res;
+        }),
+        [this](auto& ctx, const auto& tx_id) {
+          auto res = static_cast<ccf::grpc::GrpcAdapterResponse<Out>*>(
+            ctx.rpc_ctx->get_user_data());
+          if (res == nullptr)
+          {
+            throw std::runtime_error("user data was null");
+          }
+          if (
+            auto success = std::get_if<ccf::grpc::SuccessResponse<Out>>(&*res))
+          {
+            auto* header = success->body.mutable_header();
+            fill_header(*header);
+          } // else just leave the response
+          ccf::grpc::set_grpc_response(*res, ctx.rpc_ctx);
+        },
+        ccf::no_auth_required)
+        .install();
+      make_endpoint_with_local_commit_handler(
+        path,
+        HTTP_POST,
+        app::json_grpc::json_grpc_adapter<In, Out>(
+          [f](auto& ctx, In&& payload) {
+            auto res = f(ctx, std::move(payload));
+            auto res_p =
+              std::make_shared<ccf::grpc::GrpcAdapterResponse<Out>>(res);
+            ctx.rpc_ctx->set_user_data(res_p);
+            return res;
+          }),
+        [this](auto& ctx, const auto& tx_id) {
+          auto res = static_cast<ccf::grpc::GrpcAdapterResponse<Out>*>(
+            ctx.rpc_ctx->get_user_data());
+          if (res == nullptr)
+          {
+            throw std::runtime_error("user data was null");
+          }
+          if (
+            auto success = std::get_if<ccf::grpc::SuccessResponse<Out>>(&*res))
+          {
+            auto* header = success->body.mutable_header();
+            fill_header(*header);
+          } // else just leave the response
+          app::json_grpc::set_json_grpc_response(*res, ctx.rpc_ctx);
+        },
         ccf::no_auth_required)
         .install();
     }
@@ -348,9 +482,6 @@ namespace app
 
       range_response.set_count(count);
 
-      auto* header = range_response.mutable_header();
-      fill_header(*header);
-
       return ccf::grpc::make_success(range_response);
     }
 
@@ -412,9 +543,6 @@ namespace app
         prev_kv->set_version(value.version);
         prev_kv->set_lease(value.lease);
       }
-
-      auto* header = put_response.mutable_header();
-      fill_header(*header);
 
       return ccf::grpc::make_success(put_response);
     }
@@ -517,9 +645,6 @@ namespace app
 
         delete_range_response.set_deleted(deleted);
       }
-
-      auto* header = delete_range_response.mutable_header();
-      fill_header(*header);
 
       return ccf::grpc::make_success(delete_range_response);
     }
@@ -692,9 +817,6 @@ namespace app
         }
       }
 
-      auto* header = txn_response.mutable_header();
-      fill_header(*header);
-
       return ccf::grpc::make_success(txn_response);
     }
 
@@ -755,9 +877,6 @@ namespace app
       revoke_expired_leases(ctx.tx);
       kvindex->compact(payload.revision());
 
-      auto* header = response.mutable_header();
-      fill_header(*header);
-
       return ccf::grpc::make_success(response);
     }
 
@@ -781,9 +900,6 @@ namespace app
 
       response.set_id(id);
       response.set_ttl(ttl);
-
-      auto* header = response.mutable_header();
-      fill_header(*header);
 
       return ccf::grpc::make_success(response);
     }
@@ -812,9 +928,6 @@ namespace app
         return true;
       });
 
-      auto* header = response.mutable_header();
-      fill_header(*header);
-
       return ccf::grpc::make_success(response);
     }
 
@@ -842,9 +955,6 @@ namespace app
       response.set_ttl(lease.ttl_remaining(now_s));
       response.set_grantedttl(lease.ttl);
 
-      auto* header = response.mutable_header();
-      fill_header(*header);
-
       return ccf::grpc::make_success(response);
     }
 
@@ -868,9 +978,6 @@ namespace app
         return true;
       });
 
-      auto* header = response.mutable_header();
-      fill_header(*header);
-
       return ccf::grpc::make_success(response);
     }
 
@@ -889,9 +996,6 @@ namespace app
 
       response.set_id(id);
       response.set_ttl(ttl);
-
-      auto* header = response.mutable_header();
-      fill_header(*header);
 
       return ccf::grpc::make_success(response);
     }
