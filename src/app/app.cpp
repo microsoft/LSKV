@@ -192,7 +192,7 @@ namespace app
             auto success = std::get_if<ccf::grpc::SuccessResponse<Out>>(&*res))
           {
             auto* header = success->body.mutable_header();
-            fill_header(*header);
+            fill_header(*header, tx_id);
           } // else just leave the response
           ccf::grpc::set_grpc_response(*res, ctx.rpc_ctx);
         },
@@ -219,7 +219,7 @@ namespace app
             auto success = std::get_if<ccf::grpc::SuccessResponse<Out>>(&*res))
           {
             auto* header = success->body.mutable_header();
-            fill_header(*header);
+            fill_header(*header, tx_id);
           } // else just leave the response
           app::json_grpc::set_json_grpc_response(*res, ctx.rpc_ctx);
         },
@@ -256,7 +256,7 @@ namespace app
             auto success = std::get_if<ccf::grpc::SuccessResponse<Out>>(&*res))
           {
             auto* header = success->body.mutable_header();
-            fill_header(*header);
+            fill_header(*header, tx_id);
           } // else just leave the response
           ccf::grpc::set_grpc_response(*res, ctx.rpc_ctx);
         },
@@ -283,7 +283,7 @@ namespace app
             auto success = std::get_if<ccf::grpc::SuccessResponse<Out>>(&*res))
           {
             auto* header = success->body.mutable_header();
-            fill_header(*header);
+            fill_header(*header, tx_id);
           } // else just leave the response
           app::json_grpc::set_json_grpc_response(*res, ctx.rpc_ctx);
         },
@@ -999,9 +999,12 @@ namespace app
       return time.tv_sec;
     }
 
-    void fill_header(etcdserverpb::ResponseHeader& header)
+    void fill_header(
+      etcdserverpb::ResponseHeader& header, const ccf::TxID& tx_id)
     {
       header.set_member_id(member_id());
+      header.set_raft_term(tx_id.view);
+      header.set_revision(tx_id.seqno);
     }
 
     int64_t member_id()
