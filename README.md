@@ -115,3 +115,7 @@ curl -X POST https://127.0.0.1:8000/v3/kv/range --cacert workspace/sandbox_commo
 # delete the put value at 'hello'
 curl -X POST https://127.0.0.1:8000/v3/kv/delete_range --cacert workspace/sandbox_common/service_cert.pem --key workspace/sandbox_common/user0_privk.pem --cert workspace/sandbox_common/user0_cert.pem  -H "content-type: application/json" -i --data-binary '{"key":"aGVsbG8="}'
 ```
+
+## Benchmarking
+
+See [BENCHMARKING.md](./BENCHMARKING.md) or instructions to run the benchmarks and analysis.
