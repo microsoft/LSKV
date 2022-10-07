@@ -188,17 +188,16 @@ namespace app
       const std::string& path,
       const ccf::GrpcReadOnlyEndpoint<In, Out>& f)
     {
+      auto g = [f](ccf::endpoints::ReadOnlyEndpointContext& ctx, In&& payload) {
+        auto res = f(ctx, std::move(payload));
+        auto res_p = std::make_shared<ccf::grpc::GrpcAdapterResponse<Out>>(res);
+        ctx.rpc_ctx->set_user_data(res_p);
+      };
       auto grpc_path = fmt::format("/{}.{}/{}", package, service, rpc);
       make_read_only_endpoint_with_local_commit_handler(
         grpc_path,
         HTTP_POST,
-        app::grpc::grpc_read_only_adapter_in_only<In>(
-          [f](auto& ctx, In&& payload) {
-            auto res = f(ctx, std::move(payload));
-            auto res_p =
-              std::make_shared<ccf::grpc::GrpcAdapterResponse<Out>>(res);
-            ctx.rpc_ctx->set_user_data(res_p);
-          }),
+        app::grpc::grpc_read_only_adapter_in_only<In>(g),
         [this](auto& ctx, const auto& tx_id) {
           auto res = post_commit<Out>(ctx, tx_id);
           ccf::grpc::set_grpc_response(res, ctx.rpc_ctx);
@@ -208,13 +207,7 @@ namespace app
       make_read_only_endpoint_with_local_commit_handler(
         path,
         HTTP_POST,
-        app::json_grpc::json_grpc_adapter_in_only_ro<In>(
-          [f](auto& ctx, In&& payload) {
-            auto res = f(ctx, std::move(payload));
-            auto res_p =
-              std::make_shared<ccf::grpc::GrpcAdapterResponse<Out>>(res);
-            ctx.rpc_ctx->set_user_data(res_p);
-          }),
+        app::json_grpc::json_grpc_adapter_in_only_ro<In>(g),
         [this](auto& ctx, const auto& tx_id) {
           auto res = post_commit<Out>(ctx, tx_id);
           app::json_grpc::set_json_grpc_response(res, ctx.rpc_ctx);
@@ -231,16 +224,16 @@ namespace app
       const std::string& path,
       const ccf::GrpcEndpoint<In, Out>& f)
     {
+      auto g = [f](ccf::endpoints::EndpointContext& ctx, In&& payload) {
+        auto res = f(ctx, std::move(payload));
+        auto res_p = std::make_shared<ccf::grpc::GrpcAdapterResponse<Out>>(res);
+        ctx.rpc_ctx->set_user_data(res_p);
+      };
       auto grpc_path = fmt::format("/{}.{}/{}", package, service, rpc);
       make_endpoint_with_local_commit_handler(
         grpc_path,
         HTTP_POST,
-        app::grpc::grpc_adapter_in_only<In>([f](auto& ctx, In&& payload) {
-          auto res = f(ctx, std::move(payload));
-          auto res_p =
-            std::make_shared<ccf::grpc::GrpcAdapterResponse<Out>>(res);
-          ctx.rpc_ctx->set_user_data(res_p);
-        }),
+        app::grpc::grpc_adapter_in_only<In>(g),
         [this](auto& ctx, const auto& tx_id) {
           auto res = post_commit<Out>(ctx, tx_id);
           ccf::grpc::set_grpc_response(res, ctx.rpc_ctx);
@@ -250,13 +243,7 @@ namespace app
       make_endpoint_with_local_commit_handler(
         path,
         HTTP_POST,
-        app::json_grpc::json_grpc_adapter_in_only<In>(
-          [f](auto& ctx, In&& payload) {
-            auto res = f(ctx, std::move(payload));
-            auto res_p =
-              std::make_shared<ccf::grpc::GrpcAdapterResponse<Out>>(res);
-            ctx.rpc_ctx->set_user_data(res_p);
-          }),
+        app::json_grpc::json_grpc_adapter_in_only<In>(g),
         [this](auto& ctx, const auto& tx_id) {
           auto res = post_commit<Out>(ctx, tx_id);
           app::json_grpc::set_json_grpc_response(res, ctx.rpc_ctx);
