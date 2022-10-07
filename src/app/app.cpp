@@ -10,6 +10,7 @@
 #include "ccf/json_handler.h"
 #include "endpoints/grpc.h" // TODO(#22): private header
 #include "etcd.pb.h"
+#include "grpc.h"
 #include "index.h"
 #include "json_grpc.h"
 #include "kvstore.h"
@@ -173,13 +174,13 @@ namespace app
       make_read_only_endpoint_with_local_commit_handler(
         grpc_path,
         HTTP_POST,
-        ccf::grpc_read_only_adapter<In, Out>([f](auto& ctx, In&& payload) {
-          auto res = f(ctx, std::move(payload));
-          auto res_p =
-            std::make_shared<ccf::grpc::GrpcAdapterResponse<Out>>(res);
-          ctx.rpc_ctx->set_user_data(res_p);
-          return res;
-        }),
+        app::grpc::grpc_read_only_adapter_in_only<In>(
+          [f](auto& ctx, In&& payload) {
+            auto res = f(ctx, std::move(payload));
+            auto res_p =
+              std::make_shared<ccf::grpc::GrpcAdapterResponse<Out>>(res);
+            ctx.rpc_ctx->set_user_data(res_p);
+          }),
         [this](auto& ctx, const auto& tx_id) {
           auto res = static_cast<ccf::grpc::GrpcAdapterResponse<Out>*>(
             ctx.rpc_ctx->get_user_data());
@@ -238,12 +239,11 @@ namespace app
       make_endpoint_with_local_commit_handler(
         grpc_path,
         HTTP_POST,
-        ccf::grpc_adapter<In, Out>([f](auto& ctx, In&& payload) {
+        app::grpc::grpc_adapter_in_only<In>([f](auto& ctx, In&& payload) {
           auto res = f(ctx, std::move(payload));
           auto res_p =
             std::make_shared<ccf::grpc::GrpcAdapterResponse<Out>>(res);
           ctx.rpc_ctx->set_user_data(res_p);
-          return res;
         }),
         [this](auto& ctx, const auto& tx_id) {
           auto res = static_cast<ccf::grpc::GrpcAdapterResponse<Out>*>(
