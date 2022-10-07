@@ -162,6 +162,24 @@ namespace app
         lease_keep_alive);
     }
 
+    template <typename Out>
+    ccf::grpc::GrpcAdapterResponse<Out>& post_commit(
+      ccf::endpoints::CommandEndpointContext& ctx, const ccf::TxID& tx_id)
+    {
+      auto res = static_cast<ccf::grpc::GrpcAdapterResponse<Out>*>(
+        ctx.rpc_ctx->get_user_data());
+      if (res == nullptr)
+      {
+        throw std::runtime_error("user data was null");
+      }
+      if (auto success = std::get_if<ccf::grpc::SuccessResponse<Out>>(&*res))
+      {
+        auto* header = success->body.mutable_header();
+        fill_header(*header, tx_id);
+      } // else just leave the response
+      return *res;
+    }
+
     template <typename In, typename Out>
     void install_endpoint_with_header_ro(
       const std::string& package,
@@ -182,19 +200,8 @@ namespace app
             ctx.rpc_ctx->set_user_data(res_p);
           }),
         [this](auto& ctx, const auto& tx_id) {
-          auto res = static_cast<ccf::grpc::GrpcAdapterResponse<Out>*>(
-            ctx.rpc_ctx->get_user_data());
-          if (res == nullptr)
-          {
-            throw std::runtime_error("user data was null");
-          }
-          if (
-            auto success = std::get_if<ccf::grpc::SuccessResponse<Out>>(&*res))
-          {
-            auto* header = success->body.mutable_header();
-            fill_header(*header, tx_id);
-          } // else just leave the response
-          ccf::grpc::set_grpc_response(*res, ctx.rpc_ctx);
+          auto res = post_commit<Out>(ctx, tx_id);
+          ccf::grpc::set_grpc_response(res, ctx.rpc_ctx);
         },
         ccf::no_auth_required)
         .install();
@@ -209,19 +216,8 @@ namespace app
             ctx.rpc_ctx->set_user_data(res_p);
           }),
         [this](auto& ctx, const auto& tx_id) {
-          auto res = static_cast<ccf::grpc::GrpcAdapterResponse<Out>*>(
-            ctx.rpc_ctx->get_user_data());
-          if (res == nullptr)
-          {
-            throw std::runtime_error("user data was null");
-          }
-          if (
-            auto success = std::get_if<ccf::grpc::SuccessResponse<Out>>(&*res))
-          {
-            auto* header = success->body.mutable_header();
-            fill_header(*header, tx_id);
-          } // else just leave the response
-          app::json_grpc::set_json_grpc_response(*res, ctx.rpc_ctx);
+          auto res = post_commit<Out>(ctx, tx_id);
+          app::json_grpc::set_json_grpc_response(res, ctx.rpc_ctx);
         },
         ccf::no_auth_required)
         .install();
@@ -246,19 +242,8 @@ namespace app
           ctx.rpc_ctx->set_user_data(res_p);
         }),
         [this](auto& ctx, const auto& tx_id) {
-          auto res = static_cast<ccf::grpc::GrpcAdapterResponse<Out>*>(
-            ctx.rpc_ctx->get_user_data());
-          if (res == nullptr)
-          {
-            throw std::runtime_error("user data was null");
-          }
-          if (
-            auto success = std::get_if<ccf::grpc::SuccessResponse<Out>>(&*res))
-          {
-            auto* header = success->body.mutable_header();
-            fill_header(*header, tx_id);
-          } // else just leave the response
-          ccf::grpc::set_grpc_response(*res, ctx.rpc_ctx);
+          auto res = post_commit<Out>(ctx, tx_id);
+          ccf::grpc::set_grpc_response(res, ctx.rpc_ctx);
         },
         ccf::no_auth_required)
         .install();
@@ -273,19 +258,8 @@ namespace app
             ctx.rpc_ctx->set_user_data(res_p);
           }),
         [this](auto& ctx, const auto& tx_id) {
-          auto res = static_cast<ccf::grpc::GrpcAdapterResponse<Out>*>(
-            ctx.rpc_ctx->get_user_data());
-          if (res == nullptr)
-          {
-            throw std::runtime_error("user data was null");
-          }
-          if (
-            auto success = std::get_if<ccf::grpc::SuccessResponse<Out>>(&*res))
-          {
-            auto* header = success->body.mutable_header();
-            fill_header(*header, tx_id);
-          } // else just leave the response
-          app::json_grpc::set_json_grpc_response(*res, ctx.rpc_ctx);
+          auto res = post_commit<Out>(ctx, tx_id);
+          app::json_grpc::set_json_grpc_response(res, ctx.rpc_ctx);
         },
         ccf::no_auth_required)
         .install();
