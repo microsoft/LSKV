@@ -162,29 +162,6 @@ namespace app
     }
 
     template <typename In, typename Out>
-    void install_endpoint_ro(
-      const std::string& package,
-      const std::string& service,
-      const std::string& rpc,
-      const std::string& path,
-      const ccf::GrpcReadOnlyEndpoint<In, Out>& f)
-    {
-      auto grpc_path = fmt::format("/{}.{}/{}", package, service, rpc);
-      make_read_only_endpoint(
-        grpc_path,
-        HTTP_POST,
-        ccf::grpc_read_only_adapter(f),
-        ccf::no_auth_required)
-        .install();
-      make_read_only_endpoint(
-        path,
-        HTTP_POST,
-        app::json_grpc::json_grpc_adapter_ro<In, Out>(f),
-        ccf::no_auth_required)
-        .install();
-    }
-
-    template <typename In, typename Out>
     void install_endpoint_with_header_ro(
       const std::string& package,
       const std::string& service,
@@ -312,26 +289,6 @@ namespace app
           } // else just leave the response
           app::json_grpc::set_json_grpc_response(*res, ctx.rpc_ctx);
         },
-        ccf::no_auth_required)
-        .install();
-    }
-
-    template <typename In, typename Out>
-    void install_endpoint(
-      const std::string& package,
-      const std::string& service,
-      const std::string& rpc,
-      const std::string& path,
-      const ccf::GrpcEndpoint<In, Out>& f)
-    {
-      auto grpc_path = fmt::format("/{}.{}/{}", package, service, rpc);
-      make_endpoint(
-        grpc_path, HTTP_POST, ccf::grpc_adapter(f), ccf::no_auth_required)
-        .install();
-      make_endpoint(
-        path,
-        HTTP_POST,
-        app::json_grpc::json_grpc_adapter<In, Out>(f),
         ccf::no_auth_required)
         .install();
     }
