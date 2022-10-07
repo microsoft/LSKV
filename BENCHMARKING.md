@@ -18,3 +18,21 @@ Or with the SGX benchmarks:
 ```sh
 make benchmark-sgx
 ```
+
+## Analysing
+
+The analysis is currently available as a jupyter notebook.
+
+Either run it interactively:
+
+```sh
+make notebook
+```
+
+Or just run it single-shot
+
+```sh
+make execute-notebook
+```
+
+The plots should be saved in the `plots` directory.
