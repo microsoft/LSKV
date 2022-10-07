@@ -94,8 +94,8 @@ value
 
 ### JSON API
 
-We also allow calling with the [JSON API](https://etcd.io/docs/v3.5/dev-guide/api_grpc_gateway/) for some endpoints.
-See [the status of the JSON API](https://github.com/microsoft/LSKV/issues/50) for which endpoints have JSON API implementations.
+We also allow calling with the [JSON API](https://etcd.io/docs/v3.5/dev-guide/api_grpc_gateway/).
+The status of the JSON API follows that of the [gRPC API](https://github.com/microsoft/LSKV/issues/35). 
 
 To call an endpoint with curl:
 
