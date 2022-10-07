@@ -85,8 +85,8 @@ namespace app::json_grpc
   }
 
   template <typename In>
-  using GrpcEndpointInOnlyReadOnly =
-    std::function<void(ccf::endpoints::ReadOnlyEndpointContext& ctx, In&& payload)>;
+  using GrpcEndpointInOnlyReadOnly = std::function<void(
+    ccf::endpoints::ReadOnlyEndpointContext& ctx, In&& payload)>;
 
   template <typename In>
   ccf::endpoints::ReadOnlyEndpointFunction json_grpc_adapter_in_only_ro(

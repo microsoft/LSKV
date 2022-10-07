@@ -19,8 +19,8 @@ namespace app::grpc
   }
 
   template <typename In>
-  using GrpcEndpointInOnly = std::function<void(
-    ccf::endpoints::EndpointContext& ctx, In&& payload)>;
+  using GrpcEndpointInOnly =
+    std::function<void(ccf::endpoints::EndpointContext& ctx, In&& payload)>;
 
   template <typename In>
   ccf::endpoints::EndpointFunction grpc_adapter_in_only(
