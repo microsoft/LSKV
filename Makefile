@@ -79,9 +79,9 @@ benchmark-sgx: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual build-sgx .ven
 notebook: .venv
 	. .venv/bin/activate && jupyter notebook
 
-.PHONY: run-notebook
-run-notebook: .venv
-	. .venv/bin/activate && jupyter nbconvert --execute --to notebook analysis.ipynb
+.PHONY: execute-notebook
+execute-notebook: .venv
+	. .venv/bin/activate && jupyter nbconvert --execute --to notebook --inplace analysis.ipynb
 
 .PHONY: clear-notebook
 clear-notebook: .venv

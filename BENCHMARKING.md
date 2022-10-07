@@ -32,7 +32,7 @@ make notebook
 Or just run it single-shot
 
 ```sh
-make run-notebook
+make execute-notebook
 ```
 
 The plots should be saved in the `plots` directory.
