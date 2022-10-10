@@ -2,3 +2,4 @@ cimetrics==0.3.12
 pandas==1.5.0
 notebook==6.4.12
 seaborn==0.12.0
+psutil==5.9.2

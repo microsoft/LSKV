@@ -6,6 +6,8 @@ from subprocess import Popen
 
 from dataclasses import asdict, dataclass
 import argparse
+import psutil
+from psutil import Process
 import abc
 import shutil
 import time
@@ -213,8 +215,9 @@ class LSKVStore(Store):
                 p = Popen(bench, stdout=out, stderr=err)
                 return p, timings_file
 
-def wait_with_timeout(process: Popen, duration_seconds=90):
+def wait_with_timeout(process: Popen, gather_resource_usage, duration_seconds=90):
     for i in range(0, duration_seconds):
+        gather_resource_usage()
         if process.poll() is None:
             # process still running
             logging.debug(f"waiting for process to complete, try {i}")
@@ -238,7 +241,39 @@ def run_benchmark(store, bench_cmd: List[str]) -> str:
 
     logging.info(f"starting benchmark for {store.config.to_str()}")
     bench_process, timings_file = store.bench(bench_cmd)
-    wait_with_timeout(bench_process)
+
+    process = Process(proc.pid)
+    processes = [process]
+    processes += processes[0].children(recursive=True)
+        
+    def gather_resource_usage(process):
+        # loop getting cpu and memory usage for the proc and bench_process with psutil
+        cpu = process.cpu_percent()
+        memory = process.memory_full_info().uss / 1000_000
+        return cpu, memory
+
+    def gather_resource_usage_all():
+        cpu, mem = 0, 0
+        print("processes:", len(processes))
+        for process in processes:
+            try:
+                c, m = gather_resource_usage(process)
+                cpu += c
+                mem += m
+                print(process.cmdline())
+                print(f"cpu {c}%")
+                print(f"memory {m}(MB)")
+            except ProcessLookupError :
+                print("missing process", process.pid, process.cmdline(), process.name())
+            except psutil.ZombieProcess:
+                print("zombie process", process.pid, process.cmdline(), process.name())
+            except psutil.NoSuchProcess:
+                print("missing process", process.pid, process.cmdline(), process.name())
+
+        print(f"total cpu {cpu}%")
+        print(f"total mem {mem}(MB)")
+
+    wait_with_timeout(bench_process, gather_resource_usage_all)
     logging.info(f"stopping benchmark for {store.config.to_str()}")
 
     proc.terminate()
@@ -310,7 +345,7 @@ def main():
         os.makedirs(d)
 
         # plain
-        for tls in [False, True]:
+        for tls in [ True]:
             etcd_config = Config("etcd", port, tls, sgx=False, worker_threads=0)
             store = EtcdStore(d, etcd_config)
             timings_file = run_benchmark(store, bench_cmd)
