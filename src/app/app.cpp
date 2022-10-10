@@ -65,6 +65,7 @@ namespace app
       const auto lease = "Lease";
       const auto cluster = "Cluster";
       const auto receipt = "Receipt";
+      const auto maintenance = "Maintenance";
 
       auto range = [this](
                      ccf::endpoints::ReadOnlyEndpointContext& ctx,
@@ -284,6 +285,17 @@ namespace app
         "/v3/receipt/get_receipt",
         get_receipt,
         context);
+
+      auto status = [this](
+                      ccf::endpoints::ReadOnlyEndpointContext& ctx,
+                      etcdserverpb::StatusRequest&& payload) {
+        return this->status(ctx, std::move(payload));
+      };
+
+      install_endpoint_with_header_ro<
+        etcdserverpb::StatusRequest,
+        etcdserverpb::StatusResponse>(
+        etcdserverpb, maintenance, "Status", "/v3/maintenance/status", status);
     }
 
     template <typename Out>
@@ -1167,6 +1179,16 @@ namespace app
 
           return true;
         });
+
+      return ccf::grpc::make_success(response);
+    }
+
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::StatusResponse> status(
+      ccf::endpoints::ReadOnlyEndpointContext& ctx,
+      etcdserverpb::StatusRequest&& payload)
+    {
+      etcdserverpb::StatusResponse response;
+      CCF_APP_DEBUG("MAINTENANCE STATUS");
 
       return ccf::grpc::make_success(response);
     }
