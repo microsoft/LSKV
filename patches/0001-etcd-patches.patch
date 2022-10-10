@@ -461,10 +461,10 @@ index 92602ac63..84f6229d9 100644
  	}
 diff --git a/tests/framework/integration/ccf.go b/tests/framework/integration/ccf.go
 new file mode 100644
-index 000000000..1a1348292
+index 000000000..cea0962eb
 --- /dev/null
 +++ b/tests/framework/integration/ccf.go
-@@ -0,0 +1,131 @@
+@@ -0,0 +1,133 @@
 +package integration
 +
 +import (
@@ -474,6 +474,7 @@ index 000000000..1a1348292
 +	"os"
 +	"os/exec"
 +	"testing"
++	"time"
 +
 +	"go.etcd.io/etcd/client/pkg/v3/testutil"
 +	clientv3 "go.etcd.io/etcd/client/v3"
@@ -535,6 +536,7 @@ index 000000000..1a1348292
 +		_, err := client.Get(context.TODO(), "missing")
 +		if err != nil {
 +			fmt.Printf("waiting on app to be running: %v\n", err)
++			os.Sleep(time.Second)
 +		}
 +		fmt.Println("app is running")
 +		break
