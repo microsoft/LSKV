@@ -41,6 +41,7 @@ namespace app
       const auto etcdserverpb = "etcdserverpb";
       const auto kv = "KV";
       const auto lease = "Lease";
+      const auto cluster = "Cluster";
 
       auto range = [this](
                      ccf::endpoints::ReadOnlyEndpointContext& ctx,
@@ -160,6 +161,21 @@ namespace app
         "LeaseKeepAlive",
         "/v3/lease/keepalive",
         lease_keep_alive);
+
+      auto member_list = [this](
+                           ccf::endpoints::ReadOnlyEndpointContext& ctx,
+                           etcdserverpb::MemberListRequest&& payload) {
+        return this->member_list(ctx, std::move(payload));
+      };
+
+      install_endpoint_with_header_ro<
+        etcdserverpb::MemberListRequest,
+        etcdserverpb::MemberListResponse>(
+        etcdserverpb,
+        cluster,
+        "MemberList",
+        "/v3/cluster/member/list",
+        member_list);
     }
 
     template <typename Out>
@@ -912,6 +928,36 @@ namespace app
 
       response.set_id(id);
       response.set_ttl(ttl);
+
+      return ccf::grpc::make_success(response);
+    }
+
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::MemberListResponse>
+    member_list(
+      ccf::endpoints::ReadOnlyEndpointContext& ctx,
+      etcdserverpb::MemberListRequest&& payload)
+    {
+      etcdserverpb::MemberListResponse response;
+
+      std::vector<void> nodes;
+      // for each member node
+      for (const auto& node : nodes)
+      {
+        auto* member = response.add_members();
+        member->set_id(1);
+        member->set_name("1");
+        for (const auto& url : node.peer_urls)
+        {
+          auto* peer_url = member->add_peerurls();
+          peer_url = url;
+        }
+        for (const auto& url : node.client_urls)
+        {
+          auto* client_url = member->add_clienturls();
+          client_url = url;
+        }
+        member->set_islearner(false);
+      }
 
       return ccf::grpc::make_success(response);
     }
