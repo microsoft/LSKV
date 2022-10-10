@@ -50,7 +50,7 @@ build-virtual:
 .PHONY: build-virtual-unsafe
 build-virtual-unsafe:
 	mkdir -p $(BUILD)
-	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=ON -DCCF_UNSAFE=ON -GNinja ..
+	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=ON -DCCF_UNSAFE=OFF -GNinja ..
 	cd $(BUILD) && ninja
 
 .PHONY: build-sgx
