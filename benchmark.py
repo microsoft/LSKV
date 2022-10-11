@@ -248,12 +248,12 @@ class LSKVStore(Store):
         ]
 
 
-def wait_with_timeout(process: Popen, duration_seconds=120):
+def wait_with_timeout(process: Popen, duration_seconds=300):
     for i in range(0, duration_seconds):
         res = process.poll()
         if res is None:
             # process still running
-            logging.debug(f"waiting for process to complete, try {i}")
+            logging.info(f"waiting for process to complete, try {i}")
             time.sleep(1)
         else:
             # process finished
