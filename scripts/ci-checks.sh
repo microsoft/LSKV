@@ -44,7 +44,7 @@ fi
 
 echo "$CHECK_DELIMITER"
 echo "-- Copyright notice headers"
-python3.8 "$SCRIPT_DIR"/notice-check.py
+python3.8 "$SCRIPT_DIR"/notice_check.py
 
 echo "$CHECK_DELIMITER"
 echo "-- CMake format"
