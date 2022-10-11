@@ -75,5 +75,13 @@ else
 fi
 
 echo "$CHECK_DELIMITER"
+echo "-- Python lint"
+git ls-files | grep -e '\.py$' | xargs python -m pylint --ignored-modules "*_pb2"
+
+echo "$CHECK_DELIMITER"
+echo "-- Python types"
+git ls-files | grep -e '\.py$' | xargs mypy
+
+echo "$CHECK_DELIMITER"
 echo "-- CPP Lint"
 make cpplint
