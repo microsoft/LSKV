@@ -71,6 +71,10 @@ benchmark-virtual: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual .venv cert
 benchmark-sgx: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual build-sgx .venv certs
 	. .venv/bin/activate && python3 benchmark.py --sgx
 
+.PHONY: benchmark-all
+benchmark-all: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual build-sgx .venv certs
+	. .venv/bin/activate && python3 benchmark.py --sgx --no-tls --worker-threads 0 2 4 8 --clients 1 10 100 --connections 1 10 100 --prefill-num-keys 0 10 100 1000
+
 .venv: requirements.txt
 	python3 -m venv .venv
 	. .venv/bin/activate && pip3 install -r requirements.txt
