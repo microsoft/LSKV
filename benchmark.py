@@ -232,7 +232,7 @@ class LSKVStore(Store):
         ]
 
 
-def wait_with_timeout(process: Popen, duration_seconds=90):
+def wait_with_timeout(process: Popen, duration_seconds=300):
     for i in range(0, duration_seconds):
         if process.poll() is None:
             # process still running
@@ -274,7 +274,7 @@ def prefill_datastore(
     logging.info(f"prefilled {i} keys")
 
 
-def run_benchmark(store, bench_cmd: List[str], prefill_num_keys) -> str:
+def run_benchmark(store, bench_cmd: List[str], prefill_num_keys:int, prefill_value_size:int) -> str:
     with store:
         store.wait_for_ready()
 
@@ -282,11 +282,10 @@ def run_benchmark(store, bench_cmd: List[str], prefill_num_keys) -> str:
             # need to prefill the store with data for it to get
             start = int(bench_cmd[1])
             end = int(bench_cmd[2])
-            value_size = 20
             logging.info(
                 f"prefilling datastore with {prefill_num_keys} keys in range [{start}, {end})"
             )
-            prefill_datastore(store, start, end, prefill_num_keys, value_size)
+            prefill_datastore(store, start, end, prefill_num_keys, prefill_value_size)
 
         logging.info(f"starting benchmark for {store.config.to_str()}")
         bench_process, timings_file = store.bench(bench_cmd)
@@ -328,6 +327,13 @@ def run_metrics(name: str, cmd: str, file: str):
         metrics.put(f"{cmd} latency p99.9 (ms)", latency_p999, group=group)
 
 
+# only run multiple things for prefill_num_keys when it is actually a range bench
+def get_prefill_num_keys(bench_cmd:List[str], num_keys:List[int]) -> List[int]:
+    if bench_cmd[0] == "range":
+        return num_keys
+    else:
+        return [0]
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--sgx", type=bool)
@@ -346,6 +352,14 @@ def main():
         default=[],
         help="number of keys to fill datastore with before executing range benchmarks (between 0 and 1000)",
     )
+    parser.add_argument(
+        "--prefill-value-size",
+        action="extend",
+        nargs="+",
+        type=int,
+        default=[],
+        help="size of the values (in bytes) to use in prefilling for range queries",
+    )
 
     args = parser.parse_args()
 
@@ -358,6 +372,8 @@ def main():
         args.connections = [1]
     if not args.prefill_num_keys:
         args.prefill_num_keys = [10]
+    if not args.prefill_value_size:
+        args.prefill_value_size = [10]
 
     args.bench_cmds = [s.split() for s in args.bench_cmds]
     if not args.bench_cmds:
@@ -384,57 +400,58 @@ def main():
 
         for clients in args.clients:
             for conns in args.connections:
-                for prefill_keys in args.prefill_num_keys:
-                    if args.no_tls:
+                for prefill_keys in get_prefill_num_keys(bench_cmd, args.prefill_num_keys):
+                    for prefill_value_size in get_prefill_num_keys(bench_cmd, args.prefill_value_size):
+                        if args.no_tls:
+                            etcd_config = Config(
+                                "etcd",
+                                port,
+                                tls=False,
+                                sgx=False,
+                                worker_threads=0,
+                                clients=clients,
+                                connections=conns,
+                            )
+                            store = EtcdStore(d, etcd_config)
+                            timings_file = run_benchmark(store, bench_cmd, prefill_keys, prefill_value_size)
+                            run_metrics(store.config.to_str(), bench_cmd[0], timings_file)
+
                         etcd_config = Config(
                             "etcd",
                             port,
-                            tls=False,
+                            tls=True,
                             sgx=False,
                             worker_threads=0,
                             clients=clients,
                             connections=conns,
                         )
                         store = EtcdStore(d, etcd_config)
-                        timings_file = run_benchmark(store, bench_cmd, prefill_keys)
+                        timings_file = run_benchmark(store, bench_cmd, prefill_keys, prefill_value_size)
                         run_metrics(store.config.to_str(), bench_cmd[0], timings_file)
 
-                    etcd_config = Config(
-                        "etcd",
-                        port,
-                        tls=True,
-                        sgx=False,
-                        worker_threads=0,
-                        clients=clients,
-                        connections=conns,
-                    )
-                    store = EtcdStore(d, etcd_config)
-                    timings_file = run_benchmark(store, bench_cmd, prefill_keys)
-                    run_metrics(store.config.to_str(), bench_cmd[0], timings_file)
-
-                    for worker_threads in args.worker_threads:
-                        lskv_config = Config(
-                            "lskv",
-                            port,
-                            tls=True,
-                            sgx=False,
-                            worker_threads=worker_threads,
-                            clients=clients,
-                            connections=conns,
-                        )
-                        # virtual
-                        store = LSKVStore(d, lskv_config)
-                        timings_file = run_benchmark(store, bench_cmd, prefill_keys)
-                        run_metrics(store.config.to_str(), bench_cmd[0], timings_file)
-
-                        # sgx
-                        if args.sgx:
-                            lskv_config.sgx = True
-                            store = LSKVStore(d, lskv_config)
-                            timings_file = run_benchmark(store, bench_cmd, prefill_keys)
-                            run_metrics(
-                                store.config.to_str(), bench_cmd[0], timings_file
+                        for worker_threads in args.worker_threads:
+                            lskv_config = Config(
+                                "lskv",
+                                port,
+                                tls=True,
+                                sgx=False,
+                                worker_threads=worker_threads,
+                                clients=clients,
+                                connections=conns,
                             )
+                            # virtual
+                            store = LSKVStore(d, lskv_config)
+                            timings_file = run_benchmark(store, bench_cmd, prefill_keys, prefill_value_size)
+                            run_metrics(store.config.to_str(), bench_cmd[0], timings_file)
+
+                            # sgx
+                            if args.sgx:
+                                lskv_config.sgx = True
+                                store = LSKVStore(d, lskv_config)
+                                timings_file = run_benchmark(store, bench_cmd, prefill_keys, prefill_value_size)
+                                run_metrics(
+                                    store.config.to_str(), bench_cmd[0], timings_file
+                                )
 
     with cimetrics.upload.metrics():
         pass
