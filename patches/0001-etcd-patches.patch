@@ -4,7 +4,7 @@ index 36d09b9d5..7db5a1d83 100644
 +++ b/pkg/report/report.go
 @@ -17,8 +17,10 @@
  package report
- 
+
  import (
 +	"bufio"
  	"fmt"
@@ -14,22 +14,22 @@ index 36d09b9d5..7db5a1d83 100644
  	"strings"
  	"time"
 @@ -44,6 +46,9 @@ type report struct {
- 
+
  	stats Stats
  	sps   *secondPoints
 +
 +	csvFile   *os.File
 +	csvBuffer *bufio.Writer
  }
- 
+
  // Stats exposes results raw data.
 @@ -79,19 +84,31 @@ type Report interface {
  	Stats() <-chan Stats
  }
- 
+
 -func NewReport(precision string) Report { return newReport(precision) }
 +func NewReport(precision string, csvFile string) Report { return newReport(precision, csvFile) }
- 
+
 -func newReport(precision string) *report {
 +func newReport(precision string, csvFile string) *report {
  	r := &report{
@@ -51,7 +51,7 @@ index 36d09b9d5..7db5a1d83 100644
 +
  	return r
  }
- 
+
 -func NewReportSample(precision string) Report {
 -	r := NewReport(precision).(*report)
 +func NewReportSample(precision string, csvFile string) Report {
@@ -73,15 +73,15 @@ index 36d09b9d5..7db5a1d83 100644
  		r.processResults()
  		donec <- r.String()
 @@ -161,8 +184,8 @@ func (r *report) sec2str(sec float64) string { return fmt.Sprintf(r.precision+"
- 
+
  type reportRate struct{ *report }
- 
+
 -func NewReportRate(precision string) Report {
 -	return &reportRate{NewReport(precision).(*report)}
 +func NewReportRate(precision string, csvFile string) Report {
 +	return &reportRate{NewReport(precision, csvFile).(*report)}
  }
- 
+
  func (r *reportRate) String() string {
 @@ -180,6 +203,10 @@ func (r *report) processResult(res *Result) {
  	if r.sps != nil {
@@ -92,14 +92,14 @@ index 36d09b9d5..7db5a1d83 100644
 +
 +	}
  }
- 
+
  func (r *report) processResults() {
 diff --git a/pkg/report/weighted.go b/pkg/report/weighted.go
 index 411214f6d..4b5b48f3a 100644
 --- a/pkg/report/weighted.go
 +++ b/pkg/report/weighted.go
 @@ -30,10 +30,10 @@ type weightedReport struct {
- 
+
  // NewWeightedReport returns a report that includes
  // both weighted and unweighted statistics.
 -func NewWeightedReport(r Report, precision string) Report {
@@ -118,7 +118,7 @@ index 23e387bd1..ac3d553c6 100644
 @@ -25,11 +25,13 @@ import (
  	"go.etcd.io/etcd/tests/v3/framework/testutils"
  )
- 
+
 +const timeout = time.Minute
 +
  func TestKVPut(t *testing.T) {
@@ -251,7 +251,7 @@ index 7a424dc38..847686876 100644
  			clus := testRunner.NewCluster(ctx, t, tc.config)
  			defer clus.Close()
 @@ -98,7 +98,7 @@ func TestLeaseGrantAndList(t *testing.T) {
- 
+
  		for _, nc := range nestedCases {
  			t.Run(tc.name+"/"+nc.name, func(t *testing.T) {
 -				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -260,7 +260,7 @@ index 7a424dc38..847686876 100644
  				t.Logf("Creating cluster...")
  				clus := testRunner.NewCluster(ctx, t, tc.config)
 @@ -146,7 +146,7 @@ func TestLeaseGrantTimeToLiveExpired(t *testing.T) {
- 
+
  	for _, tc := range clusterTestCases {
  		t.Run(tc.name, func(t *testing.T) {
 -			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -269,7 +269,7 @@ index 7a424dc38..847686876 100644
  			clus := testRunner.NewCluster(ctx, t, tc.config)
  			defer clus.Close()
 @@ -183,7 +183,7 @@ func TestLeaseGrantKeepAliveOnce(t *testing.T) {
- 
+
  	for _, tc := range clusterTestCases {
  		t.Run(tc.name, func(t *testing.T) {
 -			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -278,7 +278,7 @@ index 7a424dc38..847686876 100644
  			clus := testRunner.NewCluster(ctx, t, tc.config)
  			defer clus.Close()
 @@ -212,7 +212,7 @@ func TestLeaseGrantRevoke(t *testing.T) {
- 
+
  	for _, tc := range clusterTestCases {
  		t.Run(tc.name, func(t *testing.T) {
 -			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -291,7 +291,7 @@ index d03f120e0..014cfc99e 100644
 --- a/tests/common/main_test.go
 +++ b/tests/common/main_test.go
 @@ -23,26 +23,27 @@ import (
- 
+
  var testRunner = framework.UnitTestRunner
  var clusterTestCases = []testCase{
 -	{
@@ -332,7 +332,7 @@ index d03f120e0..014cfc99e 100644
 +	// 	config: config.ClusterConfig{ClusterSize: 1, ClientTLS: config.AutoTLS},
 +	// },
  }
- 
+
  func TestMain(m *testing.M) {
 diff --git a/tests/common/txn_test.go b/tests/common/txn_test.go
 index 890c0f738..eeeba24d3 100644
@@ -343,7 +343,7 @@ index 890c0f738..eeeba24d3 100644
  	"fmt"
  	"testing"
 -	"time"
- 
+
  	"github.com/stretchr/testify/assert"
  	pb "go.etcd.io/etcd/api/v3/etcdserverpb"
 @@ -56,7 +55,7 @@ func TestTxnSucc(t *testing.T) {
@@ -370,7 +370,7 @@ index 92602ac63..84f6229d9 100644
 +++ b/tests/framework/integration.go
 @@ -43,23 +43,27 @@ func (e integrationRunner) BeforeTest(t testing.TB) {
  }
- 
+
  func (e integrationRunner) NewCluster(ctx context.Context, t testing.TB, cfg config.ClusterConfig) Cluster {
 -	var err error
 -	integrationCfg := integration.ClusterConfig{
@@ -413,7 +413,7 @@ index 92602ac63..84f6229d9 100644
  	}
 @@ -83,21 +87,25 @@ func tlsInfo(t testing.TB, cfg config.TLSConfig) (*transport.TLSInfo, error) {
  }
- 
+
  type integrationCluster struct {
 -	*integration.Cluster
 -	t   testing.TB
@@ -422,7 +422,7 @@ index 92602ac63..84f6229d9 100644
 +	t       testing.TB
 +	ctx     context.Context
  }
- 
+
  func (c *integrationCluster) Members() (ms []Member) {
 -	for _, m := range c.Cluster.Members {
 +	for _, m := range c.Cluster.Members() {
@@ -430,7 +430,7 @@ index 92602ac63..84f6229d9 100644
  	}
  	return ms
  }
- 
+
 +func (c *integrationCluster) WaitLeader(t testing.TB) int {
 +	return c.Cluster.WaitLeader(t)
 +}
@@ -441,18 +441,18 @@ index 92602ac63..84f6229d9 100644
 +	Member *integration.CcfMember
 +	t      testing.TB
  }
- 
+
  func (m integrationMember) Client() Client {
 @@ -113,12 +121,12 @@ func (m integrationMember) Stop() {
  }
- 
+
  func (c *integrationCluster) Close() error {
 -	c.Terminate(c.t)
 -	return nil
 +	err := c.Cluster.Close()
 +	return err
  }
- 
+
  func (c *integrationCluster) Client() Client {
 -	cc, err := c.ClusterClient()
 +	cc, err := c.Cluster.Client()
@@ -461,10 +461,10 @@ index 92602ac63..84f6229d9 100644
  	}
 diff --git a/tests/framework/integration/ccf.go b/tests/framework/integration/ccf.go
 new file mode 100644
-index 000000000..47ce43c76
+index 000000000..cea0962eb
 --- /dev/null
 +++ b/tests/framework/integration/ccf.go
-@@ -0,0 +1,147 @@
+@@ -0,0 +1,133 @@
 +package integration
 +
 +import (
@@ -518,42 +518,28 @@ index 000000000..47ce43c76
 +		t.Fatalf("failed to start sandbox: %v", err)
 +	}
 +
-+	waitForPort(net.JoinHostPort(defaultHost, defaultPort))
-+	waitForFile("workspace/sandbox_common/user0_cert.pem")
-+	return &CcfCluster{
++	cluster := &CcfCluster{
 +		cmd: cmd,
 +		t:   t,
 +		ctx: ctx,
 +	}
++	cluster.waitReady(t)
++	return cluster
 +}
 +
-+// wait for port to be up
-+func waitForPort(address string) {
-+	timeout := time.Second
-+	for {
-+		conn, err := net.DialTimeout("tcp", address, timeout)
-+		if err == nil {
-+			fmt.Printf("port open (%v)\n", address)
-+			conn.Close()
-+			time.Sleep(time.Second)
-+			return
-+		}
-+		time.Sleep(timeout)
-+		fmt.Printf("waiting on port (%v)\n", address)
++func (c *CcfCluster) waitReady(t testing.TB) {
++	client, err := c.Client()
++	if err != nil {
++		t.Fatalf("failed to get client: %v", err)
 +	}
-+}
-+
-+// wait for file to be present
-+func waitForFile(file string) {
-+	timeout := time.Second
 +	for {
-+		if _, err := os.Stat(file); err == nil {
-+			fmt.Printf("file exists (%v)\n", file)
-+			time.Sleep(time.Second)
-+			return
++		_, err := client.Get(context.TODO(), "missing")
++		if err != nil {
++			fmt.Printf("waiting on app to be running: %v\n", err)
++			os.Sleep(time.Second)
 +		}
-+		time.Sleep(timeout)
-+		fmt.Printf("waiting on file (%v)\n", file)
++		fmt.Println("app is running")
++		break
 +	}
 +}
 +
@@ -618,7 +604,7 @@ index 4c5c76c3e..9d0d2e80c 100644
 +++ b/tests/framework/integration/testing.go
 @@ -15,6 +15,7 @@
  package integration
- 
+
  import (
 +	"fmt"
  	"os"
@@ -626,31 +612,31 @@ index 4c5c76c3e..9d0d2e80c 100644
  	"testing"
 @@ -81,7 +82,8 @@ func BeforeTest(t testutil.TB, opts ...TestOption) {
  	}
- 
+
  	if options.goLeakDetection {
 -		testutil.RegisterLeakDetection(t)
 +		fmt.Println("set to run with goLeakDetection but ignoring")
 +		// testutil.RegisterLeakDetection(t)
  	}
- 
+
  	previousWD, err := os.Getwd()
 @@ -103,8 +105,6 @@ func BeforeTest(t testutil.TB, opts ...TestOption) {
- 
+
  	grpc_logger.Set(zapgrpc.NewLogger(zaptest.NewLogger(t).Named("grpc")))
  	insideTestContext = true
 -
 -	os.Chdir(t.TempDir())
  }
- 
+
  func assertInTestContext(t testutil.TB) {
 diff --git a/tests/go.mod b/tests/go.mod
 index 0ce05f471..c3b749a70 100644
 --- a/tests/go.mod
 +++ b/tests/go.mod
 @@ -2,18 +2,6 @@ module go.etcd.io/etcd/tests/v3
- 
+
  go 1.17
- 
+
 -replace (
 -	go.etcd.io/etcd/api/v3 => ../api
 -	go.etcd.io/etcd/client/pkg/v3 => ../client/pkg
@@ -851,7 +837,7 @@ index 7208fd352..d7a28b1a5 100644
 @@ -27,7 +27,6 @@ import (
  	v3 "go.etcd.io/etcd/client/v3"
  	"go.etcd.io/etcd/pkg/v3/report"
- 
+
 -	"github.com/cheggaaa/pb/v3"
  	"github.com/dustin/go-humanize"
  	"github.com/spf13/cobra"
@@ -859,7 +845,7 @@ index 7208fd352..d7a28b1a5 100644
 @@ -85,9 +84,6 @@ func putFunc(cmd *cobra.Command, args []string) {
  	clients := mustCreateClients(totalClients, totalConns)
  	k, v := make([]byte, keySize), string(mustRandBytes(valSize))
- 
+
 -	bar = pb.New(putTotal)
 -	bar.Start()
 -
@@ -880,7 +866,7 @@ index 7208fd352..d7a28b1a5 100644
  	close(r.Results())
 -	bar.Finish()
  	fmt.Println(<-rc)
- 
+
  	if checkHashkv {
 diff --git a/tools/benchmark/cmd/range.go b/tools/benchmark/cmd/range.go
 index 230006836..bfadc01e6 100644
@@ -889,7 +875,7 @@ index 230006836..bfadc01e6 100644
 @@ -24,7 +24,6 @@ import (
  	v3 "go.etcd.io/etcd/client/v3"
  	"go.etcd.io/etcd/pkg/v3/report"
- 
+
 -	"github.com/cheggaaa/pb/v3"
  	"github.com/spf13/cobra"
  	"golang.org/x/time/rate"
@@ -897,7 +883,7 @@ index 230006836..bfadc01e6 100644
 @@ -79,9 +78,6 @@ func rangeFunc(cmd *cobra.Command, args []string) {
  	requests := make(chan v3.Op, totalClients)
  	clients := mustCreateClients(totalClients, totalConns)
- 
+
 -	bar = pb.New(rangeTotal)
 -	bar.Start()
 -
@@ -924,16 +910,16 @@ index 0a22e031b..26438dd3a 100644
 --- a/tools/benchmark/cmd/root.go
 +++ b/tools/benchmark/cmd/root.go
 @@ -55,6 +55,8 @@ var (
- 
+
  	targetLeader     bool
  	autoSyncInterval time.Duration
 +
 +	csvFile string
  )
- 
+
  func init() {
 @@ -73,4 +75,6 @@ func init() {
- 
+
  	RootCmd.PersistentFlags().BoolVar(&targetLeader, "target-leader", false, "connect only to the leader node")
  	RootCmd.PersistentFlags().DurationVar(&autoSyncInterval, "auto-sync-interval", time.Duration(0), "AutoSyncInterval is the interval to update endpoints with its latest members")
 +
@@ -946,7 +932,7 @@ index bea02f7ac..50c40f3a3 100644
 @@ -25,7 +25,6 @@ import (
  	v3 "go.etcd.io/etcd/client/v3"
  	"go.etcd.io/etcd/pkg/v3/report"
- 
+
 -	"github.com/cheggaaa/pb/v3"
  	"github.com/spf13/cobra"
  	"golang.org/x/time/rate"
@@ -954,7 +940,7 @@ index bea02f7ac..50c40f3a3 100644
 @@ -75,9 +74,6 @@ func txnPutFunc(cmd *cobra.Command, args []string) {
  	clients := mustCreateClients(totalClients, totalConns)
  	k, v := make([]byte, keySize), string(mustRandBytes(valSize))
- 
+
 -	bar = pb.New(txnPutTotal)
 -	bar.Start()
 -
@@ -990,7 +976,7 @@ index ab644b3d4..ca976e9cb 100644
 -	return report.NewReport(p)
 +	return report.NewReport(p, csvFile)
  }
- 
+
  func newWeightedReport() report.Report {
 @@ -174,7 +174,7 @@ func newWeightedReport() report.Report {
  		p = "%g"
