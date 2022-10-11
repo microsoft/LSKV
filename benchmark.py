@@ -29,6 +29,8 @@ class Config:
     worker_threads: int
     clients: int
     connections: int
+    prefill_num_keys: int
+    prefill_value_size: int
 
     def to_str(self) -> str:
         d = asdict(self)
@@ -250,12 +252,12 @@ def wait_with_timeout(process: Popen, duration_seconds=300):
     return
 
 
-def prefill_datastore(
-    store: Store, start: int, end: int, num_keys: int, value_size: int
-):
+def prefill_datastore(store: Store, start: int, end: int):
     time.sleep(1)
     client = store.client()
     i = 0
+    num_keys = store.config.prefill_num_keys
+    value_size = store.config.prefill_value_size
     logging.info(f"prefilling {num_keys} keys")
     end_size = len(str(end))
     if num_keys:
@@ -274,7 +276,7 @@ def prefill_datastore(
     logging.info(f"prefilled {i} keys")
 
 
-def run_benchmark(store, bench_cmd: List[str], prefill_num_keys:int, prefill_value_size:int) -> str:
+def run_benchmark(store, bench_cmd: List[str]) -> str:
     with store:
         store.wait_for_ready()
 
@@ -283,9 +285,9 @@ def run_benchmark(store, bench_cmd: List[str], prefill_num_keys:int, prefill_val
             start = int(bench_cmd[1])
             end = int(bench_cmd[2])
             logging.info(
-                f"prefilling datastore with {prefill_num_keys} keys in range [{start}, {end})"
+                f"prefilling datastore with {store.config.prefill_num_keys} keys in range [{start}, {end})"
             )
-            prefill_datastore(store, start, end, prefill_num_keys, prefill_value_size)
+            prefill_datastore(store, start, end)
 
         logging.info(f"starting benchmark for {store.config.to_str()}")
         bench_process, timings_file = store.bench(bench_cmd)
@@ -328,11 +330,12 @@ def run_metrics(name: str, cmd: str, file: str):
 
 
 # only run multiple things for prefill_num_keys when it is actually a range bench
-def get_prefill_num_keys(bench_cmd:List[str], num_keys:List[int]) -> List[int]:
+def get_prefill_num_keys(bench_cmd: List[str], num_keys: List[int]) -> List[int]:
     if bench_cmd[0] == "range":
         return num_keys
     else:
         return [0]
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -400,8 +403,12 @@ def main():
 
         for clients in args.clients:
             for conns in args.connections:
-                for prefill_keys in get_prefill_num_keys(bench_cmd, args.prefill_num_keys):
-                    for prefill_value_size in get_prefill_num_keys(bench_cmd, args.prefill_value_size):
+                for prefill_num_keys in get_prefill_num_keys(
+                    bench_cmd, args.prefill_num_keys
+                ):
+                    for prefill_value_size in get_prefill_num_keys(
+                        bench_cmd, args.prefill_value_size
+                    ):
                         if args.no_tls:
                             etcd_config = Config(
                                 "etcd",
@@ -411,10 +418,14 @@ def main():
                                 worker_threads=0,
                                 clients=clients,
                                 connections=conns,
+                                prefill_num_keys=prefill_num_keys,
+                                prefill_value_size=prefill_value_size,
                             )
                             store = EtcdStore(d, etcd_config)
-                            timings_file = run_benchmark(store, bench_cmd, prefill_keys, prefill_value_size)
-                            run_metrics(store.config.to_str(), bench_cmd[0], timings_file)
+                            timings_file = run_benchmark(store, bench_cmd)
+                            run_metrics(
+                                store.config.to_str(), bench_cmd[0], timings_file
+                            )
 
                         etcd_config = Config(
                             "etcd",
@@ -424,9 +435,11 @@ def main():
                             worker_threads=0,
                             clients=clients,
                             connections=conns,
+                            prefill_num_keys=prefill_num_keys,
+                            prefill_value_size=prefill_value_size,
                         )
                         store = EtcdStore(d, etcd_config)
-                        timings_file = run_benchmark(store, bench_cmd, prefill_keys, prefill_value_size)
+                        timings_file = run_benchmark(store, bench_cmd)
                         run_metrics(store.config.to_str(), bench_cmd[0], timings_file)
 
                         for worker_threads in args.worker_threads:
@@ -438,17 +451,21 @@ def main():
                                 worker_threads=worker_threads,
                                 clients=clients,
                                 connections=conns,
+                                prefill_num_keys=prefill_num_keys,
+                                prefill_value_size=prefill_value_size,
                             )
                             # virtual
                             store = LSKVStore(d, lskv_config)
-                            timings_file = run_benchmark(store, bench_cmd, prefill_keys, prefill_value_size)
-                            run_metrics(store.config.to_str(), bench_cmd[0], timings_file)
+                            timings_file = run_benchmark(store, bench_cmd)
+                            run_metrics(
+                                store.config.to_str(), bench_cmd[0], timings_file
+                            )
 
                             # sgx
                             if args.sgx:
                                 lskv_config.sgx = True
                                 store = LSKVStore(d, lskv_config)
-                                timings_file = run_benchmark(store, bench_cmd, prefill_keys, prefill_value_size)
+                                timings_file = run_benchmark(store, bench_cmd)
                                 run_metrics(
                                     store.config.to_str(), bench_cmd[0], timings_file
                                 )
