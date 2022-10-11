@@ -2,47 +2,22 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
-from subprocess import Popen
-
-from dataclasses import asdict, dataclass
-import argparse
 import abc
-import shutil
-import time
-import cimetrics.upload
+import argparse
 import logging
-import pandas as pd
-import socket
 import os
+import shutil
+import socket
+import subprocess
+import time
+from dataclasses import asdict, dataclass
+from subprocess import Popen
 from typing import List, Tuple
 
+import cimetrics.upload
+import pandas as pd
+
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
-
-
-def wait_for_port(port, tries=60) -> bool:
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    for i in range(0, tries):
-        try:
-            s.connect(("127.0.0.1", port))
-            logging.info(f"finished waiting for port ({port}) to be open, try {i}")
-            time.sleep(1)
-            return True
-        except:
-            logging.info(f"waiting for port ({port}) to be open, try {i}")
-            time.sleep(1)
-    logging.error(f"took too long waiting for port {port} ({tries}s)")
-    return False
-
-
-def wait_for_file(file: str, tries=60) -> bool:
-    for i in range(0, tries):
-        if os.path.exists(file):
-            logging.info(f"finished waiting for file ({file}) to exist, try {i}")
-            return True
-        logging.info(f"waiting for file ({file}) to exist, try {i}")
-        time.sleep(1)
-    logging.error(f"took too long waiting for file {file} ({tries}s)")
-    return False
 
 
 @dataclass
@@ -86,6 +61,17 @@ class Store(abc.ABC):
         self.config = config
         self.bench_dir = bench_dir
 
+    def __enter__(self):
+        self.proc = self.spawn()
+
+    def __exit__(self, ex_type, ex_value, ex_traceback) -> bool:
+        self.proc.terminate()
+        self.proc.wait()
+        logging.info(f"stopped {self.config.to_str()}")
+
+        self.cleanup()
+        return False
+
     @abc.abstractmethod
     def spawn(self) -> Popen:
         raise NotImplemented
@@ -95,7 +81,21 @@ class Store(abc.ABC):
         raise NotImplemented
 
     def wait_for_ready(self):
-        wait_for_port(self.config.port)
+        self._wait_for_ready(self.config.port)
+
+    def _wait_for_ready(self, port: int, tries=60) -> bool:
+        c = self.client()
+        for i in range(0, tries):
+            logging.info(f"running ready check with cmd {c}")
+            p = Popen(c + ["get", "missing key"])
+            if p.wait() == 0:
+                logging.info(f"finished waiting for port ({port}) to be open, try {i}")
+                return True
+            else:
+                logging.info(f"waiting for port ({port}) to be open, try {i}")
+                time.sleep(1)
+        logging.error(f"took too long waiting for port {port} ({tries}s)")
+        return False
 
     def output_dir(self) -> str:
         d = os.path.join(self.bench_dir, self.config.to_str())
@@ -107,6 +107,11 @@ class Store(abc.ABC):
     def cleanup(self):
         # no cleanup for the base class to do and not a required method
         pass
+
+    # get the etcd client for this datastore
+    @abc.abstractmethod
+    def client(self) -> List[str]:
+        raise NotImplemented
 
 
 class EtcdStore(Store):
@@ -155,6 +160,19 @@ class EtcdStore(Store):
     def cleanup(self):
         shutil.rmtree("default.etcd", ignore_errors=True)
 
+    def client(self) -> List[str]:
+        return [
+            "bin/etcdctl",
+            "--endpoints",
+            f"{self.config.scheme()}://127.0.0.1:{self.config.port}",
+            "--cacert",
+            "certs/ca.pem",
+            "--cert",
+            "certs/client.pem",
+            "--key",
+            "certs/client-key.pem",
+        ]
+
 
 class LSKVStore(Store):
     def spawn(self) -> Popen:
@@ -183,27 +201,6 @@ class LSKVStore(Store):
     def workspace(self):
         return os.path.join(os.getcwd(), self.output_dir(), "workspace")
 
-    def wait_for_ready(self):
-        def show_logs():
-            out = "\n".join(
-                open(os.path.join(self.output_dir(), "node.out"), "r").readlines()
-            )
-            print("node.out: ", out)
-            print()
-            err = "\n".join(
-                open(os.path.join(self.output_dir(), "node.err"), "r").readlines()
-            )
-            print("node.err: ", err)
-
-        if not wait_for_port(self.config.port):
-            show_logs()
-            return
-        if not wait_for_file(
-            os.path.join(self.workspace(), "sandbox_common", "user0_cert.pem")
-        ):
-            show_logs()
-            return
-
     def bench(self, bench_cmd: List[str]) -> Tuple[Popen, str]:
         with open(os.path.join(self.output_dir(), "bench.out"), "w") as out:
             with open(os.path.join(self.output_dir(), "bench.err"), "w") as err:
@@ -220,6 +217,19 @@ class LSKVStore(Store):
                 ] + bench_cmd
                 p = Popen(bench, stdout=out, stderr=err)
                 return p, timings_file
+
+    def client(self) -> List[str]:
+        return [
+            "bin/etcdctl",
+            "--endpoints",
+            f"{self.config.scheme()}://127.0.0.1:{self.config.port}",
+            "--cacert",
+            f"{self.workspace()}/sandbox_common/service_cert.pem",
+            "--cert",
+            f"{self.workspace()}/sandbox_common/user0_cert.pem",
+            "--key",
+            f"{self.workspace()}/sandbox_common/user0_privk.pem",
+        ]
 
 
 def wait_with_timeout(process: Popen, duration_seconds=90):
@@ -240,21 +250,46 @@ def wait_with_timeout(process: Popen, duration_seconds=90):
     return
 
 
+def prefill_datastore(store: Store, start: int, end: int, num_keys: int):
+    time.sleep(1)
+    client = store.client()
+    i = 0
+    logging.info(f"prefilling {num_keys} keys")
+    end_size = len(str(end))
+    for k in range(start, end, (end - start) // num_keys):
+        i += 1
+        key = str(k).zfill(end_size)
+        value = "hello benchmark"
+        logging.debug(f"prefilling {key}")
+        # TODO: variable key and value size
+        p = Popen(
+            client + ["put", key, value],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if p.wait() != 0:
+            raise Exception("failed to fill datastore")
+    logging.info(f"prefilled {i} keys")
+
+
 def run_benchmark(store, bench_cmd: List[str]) -> str:
-    proc = store.spawn()
+    with store:
+        store.wait_for_ready()
 
-    store.wait_for_ready()
+        if bench_cmd[0] == "range":
+            # need to prefill the store with data for it to get
+            start = int(bench_cmd[1])
+            end = int(bench_cmd[2])
+            num_keys = 100
+            logging.info(
+                f"prefilling datastore with {num_keys} keys in range [{start}, {end})"
+            )
+            prefill_datastore(store, start, end, num_keys)
 
-    logging.info(f"starting benchmark for {store.config.to_str()}")
-    bench_process, timings_file = store.bench(bench_cmd)
-    wait_with_timeout(bench_process)
-    logging.info(f"stopping benchmark for {store.config.to_str()}")
-
-    proc.terminate()
-    proc.wait()
-    logging.info(f"stopped {store.config.to_str()}")
-
-    store.cleanup()
+        logging.info(f"starting benchmark for {store.config.to_str()}")
+        bench_process, timings_file = store.bench(bench_cmd)
+        wait_with_timeout(bench_process)
+        logging.info(f"stopping benchmark for {store.config.to_str()}")
 
     return timings_file
 
@@ -298,7 +333,9 @@ def main():
     parser.add_argument("--worker-threads", action="extend", nargs="+", type=int)
     parser.add_argument("--clients", action="extend", nargs="+", type=int)
     parser.add_argument("--connections", action="extend", nargs="+", type=int)
-    parser.add_argument("--bench-cmds", action="extend", nargs="+", type=str, default=[])
+    parser.add_argument(
+        "--bench-cmds", action="extend", nargs="+", type=str, default=[]
+    )
 
     args = parser.parse_args()
 
@@ -313,10 +350,10 @@ def main():
     args.bench_cmds = [s.split() for s in args.bench_cmds]
     if not args.bench_cmds:
         args.bench_cmds = [
-            ["put"],
-            ["range", "range-key"],
-            ["txn-put"],
-            ["txn-mixed", "txn-mixed-key"],
+            # ["put"],
+            ["range", "0000", "1000"],
+            # ["txn-put"],
+            # ["txn-mixed", "txn-mixed-key"],
         ]
 
     bench_dir = "bench"
@@ -337,19 +374,41 @@ def main():
         for clients in args.clients:
             for conns in args.connections:
                 if args.no_tls:
-                    etcd_config = Config("etcd", port, tls=False, sgx=False, worker_threads=0, clients=clients, connections=conns)
+                    etcd_config = Config(
+                        "etcd",
+                        port,
+                        tls=False,
+                        sgx=False,
+                        worker_threads=0,
+                        clients=clients,
+                        connections=conns,
+                    )
                     store = EtcdStore(d, etcd_config)
                     timings_file = run_benchmark(store, bench_cmd)
                     run_metrics(store.config.to_str(), bench_cmd[0], timings_file)
 
-                etcd_config = Config("etcd", port, tls=True, sgx=False, worker_threads=0, clients=clients, connections=conns)
+                etcd_config = Config(
+                    "etcd",
+                    port,
+                    tls=True,
+                    sgx=False,
+                    worker_threads=0,
+                    clients=clients,
+                    connections=conns,
+                )
                 store = EtcdStore(d, etcd_config)
                 timings_file = run_benchmark(store, bench_cmd)
                 run_metrics(store.config.to_str(), bench_cmd[0], timings_file)
 
                 for worker_threads in args.worker_threads:
                     lskv_config = Config(
-                        "lskv", port, tls=True, sgx=False, worker_threads=worker_threads, clients=clients, connections=conns
+                        "lskv",
+                        port,
+                        tls=True,
+                        sgx=False,
+                        worker_threads=worker_threads,
+                        clients=clients,
+                        connections=conns,
                     )
                     # virtual
                     store = LSKVStore(d, lskv_config)
