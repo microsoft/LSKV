@@ -7,10 +7,9 @@ import argparse
 import logging
 import os
 import shutil
-import socket
 import subprocess
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from subprocess import Popen
 from typing import List, Tuple
 
@@ -31,6 +30,14 @@ class Config:
     connections: int
     prefill_num_keys: int
     prefill_value_size: int
+    # requests per second limit
+    rate: int
+    # total number of requests to execute
+    total: int = field(init=False)
+
+    def __post_init__(self):
+        # this is based off the rate so calculate it once we know that.
+        self.total = self.calculate_total()
 
     def to_str(self) -> str:
         d = asdict(self)
@@ -39,7 +46,7 @@ class Config:
             s.append(f"{k}={v}")
         return ",".join(s)
 
-    def benchmark_cmd(self) -> str:
+    def benchmark_cmd(self, scenario_args: List[str]) -> str:
         bench = [
             "bin/benchmark",
             "--endpoints",
@@ -49,6 +56,8 @@ class Config:
             "--conns",
             str(self.connections),
         ]
+        bench += scenario_args
+        bench += ["--rate", str(self.rate), "--total", str(self.total)]
         return bench
 
     def scheme(self) -> str:
@@ -56,6 +65,14 @@ class Config:
             return "https"
         else:
             return "http"
+
+    def calculate_total(self) -> int:
+        # want runs to take 60 seconds if they can handle the rate
+        desired_duration_s = 60
+        # default to 100,000 requests per second (things can time out)
+        rate = self.rate if self.rate > 0 else 100_000
+        total = desired_duration_s * rate
+        return total
 
 
 class Store(abc.ABC):
@@ -78,9 +95,24 @@ class Store(abc.ABC):
     def spawn(self) -> Popen:
         raise NotImplemented
 
-    @abc.abstractmethod
-    def bench(self, _bench_cmd: List[str]):
-        raise NotImplemented
+    def bench(self, bench_cmd: List[str]) -> Tuple[Popen, str]:
+        with open(os.path.join(self.output_dir(), "bench.out"), "w") as out:
+            with open(os.path.join(self.output_dir(), "bench.err"), "w") as err:
+                timings_file = os.path.join(self.output_dir(), "timings.csv")
+                bench_scenario = ["--csv-file", timings_file]
+                if self.config.tls:
+                    bench_scenario += [
+                        "--cacert",
+                        self.cacert(),
+                        "--cert",
+                        self.cert(),
+                        "--key",
+                        self.key(),
+                    ]
+                bench_scenario += bench_cmd
+                bench = self.config.benchmark_cmd(bench_scenario)
+                p = Popen(bench, stdout=out, stderr=err)
+                return p, timings_file
 
     def wait_for_ready(self):
         self._wait_for_ready(self.config.port)
@@ -140,24 +172,14 @@ class EtcdStore(Store):
                     ]
                 return Popen(etcd_cmd, stdout=out, stderr=err)
 
-    def bench(self, bench_cmd: List[str]) -> Tuple[Popen, str]:
-        with open(os.path.join(self.output_dir(), "bench.out"), "w") as out:
-            with open(os.path.join(self.output_dir(), "bench.err"), "w") as err:
-                timings_file = os.path.join(self.output_dir(), "timings.csv")
-                bench_cmd = ["--csv-file", timings_file] + bench_cmd
-                bench = self.config.benchmark_cmd()
-                if self.config.tls:
-                    bench += [
-                        "--cacert",
-                        "certs/ca.pem",
-                        "--cert",
-                        "certs/client.pem",
-                        "--key",
-                        "certs/client-key.pem",
-                    ]
-                bench += bench_cmd
-                p = Popen(bench, stdout=out, stderr=err)
-                return p, timings_file
+    def cacert(self) -> str:
+        return "certs/ca.pem"
+
+    def cert(self) -> str:
+        return "certs/client.pem"
+
+    def key(self) -> str:
+        return "certs/client-key.pem"
 
     def cleanup(self):
         shutil.rmtree("default.etcd", ignore_errors=True)
@@ -203,22 +225,14 @@ class LSKVStore(Store):
     def workspace(self):
         return os.path.join(os.getcwd(), self.output_dir(), "workspace")
 
-    def bench(self, bench_cmd: List[str]) -> Tuple[Popen, str]:
-        with open(os.path.join(self.output_dir(), "bench.out"), "w") as out:
-            with open(os.path.join(self.output_dir(), "bench.err"), "w") as err:
-                timings_file = os.path.join(self.output_dir(), "timings.csv")
-                bench_cmd = ["--csv-file", timings_file] + bench_cmd
-                bench = self.config.benchmark_cmd()
-                bench += [
-                    "--cacert",
-                    f"{self.workspace()}/sandbox_common/service_cert.pem",
-                    "--cert",
-                    f"{self.workspace()}/sandbox_common/user0_cert.pem",
-                    "--key",
-                    f"{self.workspace()}/sandbox_common/user0_privk.pem",
-                ] + bench_cmd
-                p = Popen(bench, stdout=out, stderr=err)
-                return p, timings_file
+    def cacert(self) -> str:
+        return f"{self.workspace()}/sandbox_common/service_cert.pem"
+
+    def cert(self) -> str:
+        return f"{self.workspace()}/sandbox_common/user0_cert.pem"
+
+    def key(self) -> str:
+        return f"{self.workspace()}/sandbox_common/user0_privk.pem"
 
     def client(self) -> List[str]:
         return [
@@ -234,7 +248,7 @@ class LSKVStore(Store):
         ]
 
 
-def wait_with_timeout(process: Popen, duration_seconds=300):
+def wait_with_timeout(process: Popen, duration_seconds=90):
     for i in range(0, duration_seconds):
         res = process.poll()
         if res is None:
@@ -244,7 +258,9 @@ def wait_with_timeout(process: Popen, duration_seconds=300):
         else:
             # process finished
             if res == 0:
-                logging.info(f"process completed successfully within timeout (took {i}s)")
+                logging.info(
+                    f"process completed successfully within timeout (took {i}s)"
+                )
             else:
                 logging.error(f"process failed within timeout (took {i}s): code {res}")
             return
@@ -367,6 +383,14 @@ def main():
         default=[],
         help="size of the values (in bytes) to use in prefilling for range queries",
     )
+    parser.add_argument(
+        "--rate",
+        action="extend",
+        nargs="+",
+        type=int,
+        default=[],
+        help="Maximum requests per second (0 is no limit)",
+    )
 
     args = parser.parse_args()
 
@@ -381,6 +405,8 @@ def main():
         args.prefill_num_keys = [10]
     if not args.prefill_value_size:
         args.prefill_value_size = [10]
+    if not args.rate:
+        args.rate = [0]
 
     args.bench_cmds = [s.split() for s in args.bench_cmds]
     if not args.bench_cmds:
@@ -413,17 +439,37 @@ def main():
                     for prefill_value_size in get_prefill_num_keys(
                         bench_cmd, args.prefill_value_size
                     ):
-                        if args.no_tls:
+                        for rate in args.rate:
+                            if args.no_tls:
+                                etcd_config = Config(
+                                    "etcd",
+                                    port,
+                                    tls=False,
+                                    sgx=False,
+                                    worker_threads=0,
+                                    clients=clients,
+                                    connections=conns,
+                                    prefill_num_keys=prefill_num_keys,
+                                    prefill_value_size=prefill_value_size,
+                                    rate=rate,
+                                )
+                                store = EtcdStore(d, etcd_config)
+                                timings_file = run_benchmark(store, bench_cmd)
+                                run_metrics(
+                                    store.config.to_str(), bench_cmd[0], timings_file
+                                )
+
                             etcd_config = Config(
                                 "etcd",
                                 port,
-                                tls=False,
+                                tls=True,
                                 sgx=False,
                                 worker_threads=0,
                                 clients=clients,
                                 connections=conns,
                                 prefill_num_keys=prefill_num_keys,
                                 prefill_value_size=prefill_value_size,
+                                rate=rate,
                             )
                             store = EtcdStore(d, etcd_config)
                             timings_file = run_benchmark(store, bench_cmd)
@@ -431,48 +477,36 @@ def main():
                                 store.config.to_str(), bench_cmd[0], timings_file
                             )
 
-                        etcd_config = Config(
-                            "etcd",
-                            port,
-                            tls=True,
-                            sgx=False,
-                            worker_threads=0,
-                            clients=clients,
-                            connections=conns,
-                            prefill_num_keys=prefill_num_keys,
-                            prefill_value_size=prefill_value_size,
-                        )
-                        store = EtcdStore(d, etcd_config)
-                        timings_file = run_benchmark(store, bench_cmd)
-                        run_metrics(store.config.to_str(), bench_cmd[0], timings_file)
-
-                        for worker_threads in args.worker_threads:
-                            lskv_config = Config(
-                                "lskv",
-                                port,
-                                tls=True,
-                                sgx=False,
-                                worker_threads=worker_threads,
-                                clients=clients,
-                                connections=conns,
-                                prefill_num_keys=prefill_num_keys,
-                                prefill_value_size=prefill_value_size,
-                            )
-                            # virtual
-                            store = LSKVStore(d, lskv_config)
-                            timings_file = run_benchmark(store, bench_cmd)
-                            run_metrics(
-                                store.config.to_str(), bench_cmd[0], timings_file
-                            )
-
-                            # sgx
-                            if args.sgx:
-                                lskv_config.sgx = True
+                            for worker_threads in args.worker_threads:
+                                lskv_config = Config(
+                                    "lskv",
+                                    port,
+                                    tls=True,
+                                    sgx=False,
+                                    worker_threads=worker_threads,
+                                    clients=clients,
+                                    connections=conns,
+                                    prefill_num_keys=prefill_num_keys,
+                                    prefill_value_size=prefill_value_size,
+                                    rate=rate,
+                                )
+                                # virtual
                                 store = LSKVStore(d, lskv_config)
                                 timings_file = run_benchmark(store, bench_cmd)
                                 run_metrics(
                                     store.config.to_str(), bench_cmd[0], timings_file
                                 )
+
+                                # sgx
+                                if args.sgx:
+                                    lskv_config.sgx = True
+                                    store = LSKVStore(d, lskv_config)
+                                    timings_file = run_benchmark(store, bench_cmd)
+                                    run_metrics(
+                                        store.config.to_str(),
+                                        bench_cmd[0],
+                                        timings_file,
+                                    )
 
     with cimetrics.upload.metrics():
         pass
