@@ -6,6 +6,7 @@ Script to check that source files have license headers.
 
 import os
 import sys
+from typing import List
 import subprocess
 
 NOTICE_LINES_CCF = [
@@ -23,7 +24,7 @@ PREFIXES_CCF.append("#!/usr/bin/env bash" + os.linesep + "#")
 PREFIXES_CCF.append("#!/usr/bin/env python3" + os.linesep + "#")
 
 
-def has_notice(path, prefixes):
+def has_notice(path: str, prefixes: List[str]) -> bool:
     """
     Check that the given file has a notice.
     """
@@ -35,7 +36,7 @@ def has_notice(path, prefixes):
     return False
 
 
-def is_src(name):
+def is_src(name: str) -> bool:
     """
     Check whether the file is a source file based on the extension.
     """
@@ -45,7 +46,7 @@ def is_src(name):
     return False
 
 
-def submodules():
+def submodules() -> List[str]:
     """
     Get the paths of submodules in the repo.
     """
@@ -59,7 +60,7 @@ def submodules():
     ]
 
 
-def gitignored(path):
+def gitignored(path: str) -> bool:
     """
     Check if the path is ignored by git.
     """
@@ -69,7 +70,7 @@ def gitignored(path):
     return res.returncode == 0  # Returns 0 for files which _are_ ignored
 
 
-def check_repo():
+def check_repo() -> List[str]:
     """
     Check whether the repo's sources conform to the license headers requirement.
     """
