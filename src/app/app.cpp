@@ -1190,6 +1190,8 @@ namespace app
       etcdserverpb::StatusResponse response;
       CCF_APP_DEBUG("MAINTENANCE STATUS");
 
+      response.set_leader(0);
+
       return ccf::grpc::make_success(response);
     }
 
