@@ -143,9 +143,18 @@ class Store(abc.ABC):
         pass
 
     # get the etcd client for this datastore
-    @abc.abstractmethod
     def client(self) -> List[str]:
-        raise NotImplemented
+        return [
+            "bin/etcdctl",
+            "--endpoints",
+            f"{self.config.scheme()}://127.0.0.1:{self.config.port}",
+            "--cacert",
+            self.cacert(),
+            "--cert",
+            self.cert(),
+            "--key",
+            self.key(),
+        ]
 
 
 class EtcdStore(Store):
@@ -184,20 +193,6 @@ class EtcdStore(Store):
     def cleanup(self):
         shutil.rmtree("default.etcd", ignore_errors=True)
 
-    def client(self) -> List[str]:
-        return [
-            "bin/etcdctl",
-            "--endpoints",
-            f"{self.config.scheme()}://127.0.0.1:{self.config.port}",
-            "--cacert",
-            "certs/ca.pem",
-            "--cert",
-            "certs/client.pem",
-            "--key",
-            "certs/client-key.pem",
-        ]
-
-
 class LSKVStore(Store):
     def spawn(self) -> Popen:
         logging.info(f"spawning {self.config.to_str()}")
@@ -233,20 +228,6 @@ class LSKVStore(Store):
 
     def key(self) -> str:
         return f"{self.workspace()}/sandbox_common/user0_privk.pem"
-
-    def client(self) -> List[str]:
-        return [
-            "bin/etcdctl",
-            "--endpoints",
-            f"{self.config.scheme()}://127.0.0.1:{self.config.port}",
-            "--cacert",
-            f"{self.workspace()}/sandbox_common/service_cert.pem",
-            "--cert",
-            f"{self.workspace()}/sandbox_common/user0_cert.pem",
-            "--key",
-            f"{self.workspace()}/sandbox_common/user0_privk.pem",
-        ]
-
 
 def wait_with_timeout(process: Popen, duration_seconds=300):
     for i in range(0, duration_seconds):
