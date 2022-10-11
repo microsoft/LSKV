@@ -248,7 +248,7 @@ class LSKVStore(Store):
         ]
 
 
-def wait_with_timeout(process: Popen, duration_seconds=90):
+def wait_with_timeout(process: Popen, duration_seconds=120):
     for i in range(0, duration_seconds):
         res = process.poll()
         if res is None:
