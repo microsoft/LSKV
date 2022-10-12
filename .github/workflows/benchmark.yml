@@ -62,7 +62,14 @@ jobs:
           git commit -m "add plots for ${{ github.sha }}"
           git push origin ci-plots
 
+      - name: Set up comment file
+        run: |
+          for f in ${{ github.sha }}/*; do
+            echo "$f" >> comment.md
+            echo "![](../blob/ci-plots/${{ github.sha }}/$f?raw=true)" >> comment.md
+          done
+
       - name: Upload plots to PR
-        run: gh pr comment ${{ github.event.number }} --body "![](../blob/${{ github.sha}}/${{ github.sha }}/scatter.jpg)"
+        run: gh pr comment ${{ github.event.number }} --body-file comment.md
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
