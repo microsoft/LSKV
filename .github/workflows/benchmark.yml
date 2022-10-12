@@ -48,4 +48,4 @@ jobs:
         run: git push origin ci-plots
 
       - name: upload plots
-        run: gh pr comment ${{ github.event.number }} --body "![](blob/${{ github.sha}}/${{ github.sha }}/scatter.jpg)"
+        run: gh pr comment ${{ github.event.number }} --body "![](../blob/${{ github.sha}}/${{ github.sha }}/scatter.jpg)"
