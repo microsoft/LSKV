@@ -64,3 +64,5 @@ jobs:
 
       - name: upload plots
         run: gh pr comment ${{ github.event.number }} --body "![](../blob/${{ github.sha}}/${{ github.sha }}/scatter.jpg)"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
