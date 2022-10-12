@@ -36,10 +36,10 @@ jobs:
       - name: Mark safe directories
         run: git config --global --add safe.directory $(pwd)
 
-      - name: Checkout ci-plots
-        uses: actions/checkout@v3
-        with:
-          ref: ci-plots
+      # - name: Checkout ci-plots
+      #   uses: actions/checkout@v3
+      #   with:
+      #     ref: ci-plots
 
       - name: list plots
         run: ls plots && mkdir ${{ github.sha }} && ls && ls plots && mv plots/*.jpg ${{ github.sha }} && ls ${{ github.sha }}
