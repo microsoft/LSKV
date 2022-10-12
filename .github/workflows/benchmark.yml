@@ -27,7 +27,7 @@ jobs:
 
       - name: Build app
         run: make build-virtual
-      
+
       - name: Install gh cli
         run: |
           type -p curl >/dev/null || sudo apt install curl -y
