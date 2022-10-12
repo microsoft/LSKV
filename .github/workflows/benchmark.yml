@@ -27,6 +27,15 @@ jobs:
 
       - name: Build app
         run: make build-virtual
+      
+      - name: Install gh cli
+        run: |
+          type -p curl >/dev/null || sudo apt install curl -y
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh -y
 
       - name: Run benchmark
         run: export PATH=$PATH:/usr/local/go/bin && make benchmark-virtual
@@ -44,24 +53,14 @@ jobs:
 
       - name: list plots
         run: |
+          set -x
           git checkout -- analysis.ipynb 
           git checkout ci-plots 
           mkdir ${{ github.sha }} 
           mv plots/*.jpg ${{ github.sha }} 
           git add plots 
           git commit -m "add plots for ${{ github.sha }}"
-
-      - name: push plots
-        run: git push origin ci-plots
-      
-      - name: install gh cli
-        run: |
-          type -p curl >/dev/null || sudo apt install curl -y
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-          sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-          sudo apt update
-          sudo apt install gh -y
+          git push origin ci-plots
 
       - name: upload plots
         run: gh pr comment ${{ github.event.number }} --body "![](../blob/${{ github.sha}}/${{ github.sha }}/scatter.jpg)"
