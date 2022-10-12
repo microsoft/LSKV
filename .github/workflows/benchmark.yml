@@ -33,6 +33,9 @@ jobs:
       - name: Plot results
         run: make execute-notebook
 
+      - name: Mark safe directories
+        run: git config --global --add safe.directory $(pwd)
+
       - name: list plots
         run: ls plots && git branch && git checkout ci-plots && mkdir ${{ github.sha }} && ls && ls plots && mv plots/*.jpg ${{ github.sha }} && ls ${{ github.sha }}
 
