@@ -72,7 +72,7 @@ jobs:
             short="${f#*/}"
             echo "<details>" >> comment.md
             echo "<summary><b>$short</b></summary>" >> comment.md
-            echo "![](../blob/ci-plots/$f?raw=true)" >> comment.md
+            echo "<a href=\"../blob/ci-plots/$f?raw=true\"><img src=\"../blob/ci-plots/$f?raw=true\"></a>" >> comment.md
             echo "</details>" >> comment.md
           done
 
