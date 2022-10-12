@@ -64,7 +64,7 @@ jobs:
 
       - name: Set up comment file
         run: |
-          echo "# Plots from benchmarking at ${{ github.sha }}" >> comment.md
+          echo "## Plots from benchmarking at ${{ github.sha }}" >> comment.md
           echo >> comment.md
           echo "> Available from [here](../tree/ci-plots/${{ github.sha }})" >> comment.md
           echo >> comment.md
