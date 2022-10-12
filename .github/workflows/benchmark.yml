@@ -38,7 +38,7 @@ jobs:
         run: git config --global --add safe.directory $(pwd)
 
       - name: list plots
-        run: ls plots && git checkout -- analysis.ipynb && git checkout ci-plots && mkdir ${{ github.sha }} && ls && ls plots && mv plots/*.jpg ${{ github.sha }} && ls ${{ github.sha }}
+        run: ls plots && git checkout -- analysis.ipynb && git checkout ci-plots && mkdir ${{ github.sha }} && ls && ls plots && mv plots/*.jpg ${{ github.sha }} && ls ${{ github.sha }} && git add plots && git commit -m "add plots for ${{ github.sha }}"
 
       - name: push plots
         run: git push origin ci-plots
