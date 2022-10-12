@@ -69,9 +69,9 @@ jobs:
           echo "> Available from [here](../tree/ci-plots/${{ github.sha }})" >> comment.md
           echo >> comment.md
           for f in ${{ github.sha }}/*; do
-            f="${f#*/}"
+            short="${f#*/}"
             echo "<details>" >> comment.md
-            echo "<summary><b>$f</b></summary>" >> comment.md
+            echo "<summary><b>$short</b></summary>" >> comment.md
             echo "![](../blob/ci-plots/$f?raw=true)" >> comment.md
             echo "</details>" >> comment.md
           done
