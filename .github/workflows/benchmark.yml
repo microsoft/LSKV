@@ -37,6 +37,11 @@ jobs:
       - name: Mark safe directories
         run: git config --global --add safe.directory $(pwd)
 
+      - name: set up git author
+        run: |
+          git config --global user.email "62645686+ccf-bot@users.noreply.github.com"
+          git config --global user.name "ccf-bot"
+
       - name: list plots
         run: |
           git checkout -- analysis.ipynb 
