@@ -18,6 +18,9 @@ import pandas as pd
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
 
+# want runs to take a limited number of seconds if they can handle the rate
+desired_duration_s = 20
+
 
 @dataclass
 class Config:
@@ -67,10 +70,8 @@ class Config:
             return "http"
 
     def calculate_total(self) -> int:
-        # want runs to take 60 seconds if they can handle the rate
-        desired_duration_s = 20
-        # default to 100,000 requests per second (things can time out)
-        rate = self.rate if self.rate > 0 else 100_000
+        # default requests per second (things can time out)
+        rate = self.rate if self.rate > 0 else 1_000
         total = desired_duration_s * rate
         return total
 
@@ -229,7 +230,7 @@ class LSKVStore(Store):
     def key(self) -> str:
         return f"{self.workspace()}/sandbox_common/user0_privk.pem"
 
-def wait_with_timeout(process: Popen, duration_seconds=300):
+def wait_with_timeout(process: Popen, duration_seconds=2*desired_duration_s):
     for i in range(0, duration_seconds):
         res = process.poll()
         if res is None:
