@@ -58,7 +58,7 @@ jobs:
           git checkout ci-plots 
           mkdir ${{ github.sha }} 
           mv plots/*.jpg ${{ github.sha }} 
-          git add plots 
+          git add ${{ github.sha}}
           git commit -m "add plots for ${{ github.sha }}"
           git push origin ci-plots
 
