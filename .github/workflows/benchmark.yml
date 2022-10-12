@@ -64,9 +64,15 @@ jobs:
 
       - name: Set up comment file
         run: |
+          echo "# Plots from benchmarking at ${{ github.sha }}" >> comment.md
+          echo >> comment.md
+          echo "> Available from [here](../tree/ci-plots/${{ github.sha }})" >> comment.md
+          echo >> comment.md
           for f in ${{ github.sha }}/*; do
             echo "$f" >> comment.md
-            echo "![](../blob/ci-plots/${{ github.sha }}/$f?raw=true)" >> comment.md
+            echo >> comment.md
+            echo "![](../blob/ci-plots/$f?raw=true)" >> comment.md
+            echo >> comment.md
           done
 
       - name: Upload plots to PR
