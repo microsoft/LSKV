@@ -1,8 +1,10 @@
-# Ledger-backed Secure Key-Value Store (LSKV) [![Open in VSCode](https://img.shields.io/static/v1?label=Open+in&message=VSCode&logo=visualstudiocode&color=007ACC&logoColor=007ACC&labelColor=2C2C32)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/LSKV)
+# LSKV
 
-[![LSKV CI](https://github.com/microsoft/LSKV/actions/workflows/ci.yml/badge.svg)](https://github.com/microsoft/LSKV/actions/workflows/ci.yml)
+[![Open in VSCode](https://img.shields.io/static/v1?label=Open+in&message=VSCode&logo=visualstudiocode&color=007ACC&logoColor=007ACC&labelColor=2C2C32)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/LSKV) [![LSKV CI](https://github.com/microsoft/LSKV/actions/workflows/ci.yml/badge.svg)](https://github.com/microsoft/LSKV/actions/workflows/ci.yml)
 
-Ledger-backed Secure Key-Value Stored app sample based on [CCF](https://github.com/microsoft/ccf).
+The Ledger-backed Secure Key-Value store, also known as LSKV, is a sample application based on the [Confidential Consortium Framework](https://github.com/microsoft/ccf). 
+
+This early stage research prototype should not be used in production.
 
 ## Install Dependencies
 
