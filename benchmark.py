@@ -68,7 +68,7 @@ class Config:
 
     def calculate_total(self) -> int:
         # want runs to take 60 seconds if they can handle the rate
-        desired_duration_s = 60
+        desired_duration_s = 20
         # default to 100,000 requests per second (things can time out)
         rate = self.rate if self.rate > 0 else 100_000
         total = desired_duration_s * rate
@@ -340,8 +340,9 @@ def get_prefill_num_keys(bench_cmd: List[str], num_keys: List[int]) -> List[int]
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--sgx", type=bool)
-    parser.add_argument("--no-tls", type=bool)
+    parser.add_argument("--sgx", action="store_true")
+    parser.add_argument("--no-sgx", action="store_true")
+    parser.add_argument("--no-tls", action="store_true")
     parser.add_argument("--worker-threads", action="extend", nargs="+", type=int)
     parser.add_argument("--clients", action="extend", nargs="+", type=int)
     parser.add_argument("--connections", action="extend", nargs="+", type=int)
@@ -471,12 +472,13 @@ def main():
                                     prefill_value_size=prefill_value_size,
                                     rate=rate,
                                 )
-                                # virtual
-                                store = LSKVStore(d, lskv_config)
-                                timings_file = run_benchmark(store, bench_cmd)
-                                run_metrics(
-                                    store.config.to_str(), bench_cmd[0], timings_file
-                                )
+                                if args.no_sgx:
+                                    # virtual
+                                    store = LSKVStore(d, lskv_config)
+                                    timings_file = run_benchmark(store, bench_cmd)
+                                    run_metrics(
+                                        store.config.to_str(), bench_cmd[0], timings_file
+                                    )
 
                                 # sgx
                                 if args.sgx:
