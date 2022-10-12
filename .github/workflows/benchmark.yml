@@ -29,3 +29,9 @@ jobs:
 
       - name: Run benchmark
         run: export PATH=$PATH:/usr/local/go/bin && make benchmark-virtual
+
+      - name: Plot results
+        run: make execute-notebook
+
+      - name: list plots
+        run: ls plots
