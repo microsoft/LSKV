@@ -19,14 +19,8 @@ jobs:
       - name: Install Go
         run: curl -L -o go1.19.1.linux-amd64.tar.gz https://go.dev/dl/go1.19.1.linux-amd64.tar.gz && tar -C /usr/local -xzf go1.19.1.linux-amd64.tar.gz
 
-      - name: Build benchmark
-        run: export PATH=$PATH:/usr/local/go/bin && make bin/benchmark
-
       - name: Get etcd
         run: make bin/etcd
-
-      - name: Build app
-        run: make build-virtual
 
       - name: Install gh cli
         run: |
@@ -37,6 +31,12 @@ jobs:
           sudo apt update
           sudo apt install gh -y
 
+      - name: Build benchmark
+        run: export PATH=$PATH:/usr/local/go/bin && make bin/benchmark
+
+      - name: Build app
+        run: make build-virtual
+
       - name: Run benchmark
         run: export PATH=$PATH:/usr/local/go/bin && make benchmark-virtual
 
@@ -46,12 +46,12 @@ jobs:
       - name: Mark safe directories
         run: git config --global --add safe.directory $(pwd)
 
-      - name: set up git author
+      - name: Set up git author
         run: |
           git config --global user.email "62645686+ccf-bot@users.noreply.github.com"
           git config --global user.name "ccf-bot"
 
-      - name: list plots
+      - name: Commit and push plots
         run: |
           set -x
           git checkout -- analysis.ipynb 
@@ -62,7 +62,7 @@ jobs:
           git commit -m "add plots for ${{ github.sha }}"
           git push origin ci-plots
 
-      - name: upload plots
+      - name: Upload plots to PR
         run: gh pr comment ${{ github.event.number }} --body "![](../blob/${{ github.sha}}/${{ github.sha }}/scatter.jpg)"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
