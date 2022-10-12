@@ -1,4 +1,4 @@
-name: "LSKV Perf testing"
+name: "Perf testing"
 
 on:
   pull_request:

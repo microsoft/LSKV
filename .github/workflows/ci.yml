@@ -1,4 +1,4 @@
-name: "LSKV CI"
+name: "CI"
 
 on:
   push:
