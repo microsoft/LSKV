@@ -34,4 +34,10 @@ jobs:
         run: make execute-notebook
 
       - name: list plots
-        run: ls plots
+        run: ls plots && git branch && git checkout ci-plots && mkdir ${{ github.sha }} && ls && ls plots && mv plots/*.jpg ${{ github.sha }} && ls ${{ github.sha }}
+
+      - name: push plots
+        run: git push origin ci-plots
+
+      - name: upload plots
+        run: gh pr comment ${{ github.event.number }} --body "![](blob/${{ github.sha}}/${{ github.sha }}/scatter.jpg)"
