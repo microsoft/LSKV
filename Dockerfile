@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/ccf/app/dev:3.0.0-dev5-sgx as builder
 COPY . /src
 RUN mkdir -p /build/
 WORKDIR /build/
-RUN CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja /src && ninja
+RUN CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja -DCOMPILE_TARGETS=sgx /src && ninja
 
 # Run
 FROM mcr.microsoft.com/ccf/app/run:3.0.0-dev5-sgx
