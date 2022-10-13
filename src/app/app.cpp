@@ -978,6 +978,7 @@ namespace app
           }
           catch (const JsonParseError& e)
           {
+            m->set_name("default");
             CCF_APP_FAIL(
               "failed to convert node data json to struct with name, peer_urls "
               "and client_urls (try setting node_data_json_file in the "
