@@ -64,7 +64,9 @@ Alternatively, it is possible to build a runtime image of this application via d
 $ docker build -t lskv-sgx -f Dockerfile.sgx .
 ```
 
-## Etcd integration
+## Testing
+
+### Etcd integration tests
 
 To run some etcd integration tests:
 
