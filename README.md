@@ -123,7 +123,7 @@ $ docker run --name lskv -it --rm --device /dev/sgx_enclave:/dev/sgx_enclave --d
 
 ## Interacting with the store
 
-**Note**: When running with Docker extra setup steps are currently required before interacting with the store as below, see [???]().
+**Note**: When running with Docker extra setup steps are currently required before interacting with the store as below, see [Running a CCF Service](https://microsoft.github.io/CCF/main/operations/start_network.html#opening-a-network-to-users).
 
 ### etcdctl (gRPC API)
 
