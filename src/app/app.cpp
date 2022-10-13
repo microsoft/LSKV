@@ -934,6 +934,12 @@ namespace app
       return ccf::grpc::make_success(response);
     }
 
+    static std::string net_interface_to_url(
+      const ccf::NodeInfo::NetInterface& netint)
+    {
+      return fmt::format("https://{}", netint.published_address);
+    }
+
     ccf::grpc::GrpcAdapterResponse<etcdserverpb::MemberListResponse>
     member_list(
       ccf::endpoints::ReadOnlyEndpointContext& ctx,
@@ -951,6 +957,16 @@ namespace app
           auto* m = response.add_members();
           m->set_id(node_id_to_member_id(nid));
 
+          auto peer_interface = n.node_to_node_interface;
+          auto* peer_url = m->add_peerurls();
+          *peer_url = net_interface_to_url(peer_interface);
+
+          for (auto& client_interface : n.rpc_interfaces)
+          {
+            auto* client_url = m->add_clienturls();
+            *client_url = net_interface_to_url(client_interface.second);
+          }
+
           try
           {
             nlohmann::json node_data_js = n.node_data;
@@ -959,17 +975,6 @@ namespace app
             CCF_APP_INFO("node data name: {}", node_data.name);
 
             m->set_name(node_data.name);
-
-            for (auto& url : node_data.peer_urls)
-            {
-              auto* peer_url = m->add_peerurls();
-              peer_url = &url;
-            }
-            for (auto& url : node_data.client_urls)
-            {
-              auto* client_url = m->add_clienturls();
-              client_url = &url;
-            }
           }
           catch (const JsonParseError& e)
           {
