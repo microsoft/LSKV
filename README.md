@@ -13,17 +13,17 @@ This repository and its dependencies can be checked out by clicking: [![Open in 
 Alternatively, CCF and its dependencies can be installed manually:
 
 ```bash
-$ wget https://github.com/microsoft/CCF/releases/download/ccf-3.0.0-dev5/ccf_3.0.0_dev5_amd64.deb
-$ sudo dpkg -i ccf_3.0.0_dev5_amd64.deb # Installs CCF under /opt/ccf
-$ cat /opt/ccf/share/VERSION_LONG
-ccf-3.0.0-dev5
-$ /opt/ccf/getting_started/setup_vm/run.sh /opt/ccf/getting_started/setup_vm/app-dev.yml  # Install dependencies
+make install-ccf
 ```
 
 Or
 
 ```bash
-make install-ccf
+$ wget https://github.com/microsoft/CCF/releases/download/ccf-3.0.0-dev5/ccf_3.0.0_dev5_amd64.deb
+$ sudo dpkg -i ccf_3.0.0_dev5_amd64.deb # Installs CCF under /opt/ccf
+$ cat /opt/ccf/share/VERSION_LONG
+ccf-3.0.0-dev5
+$ /opt/ccf/getting_started/setup_vm/run.sh /opt/ccf/getting_started/setup_vm/app-dev.yml  # Install dependencies
 ```
 
 If your organisation supports it, you can also checkout this repository in a Github codespace: [![Open in Github codespace](https://img.shields.io/static/v1?label=Open+in&message=GitHub+codespace&logo=github&color=2F363D&logoColor=white&labelColor=2C2C32)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=534240617&machine=basicLinux32gb&devcontainer_path=.devcontainer.json&location=WestEurope)
@@ -32,32 +32,63 @@ If your organisation supports it, you can also checkout this repository in a Git
 
 In the local checkout of this repository:
 
+### Virtual (insecure)
+
 ```bash
-$ cd LSKV
-$ mkdir build
-$ cd build
-# to build with public maps (more debuggable) add -DPUBLIC_MAPS
-$ CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja ..
-$ ninja
-$ ls
-liblskv.enclave.so.signed # SGX-enabled application
-liblskv.virtual.so # Virtual application (i.e. insecure!)
+make build-virtual
 ```
 
-### Docker
+Builds `build/liblskv.virtual.so`.
+
+#### Docker
 
 Alternatively, it is possible to build a runtime image of this application via docker:
 
 ```bash
-$ docker build -t lskv .
+$ docker build -t lskv-virtual -f Dockerfile.virtual .
 ```
 
-## Test
+### SGX (secure)
 
-### Manual
+```bash
+make build-sgx
+```
+
+Builds `build/liblskv.enclave.so.signed`.
+
+#### Docker
+
+Alternatively, it is possible to build a runtime image of this application via docker:
+
+```bash
+$ docker build -t lskv-sgx -f Dockerfile.sgx .
+```
+
+## Etcd integration
+
+To run some etcd integration tests:
+
+```sh
+make test-virtual
+```
+
+## Run
+
+### Locally
+
+```bash
+$ make run-virtual
+```
+
+Or
 
 ```bash
 $ /opt/ccf/bin/sandbox.sh -p ./liblskv.virtual.so --http2
+```
+
+Producing:
+
+```sh
 Setting up Python environment...
 Python environment successfully setup
 [12:00:00.000] Virtual mode enabled

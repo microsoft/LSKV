@@ -13,11 +13,12 @@ H_FILES=$(wildcard src/**/*.h)
 BIN_DIR=bin
 
 CCF_VER="ccf-3.0.0-dev5"
+CCF_VER_LOWER="ccf_3.0.0_dev5"
 
 .PHONY: install-ccf
 install-ccf:
-	wget -c https://github.com/microsoft/CCF/releases/download/ccf-3.0.0-dev5/ccf_3.0.0_dev5_amd64.deb # download deb
-	sudo dpkg -i ccf_3.0.0_dev5_amd64.deb # Installs CCF under /opt/ccf
+	wget -c https://github.com/microsoft/CCF/releases/download/$(CCF_VER)/$(CCF_VER_LOWER)_amd64.deb # download deb
+	sudo dpkg -i $(CCF_VER_LOWER)_amd64.deb # Installs CCF under /opt/ccf
 	/opt/ccf/getting_started/setup_vm/run.sh /opt/ccf/getting_started/setup_vm/app-dev.yml  # Install dependencies
 
 .PHONY: build-virtual
@@ -36,11 +37,11 @@ build-sgx:
 
 .PHONY: run-virtual
 run-virtual: build-virtual
-	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2 --verbose
+	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2
 
 .PHONY: run-sgx
 run-sgx: build-sgx
-	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.enclave.so.signed -e release --http2 --verbose
+	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.enclave.so.signed -e release --http2
 
 .PHONY: test-virtual
 test-virtual: build-virtual patched-etcd
