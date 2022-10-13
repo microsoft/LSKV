@@ -44,7 +44,7 @@ fi
 
 echo "$CHECK_DELIMITER"
 echo "-- Copyright notice headers"
-python3.8 "$SCRIPT_DIR"/notice-check.py
+python3.8 "$SCRIPT_DIR"/notice_check.py
 
 echo "$CHECK_DELIMITER"
 echo "-- CMake format"
@@ -65,6 +65,7 @@ fi
 source scripts/env/bin/activate
 pip install -U pip
 pip install -U wheel black pylint mypy cpplint 1>/dev/null
+pip install -r requirements.txt
 
 echo "$CHECK_DELIMITER"
 echo "-- Python format"
@@ -73,6 +74,14 @@ if [ $FIX -ne 0 ]; then
 else
   git ls-files scripts/ | grep -e '\.py$' | xargs black --check
 fi
+
+echo "$CHECK_DELIMITER"
+echo "-- Python lint"
+git ls-files | grep -e '\.py$' | xargs python -m pylint --ignored-modules "*_pb2"
+
+echo "$CHECK_DELIMITER"
+echo "-- Python types"
+git ls-files | grep -e '\.py$' | xargs mypy
 
 echo "$CHECK_DELIMITER"
 echo "-- CPP Lint"
