@@ -1,11 +1,9 @@
 # Build
 FROM mcr.microsoft.com/ccf/app/dev:3.0.0-dev5-sgx as builder
 
-RUN mkdir -p /src/{src,proto}
-COPY CMakeLists.txt /src
-COPY src /src/src
-COPY proto /src/proto
-RUN mkdir -p /build
+COPY CMakeLists.txt oe_sign.conf /src/
+COPY src /src/src/
+COPY proto /src/proto/
 WORKDIR /build
 RUN CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja -DCOMPILE_TARGETS=sgx /src && ninja
 
