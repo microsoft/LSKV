@@ -172,12 +172,12 @@ class Store(abc.ABC):
             proc = Popen(client + ["get", "missing key"])
             if proc.wait() == 0:
                 logging.info(
-                    "finished waiting for port (%d) to be open, try %d", port, i
+                    "finished waiting for port (%s) to be open, try %s", port, i
                 )
                 return True
-            logging.info("waiting for port (%d) to be open, try %d", port, i)
+            logging.info("waiting for port (%s) to be open, try %s", port, i)
             time.sleep(1)
-        logging.error("took too long waiting for port %d (%ds)", port, tries)
+        logging.error("took too long waiting for port %s (%ss)", port, tries)
         return False
 
     def output_dir(self) -> str:
@@ -186,7 +186,7 @@ class Store(abc.ABC):
         """
         out_dir = os.path.join(self.bench_dir, self.config.to_str())
         if not os.path.exists(out_dir):
-            logging.info("creating output dir: %d", out_dir)
+            logging.info("creating output dir: %s", out_dir)
             os.makedirs(out_dir)
         return out_dir
 
@@ -354,17 +354,17 @@ def wait_with_timeout(process: Popen, duration_seconds=2 * DESIRED_DURATION_S):
         res = process.poll()
         if res is None:
             # process still running
-            logging.info("waiting for process to complete, try %d", i)
+            logging.info("waiting for process to complete, try %s", i)
             time.sleep(1)
         else:
             # process finished
             if res == 0:
                 logging.info(
-                    "process completed successfully within timeout (took %ds)", i
+                    "process completed successfully within timeout (took %ss)", i
                 )
             else:
                 logging.error(
-                    "process failed within timeout (took %ds): code %s", i, res
+                    "process failed within timeout (took %ss): code %s", i, res
                 )
             return
 
@@ -384,7 +384,7 @@ def prefill_datastore(store: Store, start: int, end: int):
     i = 0
     num_keys = store.config.prefill_num_keys
     value_size = store.config.prefill_value_size
-    logging.info("prefilling %d keys", num_keys)
+    logging.info("prefilling %s keys", num_keys)
     end_size = len(str(end))
     if num_keys:
         for k in range(start, end, (end - start) // num_keys):
@@ -400,7 +400,7 @@ def prefill_datastore(store: Store, start: int, end: int):
             )
             if proc.wait() != 0:
                 raise Exception("failed to fill datastore")
-    logging.info("prefilled %d keys", i)
+    logging.info("prefilled %s keys", i)
 
 
 def run_benchmark(store, bench_cmd: List[str]) -> str:
@@ -415,7 +415,7 @@ def run_benchmark(store, bench_cmd: List[str]) -> str:
             start = int(bench_cmd[1])
             end = int(bench_cmd[2])
             logging.info(
-                "prefilling datastore with %d keys in range [%d, %d)",
+                "prefilling datastore with %s keys in range [%s, %s)",
                 store.config.prefill_num_keys,
                 start,
                 end,
@@ -449,13 +449,13 @@ def run_metrics(name: str, cmd: str, file: str):
     latency_p99 = latencies.quantile(0.99)
     latency_p999 = latencies.quantile(0.999)
 
-    logging.info("             count: %d", count)
-    logging.info("         total (s): %d", total)
-    logging.info("throughput (req/s): %d", thput)
-    logging.info("  p50 latency (ms): %d", latency_p50)
-    logging.info("  p90 latency (ms): %d", latency_p90)
-    logging.info("  p99 latency (ms): %d", latency_p99)
-    logging.info("p99.9 latency (ms): %d", latency_p999)
+    logging.info("             count: %s", count)
+    logging.info("         total (s): %s", total)
+    logging.info("throughput (req/s): %s", thput)
+    logging.info("  p50 latency (ms): %s", latency_p50)
+    logging.info("  p90 latency (ms): %s", latency_p90)
+    logging.info("  p99 latency (ms): %s", latency_p99)
+    logging.info("p99.9 latency (ms): %s", latency_p999)
 
     group = name
     with cimetrics.upload.metrics(complete=False) as metrics:
