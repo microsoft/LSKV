@@ -6,11 +6,11 @@ WORKDIR /build/
 RUN CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja /src && ninja
 
 # Run
-FROM mcr.microsoft.com/ccf/app/dev:3.0.0-dev5-sgx
+FROM mcr.microsoft.com/ccf/app/run:3.0.0-dev5-sgx
 
 COPY --from=builder /build/liblskv.enclave.so.signed /app/
 COPY --from=builder /opt/ccf/bin/*.js /app/
-COPY --from=builder /opt/ccf/bin/keygenerator.sh /app/ 
+COPY --from=builder /opt/ccf/bin/keygenerator.sh /app/
 COPY ./config/cchost_config.json /app/
 WORKDIR /app/
 RUN /app/keygenerator.sh --name member0 --gen-enc-key
