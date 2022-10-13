@@ -101,37 +101,35 @@ Python environment successfully setup
 [12:00:00.000] Press Ctrl+C to shutdown the network
 ```
 
-Or, for an SGX-enabled application: `$ /opt/ccf/bin/sandbox.sh -p ./liblskv.enclave.so.signed -e release --http2`
+Or, for an SGX-enabled application: `$ make run-sgx` or `$ /opt/ccf/bin/sandbox.sh -p ./liblskv.enclave.so.signed -e release --http2`.
 
-#### Running with docker in SGX
+### With docker in Virtual mode
 
 ```bash
-$ docker run --device /dev/sgx_enclave:/dev/sgx_enclave --device /dev/sgx_provision:/dev/sgx_provision -v /dev/sgx:/dev/sgx lskv
+$ docker run --name lskv -it --rm lskv-sgx
 ...
 2022-01-01T12:00:00.000000Z -0.000 0   [info ] ../src/node/node_state.h:1790        | Network TLS connections now accepted
 # It is then possible to interact with the service
 ```
 
-### Etcd integration
+### With docker in SGX mode
 
-To run some etcd integration tests:
-
-```sh
-make test-virtual
+```bash
+$ docker run --name lskv -it --rm --device /dev/sgx_enclave:/dev/sgx_enclave --device /dev/sgx_provision:/dev/sgx_provision -v /dev/sgx:/dev/sgx lskv-sgx
+...
+2022-01-01T12:00:00.000000Z -0.000 0   [info ] ../src/node/node_state.h:1790        | Network TLS connections now accepted
+# It is then possible to interact with the service
 ```
 
 ## Interacting with the store
+
+**Note**: When running with Docker extra setup steps are currently required before interacting with the store as below, see [???]().
 
 ### etcdctl (gRPC API)
 
 You can use the official etcd CLI client for interacting with the datastore over gRPC, for supported methods see the [gRPC API status](https://github.com/microsoft/LSKV/issues/35).
 
 ```bash
-# run the datastore from the project root, in virtual mode
-$ /opt/ccf/bin/sandbox.sh -p build/liblskv.virtual.so --http2
-...
-
-# In another terminal, from the project root
 $ ./etcdctl.sh put key value
 OK
 
@@ -148,9 +146,6 @@ The status of the JSON API follows that of the [gRPC API](https://github.com/mic
 To call an endpoint with curl:
 
 ```sh
-# start the datastore
-make run-virtual
-
 # read an empty value from 'hello'
 curl -X POST https://127.0.0.1:8000/v3/kv/range --cacert workspace/sandbox_common/service_cert.pem --key workspace/sandbox_common/user0_privk.pem --cert workspace/sandbox_common/user0_cert.pem  -H "content-type: application/json" -i --data-binary '{"key":"aGVsbG8="}'
 
