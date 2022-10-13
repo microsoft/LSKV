@@ -8,6 +8,7 @@
 #include "ccf/ds/hex.h"
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
+#include "ccf/service/tables/nodes.h"
 #include "endpoints/grpc.h" // TODO(#22): private header
 #include "etcd.pb.h"
 #include "grpc.h"
@@ -15,6 +16,7 @@
 #include "json_grpc.h"
 #include "kvstore.h"
 #include "leases.h"
+#include "node_data.h"
 
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
@@ -938,26 +940,51 @@ namespace app
       etcdserverpb::MemberListRequest&& payload)
     {
       etcdserverpb::MemberListResponse response;
+      CCF_APP_INFO("MEMBER LIST");
 
-      std::vector<void> nodes;
-      // for each member node
-      for (const auto& node : nodes)
-      {
-        auto* member = response.add_members();
-        member->set_id(1);
-        member->set_name("1");
-        for (const auto& url : node.peer_urls)
-        {
-          auto* peer_url = member->add_peerurls();
-          peer_url = url;
-        }
-        for (const auto& url : node.client_urls)
-        {
-          auto* client_url = member->add_clienturls();
-          client_url = url;
-        }
-        member->set_islearner(false);
-      }
+      auto ccf_governance_map_nodes =
+        ctx.tx.template ro<ccf::Nodes>(ccf::Tables::NODES);
+
+      std::map<std::string, etcdserverpb::Member> nodes;
+      ccf_governance_map_nodes->foreach(
+        [&response](const auto& nid, const auto& n) {
+          auto* m = response.add_members();
+          m->set_id(node_id_to_member_id(nid));
+
+          try
+          {
+            nlohmann::json node_data_js = n.node_data;
+            app::nodes::NodeData node_data =
+              node_data_js.get<app::nodes::NodeData>();
+            CCF_APP_INFO("node data name: {}", node_data.name);
+
+            m->set_name(node_data.name);
+
+            for (auto& url : node_data.peer_urls)
+            {
+              auto* peer_url = m->add_peerurls();
+              peer_url = &url;
+            }
+            for (auto& url : node_data.client_urls)
+            {
+              auto* client_url = m->add_clienturls();
+              client_url = &url;
+            }
+          }
+          catch (const JsonParseError& e)
+          {
+            CCF_APP_FAIL(
+              "failed to convert node data json to struct with name, peer_urls "
+              "and client_urls (try setting node_data_json_file in the "
+              "configuration for this node): {} at {}",
+              e.what(),
+              e.pointer());
+          }
+
+          m->set_islearner(false);
+
+          return true;
+        });
 
       return ccf::grpc::make_success(response);
     }
@@ -1027,6 +1054,11 @@ namespace app
         return 0;
       }
 
+      return node_id_to_member_id(node_id);
+    }
+
+    static int64_t node_id_to_member_id(const ccf::NodeId& node_id)
+    {
       // it is a hex encoded string by default so unhex it
       auto bytes = ds::from_hex(node_id.value());
 
@@ -1034,7 +1066,7 @@ namespace app
       return bytes_to_int64_t(bytes);
     }
 
-    int64_t bytes_to_int64_t(std::vector<uint8_t> bytes)
+    static int64_t bytes_to_int64_t(std::vector<uint8_t> bytes)
     {
       int64_t out;
       // we don't care about endianness here, it will always be the same for
