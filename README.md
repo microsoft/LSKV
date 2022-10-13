@@ -108,7 +108,7 @@ Or, for an SGX-enabled application: `$ make run-sgx` or `$ /opt/ccf/bin/sandbox.
 ### With docker in Virtual mode
 
 ```bash
-$ docker run --name lskv -it --rm lskv-sgx
+$ docker run --name lskv -it --rm lskv-virtual
 ...
 2022-01-01T12:00:00.000000Z -0.000 0   [info ] ../src/node/node_state.h:1790        | Network TLS connections now accepted
 # It is then possible to interact with the service
