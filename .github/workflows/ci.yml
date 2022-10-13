@@ -38,13 +38,22 @@ jobs:
         run: export PATH=$PATH:/usr/local/go/bin && make test-virtual
         continue-on-error: true
 
-  build-docker:
+  build-docker-virtual:
     runs-on: ubuntu-20.04
-    container: mcr.microsoft.com/ccf/app/dev:lts-devcontainer
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Build container
-        run: docker build -t lskv .
+        run: docker build -t lskv-virtual -f Dockerfile.virtual .
+
+  build-docker-sgx:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Build container
+        run: docker build -t lskv-sgx -f Dockerfile.sgx .
