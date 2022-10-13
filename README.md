@@ -14,7 +14,7 @@ Alternatively, CCF and its dependencies can be installed manually:
 
 ```bash
 $ wget https://github.com/microsoft/CCF/releases/download/ccf-3.0.0-dev5/ccf_3.0.0_dev5_amd64.deb
-$ sudo dpkg -i ccf_3.0.0_dev5_amd64.deb # Install CCF under /opt/ccf
+$ sudo dpkg -i ccf_3.0.0_dev5_amd64.deb # Installs CCF under /opt/ccf
 $ cat /opt/ccf/share/VERSION_LONG
 ccf-3.0.0-dev5
 $ /opt/ccf/getting_started/setup_vm/run.sh /opt/ccf/getting_started/setup_vm/app-dev.yml  # Install dependencies
@@ -38,12 +38,20 @@ liblskv.enclave.so.signed # SGX-enabled application
 liblskv.virtual.so # Virtual application (i.e. insecure!)
 ```
 
+### Docker
+
+Alternatively, it is possible to build a runtime image of this application via docker:
+
+```bash
+$ docker build -t lskv .
+```
+
 ## Test
 
 ### Manual
 
 ```bash
-$ /opt/ccf/bin/sandbox.sh -p ./liblskv.virtual.so
+$ /opt/ccf/bin/sandbox.sh -p ./liblskv.virtual.so --http2
 Setting up Python environment...
 Python environment successfully setup
 [12:00:00.000] Virtual mode enabled
@@ -56,7 +64,16 @@ Python environment successfully setup
 [12:00:00.000] Press Ctrl+C to shutdown the network
 ```
 
-Or, for an SGX-enabled application: `$ /opt/ccf/bin/sandbox.sh -p ./liblskv.enclave.so.signed -e release`
+Or, for an SGX-enabled application: `$ /opt/ccf/bin/sandbox.sh -p ./liblskv.enclave.so.signed -e release --http2`
+
+#### Running with docker in SGX
+
+```bash
+$ docker run --device /dev/sgx_enclave:/dev/sgx_enclave --device /dev/sgx_provision:/dev/sgx_provision -v /dev/sgx:/dev/sgx lskv
+...
+2022-01-01T12:00:00.000000Z -0.000 0   [info ] ../src/node/node_state.h:1790        | Network TLS connections now accepted
+# It is then possible to interact with the service
+```
 
 ### Etcd integration
 
@@ -66,22 +83,14 @@ To run some etcd integration tests:
 make test-virtual
 ```
 
-## Docker
+## Interacting with the store
 
-Alternatively, it is possible to build a runtime image of this application via docker:
+### etcdctl (gRPC API)
 
-```bash
-$ docker build -t lskv .
-$ docker run --device /dev/sgx_enclave:/dev/sgx_enclave --device /dev/sgx_provision:/dev/sgx_provision -v /dev/sgx:/dev/sgx lskv
-...
-2022-01-01T12:00:00.000000Z -0.000 0   [info ] ../src/node/node_state.h:1790        | Network TLS connections now accepted
-# It is then possible to interact with the service
-```
-
-## etcd
+You can use the official etcd CLI client for interacting with the datastore over gRPC, for supported methods see the [gRPC API status](https://github.com/microsoft/LSKV/issues/35).
 
 ```bash
-# run the datastore from the project root
+# run the datastore from the project root, in virtual mode
 $ /opt/ccf/bin/sandbox.sh -p build/liblskv.virtual.so --http2
 ...
 
@@ -120,4 +129,4 @@ curl -X POST https://127.0.0.1:8000/v3/kv/delete_range --cacert workspace/sandbo
 
 ## Benchmarking
 
-See [BENCHMARKING.md](./BENCHMARKING.md) or instructions to run the benchmarks and analysis.
+See [BENCHMARKING.md](./BENCHMARKING.md) for instructions to run the benchmarks and analysis.
