@@ -32,7 +32,7 @@ If your organisation supports it, you can also checkout this repository in a Git
 
 In the local checkout of this repository:
 
-### Virtual (insecure)
+### Virtual (non-attested)
 
 ```bash
 make build-virtual
@@ -48,7 +48,7 @@ Alternatively, it is possible to build a runtime image of this application via d
 $ docker build -t lskv-virtual -f Dockerfile.virtual .
 ```
 
-### SGX (secure)
+### SGX (attested)
 
 ```bash
 make build-sgx
