@@ -11,6 +11,7 @@
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
 #include "ccf/service/tables/service.h"
+#include "ccf/service/tables/nodes.h"
 #include "endpoints/grpc.h" // TODO(#22): private header
 #include "etcd.pb.h"
 #include "grpc.h"
@@ -18,6 +19,7 @@
 #include "json_grpc.h"
 #include "kvstore.h"
 #include "leases.h"
+#include "node_data.h"
 
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
@@ -46,6 +48,7 @@ namespace app
       const auto etcdserverpb = "etcdserverpb";
       const auto kv = "KV";
       const auto lease = "Lease";
+      const auto cluster = "Cluster";
 
       auto range = [this](
                      ccf::endpoints::ReadOnlyEndpointContext& ctx,
@@ -175,6 +178,21 @@ namespace app
         "LeaseKeepAlive",
         "/v3/lease/keepalive",
         lease_keep_alive);
+
+      auto member_list = [this](
+                           ccf::endpoints::ReadOnlyEndpointContext& ctx,
+                           etcdserverpb::MemberListRequest&& payload) {
+        return this->member_list(ctx, std::move(payload));
+      };
+
+      install_endpoint_with_header_ro<
+        etcdserverpb::MemberListRequest,
+        etcdserverpb::MemberListResponse>(
+        etcdserverpb,
+        cluster,
+        "MemberList",
+        "/v3/cluster/member/list",
+        member_list);
     }
 
     template <typename Out>
@@ -931,6 +949,66 @@ namespace app
       return ccf::grpc::make_success(response);
     }
 
+    static std::string net_interface_to_url(
+      const ccf::NodeInfo::NetInterface& netint)
+    {
+      return fmt::format("https://{}", netint.published_address);
+    }
+
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::MemberListResponse>
+    member_list(
+      ccf::endpoints::ReadOnlyEndpointContext& ctx,
+      etcdserverpb::MemberListRequest&& payload)
+    {
+      etcdserverpb::MemberListResponse response;
+      CCF_APP_DEBUG("MEMBER LIST");
+
+      auto ccf_governance_map_nodes =
+        ctx.tx.template ro<ccf::Nodes>(ccf::Tables::NODES);
+
+      std::map<std::string, etcdserverpb::Member> nodes;
+      ccf_governance_map_nodes->foreach(
+        [&response](const auto& nid, const auto& n) {
+          auto* m = response.add_members();
+          m->set_id(node_id_to_member_id(nid));
+
+          auto peer_interface = n.node_to_node_interface;
+          auto* peer_url = m->add_peerurls();
+          *peer_url = net_interface_to_url(peer_interface);
+
+          for (auto& client_interface : n.rpc_interfaces)
+          {
+            auto* client_url = m->add_clienturls();
+            *client_url = net_interface_to_url(client_interface.second);
+          }
+
+          try
+          {
+            nlohmann::json node_data_js = n.node_data;
+            app::nodes::NodeData node_data =
+              node_data_js.get<app::nodes::NodeData>();
+
+            m->set_name(node_data.name);
+          }
+          catch (const JsonParseError& e)
+          {
+            m->set_name("default");
+            CCF_APP_FAIL(
+              "failed to convert node data json to struct with name, peer_urls "
+              "and client_urls (try setting node_data_json_file in the "
+              "configuration for this node): {} at {}",
+              e.what(),
+              e.pointer());
+          }
+
+          m->set_islearner(false);
+
+          return true;
+        });
+
+      return ccf::grpc::make_success(response);
+    }
+
     void revoke_expired_leases(kv::Tx& tx)
     {
       CCF_APP_DEBUG("revoking any expired leases");
@@ -1024,6 +1102,11 @@ namespace app
         return 0;
       }
 
+      return node_id_to_member_id(node_id);
+    }
+
+    static int64_t node_id_to_member_id(const ccf::NodeId& node_id)
+    {
       // it is a hex encoded string by default so unhex it
       auto bytes = ds::from_hex(node_id.value());
 
@@ -1031,7 +1114,7 @@ namespace app
       return bytes_to_int64_t(bytes);
     }
 
-    int64_t bytes_to_int64_t(std::vector<uint8_t> bytes)
+    static int64_t bytes_to_int64_t(std::vector<uint8_t> bytes)
     {
       int64_t out;
       // we don't care about endianness here, it will always be the same for

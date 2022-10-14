@@ -363,3 +363,26 @@ message LeaseLeasesResponse {
   ResponseHeader header = 1;
   repeated LeaseStatus leases = 2;
 }
+
+message Member {
+  // ID is the member ID for this member.
+  uint64 ID = 1;
+  // name is the human-readable name of the member. If the member is not started, the name will be an empty string.
+  string name = 2;
+  // peerURLs is the list of URLs the member exposes to the cluster for communication.
+  repeated string peerURLs = 3;
+  // clientURLs is the list of URLs the member exposes to clients for communication. If the member is not started, clientURLs will be empty.
+  repeated string clientURLs = 4;
+  // isLearner indicates if the member is raft learner.
+  bool isLearner = 5;
+}
+
+message MemberListRequest {
+  bool linearizable = 1;
+}
+
+message MemberListResponse {
+  ResponseHeader header = 1;
+  // members is a list of all members associated with the cluster.
+  repeated Member members = 2;
+}
