@@ -71,6 +71,9 @@ $(BIN_DIR)/etcd:
 
 $(BIN_DIR)/etcdctl: $(BIN_DIR)/etcd
 
+$(BIN_DIR)/go-ycsb:
+	cd 3rdparty/go-ycsb && make && mv bin/go-ycsb ../../bin/.
+
 .PHONY: benchmark-virtual
 benchmark-virtual: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual .venv certs
 	. .venv/bin/activate && python3 benchmark.py --no-sgx
