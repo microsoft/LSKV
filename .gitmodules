@@ -1,3 +1,6 @@
 [submodule "3rdparty/etcd"]
 	path = 3rdparty/etcd
 	url = https://github.com/etcd-io/etcd.git
+[submodule "3rdparty/go-ycsb"]
+	path = 3rdparty/go-ycsb
+	url = https://github.com/pingcap/go-ycsb.git
