@@ -10,8 +10,8 @@
 #include "ccf/ds/hex.h"
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
-#include "ccf/service/tables/service.h"
 #include "ccf/service/tables/nodes.h"
+#include "ccf/service/tables/service.h"
 #include "endpoints/grpc.h" // TODO(#22): private header
 #include "etcd.pb.h"
 #include "grpc.h"
