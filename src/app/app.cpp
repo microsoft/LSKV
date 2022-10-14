@@ -3,6 +3,7 @@
 
 #define VERBOSE_LOGGING
 
+#include "ccf/crypto/verifier.h"
 #include "ccf/app_interface.h"
 #include "ccf/common_auth_policies.h"
 #include "ccf/crypto/sha256.h"
@@ -1002,7 +1003,8 @@ namespace app
       }
 
       auto cert = service_info.value().cert;
-      auto sha = crypto::sha256(cert.raw());
+      auto public_key = crypto::make_verifier(cert)->public_key_der();
+      auto sha = crypto::sha256(public_key);
 
       // take first few bytes (like node id)
       // and convert those 8 bytes to the int64_t
