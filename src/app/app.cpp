@@ -3,10 +3,10 @@
 
 #define VERBOSE_LOGGING
 
-#include "ccf/crypto/verifier.h"
 #include "ccf/app_interface.h"
 #include "ccf/common_auth_policies.h"
 #include "ccf/crypto/sha256.h"
+#include "ccf/crypto/verifier.h"
 #include "ccf/ds/hex.h"
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
