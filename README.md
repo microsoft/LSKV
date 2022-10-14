@@ -2,9 +2,9 @@
 
 [![Open in VSCode](https://img.shields.io/static/v1?label=Open+in&message=VSCode&logo=visualstudiocode&color=007ACC&logoColor=007ACC&labelColor=2C2C32)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/LSKV) [![LSKV CI](https://github.com/microsoft/LSKV/actions/workflows/ci.yml/badge.svg)](https://github.com/microsoft/LSKV/actions/workflows/ci.yml)
 
-The Ledger-backed Secure Key-Value store, also known as LSKV, is a sample application based on the [Confidential Consortium Framework](https://github.com/microsoft/ccf) (CCF).
+The Ledger-backed Secure Key-Value store, also known as LSKV, is a research project to investigate whether it is possible to build a trustworthy distributed data store on top of the [Confidential Consortium Framework (CCF)](https://github.com/microsoft/CCF). LSKV aims to provide gRPC & HTTP/JSON APIs, similar to that of existing key-value stores such as [etcd](https://etcd.io/), with support for common operations such as watches and leases, whilst taking advantage of the confidentiality guarantees, auditability, and multi-party governance provided by CCF.
 
-This early stage research prototype should not be used in production.
+**This early stage research prototype should not be used in production.**
 
 ## Install Dependencies
 
@@ -64,7 +64,9 @@ Alternatively, it is possible to build a runtime image of this application via d
 $ docker build -t lskv-sgx -f Dockerfile.sgx .
 ```
 
-## Etcd integration
+## Testing
+
+### Etcd integration tests
 
 To run some etcd integration tests:
 
@@ -106,7 +108,7 @@ Or, for an SGX-enabled application: `$ make run-sgx` or `$ /opt/ccf/bin/sandbox.
 ### With docker in Virtual mode
 
 ```bash
-$ docker run --name lskv -it --rm lskv-sgx
+$ docker run --name lskv -it --rm lskv-virtual
 ...
 2022-01-01T12:00:00.000000Z -0.000 0   [info ] ../src/node/node_state.h:1790        | Network TLS connections now accepted
 # It is then possible to interact with the service

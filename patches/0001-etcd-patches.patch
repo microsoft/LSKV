@@ -536,7 +536,7 @@ index 000000000..cea0962eb
 +		_, err := client.Get(context.TODO(), "missing")
 +		if err != nil {
 +			fmt.Printf("waiting on app to be running: %v\n", err)
-+			os.Sleep(time.Second)
++			time.Sleep(time.Second)
 +		}
 +		fmt.Println("app is running")
 +		break
