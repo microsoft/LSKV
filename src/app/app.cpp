@@ -5,10 +5,13 @@
 
 #include "ccf/app_interface.h"
 #include "ccf/common_auth_policies.h"
+#include "ccf/crypto/sha256.h"
+#include "ccf/crypto/verifier.h"
 #include "ccf/ds/hex.h"
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
 #include "ccf/service/tables/nodes.h"
+#include "ccf/service/tables/service.h"
 #include "endpoints/grpc.h" // TODO(#22): private header
 #include "etcd.pb.h"
 #include "grpc.h"
@@ -29,6 +32,8 @@ namespace app
     using IndexStrategy = app::index::KVIndexer;
     std::shared_ptr<IndexStrategy> kvindex = nullptr;
 
+    int64_t cluster_id;
+
   public:
     explicit AppHandlers(ccfapp::AbstractNodeContext& context) :
       ccf::UserEndpointRegistry(context)
@@ -48,6 +53,7 @@ namespace app
       auto range = [this](
                      ccf::endpoints::ReadOnlyEndpointContext& ctx,
                      etcdserverpb::RangeRequest&& payload) {
+        populate_cluster_id(ctx.tx);
         auto kvs = kvstore::KVStore(ctx.tx);
         auto lstore = leasestore::ReadOnlyLeaseStore(ctx.tx);
         return this->range(kvs, lstore, std::move(payload));
@@ -61,6 +67,7 @@ namespace app
       auto put = [this](
                    ccf::endpoints::EndpointContext& ctx,
                    etcdserverpb::PutRequest&& payload) {
+        populate_cluster_id(ctx.tx);
         return this->put(ctx, std::move(payload));
       };
 
@@ -71,6 +78,7 @@ namespace app
       auto delete_range = [this](
                             ccf::endpoints::EndpointContext& ctx,
                             etcdserverpb::DeleteRangeRequest&& payload) {
+        populate_cluster_id(ctx.tx);
         return this->delete_range(ctx, std::move(payload));
       };
 
@@ -82,6 +90,7 @@ namespace app
       auto txn = [this](
                    ccf::endpoints::EndpointContext& ctx,
                    etcdserverpb::TxnRequest&& payload) {
+        populate_cluster_id(ctx.tx);
         return this->txn(ctx, std::move(payload));
       };
 
@@ -92,6 +101,7 @@ namespace app
       auto compact = [this](
                        ccf::endpoints::EndpointContext& ctx,
                        etcdserverpb::CompactionRequest&& payload) {
+        populate_cluster_id(ctx.tx);
         return this->compact(ctx, std::move(payload));
       };
 
@@ -103,6 +113,7 @@ namespace app
       auto lease_grant = [this](
                            ccf::endpoints::EndpointContext& ctx,
                            etcdserverpb::LeaseGrantRequest&& payload) {
+        populate_cluster_id(ctx.tx);
         return this->lease_grant(ctx, std::move(payload));
       };
 
@@ -114,6 +125,7 @@ namespace app
       auto lease_revoke = [this](
                             ccf::endpoints::EndpointContext& ctx,
                             etcdserverpb::LeaseRevokeRequest&& payload) {
+        populate_cluster_id(ctx.tx);
         return this->lease_revoke(ctx, std::move(payload));
       };
 
@@ -126,6 +138,7 @@ namespace app
         [this](
           ccf::endpoints::ReadOnlyEndpointContext& ctx,
           etcdserverpb::LeaseTimeToLiveRequest&& payload) {
+          populate_cluster_id(ctx.tx);
           return this->lease_time_to_live(ctx, std::move(payload));
         };
 
@@ -141,6 +154,7 @@ namespace app
       auto lease_leases = [this](
                             ccf::endpoints::ReadOnlyEndpointContext& ctx,
                             etcdserverpb::LeaseLeasesRequest&& payload) {
+        populate_cluster_id(ctx.tx);
         return this->lease_leases(ctx, std::move(payload));
       };
 
@@ -152,6 +166,7 @@ namespace app
       auto lease_keep_alive = [this](
                                 ccf::endpoints::EndpointContext& ctx,
                                 etcdserverpb::LeaseKeepAliveRequest&& payload) {
+        populate_cluster_id(ctx.tx);
         return this->lease_keep_alive(ctx, std::move(payload));
       };
 
@@ -1041,9 +1056,37 @@ namespace app
     void fill_header(
       etcdserverpb::ResponseHeader& header, const ccf::TxID& tx_id)
     {
+      header.set_cluster_id(cluster_id);
       header.set_member_id(member_id());
       header.set_raft_term(tx_id.view);
       header.set_revision(tx_id.seqno);
+    }
+
+    void populate_cluster_id(kv::ReadOnlyTx& tx)
+    {
+      cluster_id = get_cluster_id(tx);
+    }
+
+    int64_t get_cluster_id(kv::ReadOnlyTx& tx)
+    {
+      auto ccf_governance_map =
+        tx.template ro<ccf::Service>(ccf::Tables::SERVICE);
+      auto service_info = ccf_governance_map->get();
+
+      if (!service_info.has_value())
+      {
+        // shouldn't but just in case
+        CCF_APP_FAIL("Failed to get id for cluster");
+        return 0;
+      }
+
+      auto cert = service_info.value().cert;
+      auto public_key = crypto::make_verifier(cert)->public_key_der();
+      auto sha = crypto::sha256(public_key);
+
+      // take first few bytes (like node id)
+      // and convert those 8 bytes to the int64_t
+      return bytes_to_int64_t(sha);
     }
 
     int64_t member_id()
