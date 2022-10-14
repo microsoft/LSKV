@@ -946,7 +946,7 @@ namespace app
       etcdserverpb::MemberListRequest&& payload)
     {
       etcdserverpb::MemberListResponse response;
-      CCF_APP_INFO("MEMBER LIST");
+      CCF_APP_DEBUG("MEMBER LIST");
 
       auto ccf_governance_map_nodes =
         ctx.tx.template ro<ccf::Nodes>(ccf::Tables::NODES);
@@ -972,7 +972,6 @@ namespace app
             nlohmann::json node_data_js = n.node_data;
             app::nodes::NodeData node_data =
               node_data_js.get<app::nodes::NodeData>();
-            CCF_APP_INFO("node data name: {}", node_data.name);
 
             m->set_name(node_data.name);
           }
