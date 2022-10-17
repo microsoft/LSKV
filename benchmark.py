@@ -240,6 +240,79 @@ class Store(abc.ABC):
         ]
 
 
+class Benchmark(abc.ABC):
+    """
+    Type of benchmark to run.
+    """
+    def setup_cmd(self, store: Store) -> List[str]:
+        """
+        Return the command to setup the benchmark.
+        """
+        # not everything needs setup
+        return []
+
+    @abc.abstractmethod
+    def run_cmd(self, store: Store) -> List[str]:
+        """
+        Return the command to run the benchmark.
+        """
+        raise NotImplementedError
+
+
+class EtcdBenchmark(Benchmark):
+    """
+    Etcd benchmark.
+    """
+
+    def run_cmd(self, store: Store) -> List[str]:
+        """
+        Return the command to run the benchmark for the given store.
+        """
+        bench = [
+            "bin/benchmark",
+            "--endpoints",
+            f"{store.config.scheme()}://127.0.0.1:{store.config.port}",
+            "--clients",
+            str(store.config.clients),
+            "--conns",
+            str(store.config.connections),
+        ]
+        bench += ["--rate", str(store.config.rate), "--total", str(store.config.total)]
+        return bench
+
+
+class YCSB(Benchmark):
+    """
+    Yahoo!'s cloud serving benchmark
+    """
+
+    def setup_cmd(self, store: Store) -> List[str]:
+        """
+        Setup the YCSB benchmark.
+        """
+        load = [
+            "bin/go-ycsb",
+            "load",
+            "etcd",
+            "-P",
+            "workload",
+        ]
+        return load
+
+    def run_cmd(self, store: Store) -> List[str]:
+        """
+        Return the command to run the benchmark for the given store.
+        """
+        bench = [
+            "bin/go-ycsb",
+            "run",
+            "etcd",
+            "-P",
+            store.config.bench_args,
+        ]
+        return bench
+
+
 class EtcdStore(Store):
     """
     A store based on etcd.
