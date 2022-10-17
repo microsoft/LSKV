@@ -15,7 +15,7 @@ import subprocess
 import time
 from dataclasses import asdict, dataclass, field
 from subprocess import Popen
-from typing import List, Tuple
+from typing import List
 
 import cimetrics.upload  # type: ignore
 import pandas as pd  # type: ignore
@@ -34,7 +34,7 @@ class Config:
     Config holds the configuration options for a given benchmark run.
     """
 
-    bench_cmd: List[str]
+    bench_args: List[str]
     name: str
     port: int
     tls: bool
@@ -68,33 +68,6 @@ class Config:
             else:
                 string_parts.append(f"{k}={value}")
         return ",".join(string_parts)
-
-    def benchmark_cmd(
-        self,
-        cacert: str,
-        cert: str,
-        key: str,
-        timings_file: str,
-    ) -> List[str]:
-        """
-        Return the command to run the benchmark.
-        """
-        bench = [
-            "bin/benchmark",
-            "--endpoints",
-            f"{self.scheme()}://127.0.0.1:{self.port}",
-            "--clients",
-            str(self.clients),
-            "--conns",
-            str(self.connections),
-            "--csv-file",
-            timings_file,
-        ]
-        if self.tls:
-            bench += ["--cacert", cacert, "--cert", cert, "--key", key]
-        bench += self.bench_cmd
-        bench += ["--rate", str(self.rate), "--total", str(self.total)]
-        return bench
 
     def scheme(self) -> str:
         """
@@ -144,24 +117,6 @@ class Store(abc.ABC):
         Spawn the datastore process.
         """
         raise NotImplementedError
-
-    def bench(self) -> Tuple[Popen, str]:
-        """
-        Run the benchmark command and return the process and the timings file.
-        """
-        timings_file = os.path.join(self.output_dir(), "timings.csv")
-        bench = self.config.benchmark_cmd(
-            self.cacert(), self.cert(), self.key(), timings_file
-        )
-        with open(
-            os.path.join(self.output_dir(), "bench.out"), "w", encoding="utf-8"
-        ) as out:
-            with open(
-                os.path.join(self.output_dir(), "bench.err"), "w", encoding="utf-8"
-            ) as err:
-                # pylint: disable=consider-using-with
-                proc = Popen(bench, stdout=out, stderr=err)
-                return proc, timings_file
 
     def wait_for_ready(self):
         """
@@ -244,7 +199,8 @@ class Benchmark(abc.ABC):
     """
     Type of benchmark to run.
     """
-    def setup_cmd(self, store: Store) -> List[str]:
+
+    def setup_cmd(self, _store: Store) -> List[str]:
         """
         Return the command to setup the benchmark.
         """
@@ -268,6 +224,7 @@ class EtcdBenchmark(Benchmark):
         """
         Return the command to run the benchmark for the given store.
         """
+        timings_file = os.path.join(store.output_dir(), "timings.csv")
         bench = [
             "bin/benchmark",
             "--endpoints",
@@ -276,8 +233,20 @@ class EtcdBenchmark(Benchmark):
             str(store.config.clients),
             "--conns",
             str(store.config.connections),
+            "--csv-file",
+            timings_file,
         ]
         bench += ["--rate", str(store.config.rate), "--total", str(store.config.total)]
+        if store.config.tls:
+            bench += [
+                "--cacert",
+                store.cacert(),
+                "--cert",
+                store.cert(),
+                "--key",
+                store.key(),
+            ]
+        bench += store.config.bench_args
         return bench
 
 
@@ -286,7 +255,7 @@ class YCSB(Benchmark):
     Yahoo!'s cloud serving benchmark
     """
 
-    def setup_cmd(self, store: Store) -> List[str]:
+    def setup_cmd(self, _store: Store) -> List[str]:
         """
         Setup the YCSB benchmark.
         """
@@ -308,8 +277,8 @@ class YCSB(Benchmark):
             "run",
             "etcd",
             "-P",
-            store.config.bench_args,
         ]
+        bench += store.config.bench_args
         return bench
 
 
@@ -424,7 +393,7 @@ class LSKVStore(Store):
         return f"{self.workspace()}/sandbox_common/user0_privk.pem"
 
 
-def wait_with_timeout(process: Popen, duration_seconds=2 * DESIRED_DURATION_S):
+def wait_with_timeout(process: Popen, duration_seconds=2 * DESIRED_DURATION_S, name=""):
     """
     Wait for a process to complete, but timeout after the given duration.
     """
@@ -432,22 +401,24 @@ def wait_with_timeout(process: Popen, duration_seconds=2 * DESIRED_DURATION_S):
         res = process.poll()
         if res is None:
             # process still running
-            logging.info("waiting for process to complete, try %s", i)
+            logging.info("waiting for %s process to complete, try %s", name, i)
             time.sleep(1)
         else:
             # process finished
             if res == 0:
                 logging.info(
-                    "process completed successfully within timeout (took %ss)", i
+                    "%s process completed successfully within timeout (took %ss)",
+                    name,
+                    i,
                 )
             else:
                 logging.error(
-                    "process failed within timeout (took %ss): code %s", i, res
+                    "%s process failed within timeout (took %ss): code %s", name, i, res
                 )
             return
 
     # didn't finish in time
-    logging.error("killing process after timeout of %ss", duration_seconds)
+    logging.error("killing %s process after timeout of %ss", name, duration_seconds)
     process.kill()
     process.wait()
     return
@@ -481,17 +452,17 @@ def prefill_datastore(store: Store, start: int, end: int):
     logging.info("prefilled %s keys", i)
 
 
-def run_benchmark(store) -> str:
+def run_benchmark(store: Store, benchmark: Benchmark) -> str:
     """
     Run the benchmark for the given store with the given bench command.
     """
     with store:
         store.wait_for_ready()
 
-        if store.config.bench_cmd[0] == "range":
+        if store.config.bench_args[0] == "range":
             # need to prefill the store with data for it to get
-            start = int(store.config.bench_cmd[1])
-            end = int(store.config.bench_cmd[2])
+            start = int(store.config.bench_args[1])
+            end = int(store.config.bench_args[2])
             logging.info(
                 "prefilling datastore with %s keys in range [%s, %s)",
                 store.config.prefill_num_keys,
@@ -501,8 +472,28 @@ def run_benchmark(store) -> str:
             prefill_datastore(store, start, end)
 
         logging.info("starting benchmark for %s", store.config.to_str())
-        bench_process, timings_file = store.bench()
-        wait_with_timeout(bench_process)
+        timings_file = os.path.join(store.output_dir(), "timings.csv")
+
+        setup_cmd = benchmark.setup_cmd(store)
+        if setup_cmd:
+            logging.info("running setup command: %s", setup_cmd)
+            # pylint: disable=consider-using-with
+            proc = Popen(
+                setup_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            wait_with_timeout(proc, name="setup")
+
+        run_cmd = benchmark.run_cmd(store)
+        with open(
+            os.path.join(store.output_dir(), "bench.out"), "w", encoding="utf-8"
+        ) as out:
+            with open(
+                os.path.join(store.output_dir(), "bench.err"), "w", encoding="utf-8"
+            ) as err:
+                # pylint: disable=consider-using-with
+                proc = Popen(run_cmd, stdout=out, stderr=err)
+                wait_with_timeout(proc, name="benchmark")
+
         logging.info("stopping benchmark for %s", store.config.to_str())
 
     return timings_file
@@ -545,11 +536,11 @@ def run_metrics(name: str, cmd: str, file: str):
 
 
 # only run multiple things for prefill_num_keys when it is actually a range bench
-def get_prefill_num_keys(bench_cmd: List[str], num_keys: List[int]) -> List[int]:
+def get_prefill_num_keys(bench_args: List[str], num_keys: List[int]) -> List[int]:
     """
     Get the number of keys to prefill the datastore with.
     """
-    if bench_cmd[0] == "range":
+    if bench_args[0] == "range":
         return num_keys
     return [0]
 
@@ -566,7 +557,7 @@ def get_arguments():
     parser.add_argument("--clients", action="extend", nargs="+", type=int)
     parser.add_argument("--connections", action="extend", nargs="+", type=int)
     parser.add_argument(
-        "--bench-cmds", action="extend", nargs="+", type=str, default=[]
+        "--bench-args", action="extend", nargs="+", type=str, default=[]
     )
     parser.add_argument(
         "--prefill-num-keys",
@@ -610,9 +601,9 @@ def get_arguments():
     if not args.rate:
         args.rate = [0]
 
-    args.bench_cmds = [s.split() for s in args.bench_cmds]
-    if not args.bench_cmds:
-        args.bench_cmds = [
+    args.bench_args = [s.split() for s in args.bench_args]
+    if not args.bench_args:
+        args.bench_args = [
             ["put"],
             ["range", "0000", "1000"],
             ["txn-put"],
@@ -636,25 +627,27 @@ def main():
     os.makedirs(bench_dir)
 
     # pylint: disable=too-many-nested-blocks
-    for bench_cmd in args.bench_cmds:
-        logging.info("benching with extra args %s", bench_cmd)
+    for bench_args in args.bench_args:
+        logging.info("benching with extra args %s", bench_args)
 
-        bench_cmd_string = "_".join(bench_cmd)
-        bench_dir = os.path.join(bench_dir, bench_cmd_string)
+        bench_args_string = "_".join(bench_args)
+        bench_dir = os.path.join(bench_dir, bench_args_string)
         os.makedirs(bench_dir)
+
+        benchmark = EtcdBenchmark()
 
         for clients in args.clients:
             for conns in args.connections:
                 for prefill_num_keys in get_prefill_num_keys(
-                    bench_cmd, args.prefill_num_keys
+                    bench_args, args.prefill_num_keys
                 ):
                     for prefill_value_size in get_prefill_num_keys(
-                        bench_cmd, args.prefill_value_size
+                        bench_args, args.prefill_value_size
                     ):
                         for rate in args.rate:
                             if args.no_tls:
                                 etcd_config = Config(
-                                    bench_cmd,
+                                    bench_args,
                                     "etcd",
                                     port,
                                     tls=False,
@@ -667,13 +660,13 @@ def main():
                                     rate=rate,
                                 )
                                 store = EtcdStore(bench_dir, etcd_config)
-                                timings_file = run_benchmark(store)
+                                timings_file = run_benchmark(store, benchmark)
                                 run_metrics(
-                                    store.config.to_str(), bench_cmd[0], timings_file
+                                    store.config.to_str(), bench_args[0], timings_file
                                 )
 
                             etcd_config = Config(
-                                bench_cmd,
+                                bench_args,
                                 "etcd",
                                 port,
                                 tls=True,
@@ -686,14 +679,14 @@ def main():
                                 rate=rate,
                             )
                             store = EtcdStore(bench_dir, etcd_config)
-                            timings_file = run_benchmark(store)
+                            timings_file = run_benchmark(store, benchmark)
                             run_metrics(
-                                store.config.to_str(), bench_cmd[0], timings_file
+                                store.config.to_str(), bench_args[0], timings_file
                             )
 
                             for worker_threads in args.worker_threads:
                                 lskv_config = Config(
-                                    bench_cmd,
+                                    bench_args,
                                     "lskv",
                                     port,
                                     tls=True,
@@ -710,10 +703,11 @@ def main():
                                     store = LSKVStore(bench_dir, lskv_config)
                                     timings_file = run_benchmark(
                                         store,
+                                        benchmark,
                                     )
                                     run_metrics(
                                         store.config.to_str(),
-                                        bench_cmd[0],
+                                        bench_args[0],
                                         timings_file,
                                     )
 
@@ -723,10 +717,11 @@ def main():
                                     store = LSKVStore(bench_dir, lskv_config)
                                     timings_file = run_benchmark(
                                         store,
+                                        benchmark,
                                     )
                                     run_metrics(
                                         store.config.to_str(),
-                                        bench_cmd[0],
+                                        bench_args[0],
                                         timings_file,
                                     )
 
