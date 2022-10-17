@@ -1,10 +1,10 @@
 BUILD=build
 CCF_PREFIX=/opt/ccf
 
-CC="/opt/oe_lvi/clang-10"
-CXX="/opt/oe_lvi/clang++-10"
+CC=/opt/oe_lvi/clang-10
+CXX=/opt/oe_lvi/clang++-10
 
-ETCD_VER="v3.5.4"
+ETCD_VER=v3.5.4
 ETCD_DOWNLOAD_URL=https://github.com/etcd-io/etcd/releases/download
 
 CPP_FILES=$(wildcard src/**/*.cpp)
@@ -12,8 +12,8 @@ H_FILES=$(wildcard src/**/*.h)
 
 BIN_DIR=bin
 
-CCF_VER="ccf-3.0.0-dev5"
-CCF_VER_LOWER="ccf_3.0.0_dev5"
+CCF_VER=ccf-3.0.0-dev5
+CCF_VER_LOWER=ccf_3.0.0_dev5
 
 .PHONY: install-ccf
 install-ccf:
@@ -60,7 +60,7 @@ $(BIN_DIR)/benchmark: patched-etcd
 	mv $(BUILD)/3rdparty/etcd/benchmark $(BIN_DIR)/benchmark
 
 $(BIN_DIR)/etcd:
-	rm -f /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz
+	rm -f /tmp/etcd-$(ETCD_VER)-linux-amd64.tar.gz
 	rm -rf /tmp/etcd-download-test && mkdir -p /tmp/etcd-download-test
 	curl -L $(ETCD_DOWNLOAD_URL)/$(ETCD_VER)/etcd-$(ETCD_VER)-linux-amd64.tar.gz -o /tmp/etcd-$(ETCD_VER)-linux-amd64.tar.gz
 	tar xzvf /tmp/etcd-$(ETCD_VER)-linux-amd64.tar.gz -C /tmp/etcd-download-test --strip-components=1
