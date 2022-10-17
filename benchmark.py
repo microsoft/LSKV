@@ -17,8 +17,8 @@ from dataclasses import asdict, dataclass, field
 from subprocess import Popen
 from typing import List, Tuple
 
-import cimetrics.upload # type: ignore
-import pandas as pd # type: ignore
+import cimetrics.upload  # type: ignore
+import pandas as pd  # type: ignore
 import typing_extensions
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
@@ -34,6 +34,7 @@ class Config:
     Config holds the configuration options for a given benchmark run.
     """
 
+    bench_cmd: List[str]
     name: str
     port: int
     tls: bool
@@ -62,10 +63,19 @@ class Config:
         config_dict = asdict(self)
         string_parts = []
         for k, value in config_dict.items():
-            string_parts.append(f"{k}={value}")
+            if isinstance(value, list):
+                string_parts.append(f"{k}={'_'.join(value)}")
+            else:
+                string_parts.append(f"{k}={value}")
         return ",".join(string_parts)
 
-    def benchmark_cmd(self, scenario_args: List[str]) -> List[str]:
+    def benchmark_cmd(
+        self,
+        cacert: str,
+        cert: str,
+        key: str,
+        timings_file: str,
+    ) -> List[str]:
         """
         Return the command to run the benchmark.
         """
@@ -77,8 +87,12 @@ class Config:
             str(self.clients),
             "--conns",
             str(self.connections),
+            "--csv-file",
+            timings_file,
         ]
-        bench += scenario_args
+        if self.tls:
+            bench += ["--cacert", cacert, "--cert", cert, "--key", key]
+        bench += self.bench_cmd
         bench += ["--rate", str(self.rate), "--total", str(self.total)]
         return bench
 
@@ -131,29 +145,20 @@ class Store(abc.ABC):
         """
         raise NotImplementedError
 
-    def bench(self, bench_cmd: List[str]) -> Tuple[Popen, str]:
+    def bench(self) -> Tuple[Popen, str]:
         """
         Run the benchmark command and return the process and the timings file.
         """
+        timings_file = os.path.join(self.output_dir(), "timings.csv")
+        bench = self.config.benchmark_cmd(
+            self.cacert(), self.cert(), self.key(), timings_file
+        )
         with open(
             os.path.join(self.output_dir(), "bench.out"), "w", encoding="utf-8"
         ) as out:
             with open(
                 os.path.join(self.output_dir(), "bench.err"), "w", encoding="utf-8"
             ) as err:
-                timings_file = os.path.join(self.output_dir(), "timings.csv")
-                bench_scenario = ["--csv-file", timings_file]
-                if self.config.tls:
-                    bench_scenario += [
-                        "--cacert",
-                        self.cacert(),
-                        "--cert",
-                        self.cert(),
-                        "--key",
-                        self.key(),
-                    ]
-                bench_scenario += bench_cmd
-                bench = self.config.benchmark_cmd(bench_scenario)
                 # pylint: disable=consider-using-with
                 proc = Popen(bench, stdout=out, stderr=err)
                 return proc, timings_file
@@ -403,17 +408,17 @@ def prefill_datastore(store: Store, start: int, end: int):
     logging.info("prefilled %s keys", i)
 
 
-def run_benchmark(store, bench_cmd: List[str]) -> str:
+def run_benchmark(store) -> str:
     """
     Run the benchmark for the given store with the given bench command.
     """
     with store:
         store.wait_for_ready()
 
-        if bench_cmd[0] == "range":
+        if store.config.bench_cmd[0] == "range":
             # need to prefill the store with data for it to get
-            start = int(bench_cmd[1])
-            end = int(bench_cmd[2])
+            start = int(store.config.bench_cmd[1])
+            end = int(store.config.bench_cmd[2])
             logging.info(
                 "prefilling datastore with %s keys in range [%s, %s)",
                 store.config.prefill_num_keys,
@@ -423,7 +428,7 @@ def run_benchmark(store, bench_cmd: List[str]) -> str:
             prefill_datastore(store, start, end)
 
         logging.info("starting benchmark for %s", store.config.to_str())
-        bench_process, timings_file = store.bench(bench_cmd)
+        bench_process, timings_file = store.bench()
         wait_with_timeout(bench_process)
         logging.info("stopping benchmark for %s", store.config.to_str())
 
@@ -576,6 +581,7 @@ def main():
                         for rate in args.rate:
                             if args.no_tls:
                                 etcd_config = Config(
+                                    bench_cmd,
                                     "etcd",
                                     port,
                                     tls=False,
@@ -588,12 +594,13 @@ def main():
                                     rate=rate,
                                 )
                                 store = EtcdStore(bench_dir, etcd_config)
-                                timings_file = run_benchmark(store, bench_cmd)
+                                timings_file = run_benchmark(store)
                                 run_metrics(
                                     store.config.to_str(), bench_cmd[0], timings_file
                                 )
 
                             etcd_config = Config(
+                                bench_cmd,
                                 "etcd",
                                 port,
                                 tls=True,
@@ -606,13 +613,14 @@ def main():
                                 rate=rate,
                             )
                             store = EtcdStore(bench_dir, etcd_config)
-                            timings_file = run_benchmark(store, bench_cmd)
+                            timings_file = run_benchmark(store)
                             run_metrics(
                                 store.config.to_str(), bench_cmd[0], timings_file
                             )
 
                             for worker_threads in args.worker_threads:
                                 lskv_config = Config(
+                                    bench_cmd,
                                     "lskv",
                                     port,
                                     tls=True,
@@ -627,7 +635,9 @@ def main():
                                 if args.no_sgx:
                                     # virtual
                                     store = LSKVStore(bench_dir, lskv_config)
-                                    timings_file = run_benchmark(store, bench_cmd)
+                                    timings_file = run_benchmark(
+                                        store,
+                                    )
                                     run_metrics(
                                         store.config.to_str(),
                                         bench_cmd[0],
@@ -638,7 +648,9 @@ def main():
                                 if args.sgx:
                                     lskv_config.sgx = True
                                     store = LSKVStore(bench_dir, lskv_config)
-                                    timings_file = run_benchmark(store, bench_cmd)
+                                    timings_file = run_benchmark(
+                                        store,
+                                    )
                                     run_metrics(
                                         store.config.to_str(),
                                         bench_cmd[0],
