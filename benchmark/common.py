@@ -10,6 +10,7 @@ import logging
 import os
 from typing import List
 import abc
+import argparse
 import time
 from subprocess import Popen
 import typing_extensions
@@ -160,6 +161,14 @@ class Benchmark(abc.ABC):
         """
         raise NotImplementedError
 
+
+def get_argument_parser()->argparse.ArgumentParser:
+    """
+    Get the default argument parser with common flags.
+    """
+    parser = argparse.ArgumentParser(description="Benchmark")
+    parser.add_argument("-v", "--verbose", action="store_true", help="verbose output")
+    return parser
 
 # want runs to take a limited number of seconds if they can handle the rate
 DESIRED_DURATION_S = 20

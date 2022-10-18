@@ -20,6 +20,7 @@ from typing import List
 import cimetrics.upload  # type: ignore
 import pandas as pd  # type: ignore
 
+import common
 from common import Benchmark, Config, Store, wait_with_timeout, DESIRED_DURATION_S
 from stores import EtcdStore, LSKVStore
 
@@ -245,8 +246,7 @@ def get_arguments():
     """
     Parse command line arguments.
     """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-v", "--verbose", action="store_true", help="verbose output")
+    parser = common.get_argument_parser()
     parser.add_argument("--sgx", action="store_true")
     parser.add_argument("--no-sgx", action="store_true")
     parser.add_argument("--no-tls", action="store_true")
