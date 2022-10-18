@@ -35,7 +35,6 @@ class EtcdConfig(common.Config):
     """
 
     bench_args: List[str]
-    name: str
     clients: int
     connections: int
     prefill_num_keys: int
@@ -350,7 +349,7 @@ def make_configurations(args: argparse.Namespace) -> List[EtcdConfig]:
                                 logging.debug("adding insecure etcd")
                                 etcd_config = EtcdConfig(
                                     bench_args=bench_args,
-                                    name="etcd",
+                                    store="etcd",
                                     port=port,
                                     tls=False,
                                     sgx=False,
@@ -366,7 +365,7 @@ def make_configurations(args: argparse.Namespace) -> List[EtcdConfig]:
                             logging.debug("adding tls etcd")
                             etcd_config = EtcdConfig(
                                 bench_args=bench_args,
-                                name="etcd",
+                                store="etcd",
                                 port=port,
                                 tls=True,
                                 sgx=False,
@@ -385,7 +384,7 @@ def make_configurations(args: argparse.Namespace) -> List[EtcdConfig]:
                                 )
                                 lskv_config = EtcdConfig(
                                     bench_args=bench_args,
-                                    name="lskv",
+                                    store="lskv",
                                     port=port,
                                     tls=True,
                                     sgx=False,

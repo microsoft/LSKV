@@ -28,6 +28,7 @@ class Config(abc.ABC):
     Store of config to setup and run a benchmark instance.
     """
 
+    store: str
     port: int
     tls: bool
     sgx: bool
