@@ -64,8 +64,12 @@ class YCSBenchmark(common.Benchmark):
             "etcd",
             "--prop",
             f"etcd.endpoints={self.config.scheme()}://127.0.0.1:{self.config.port}",
+            "--prop",
+            "measurementtype=raw",
+            "--prop",
+            f"measurement.raw.output_file={timings_file}",
             "--property_file",
-            self.config.workload,
+            self.path_to_workload(),
         ]
         logging.debug("load cmd: %s", bench)
         if self.config.tls:
@@ -90,8 +94,12 @@ class YCSBenchmark(common.Benchmark):
             "etcd",
             "--prop",
             f"etcd.endpoints={self.config.scheme()}://127.0.0.1:{self.config.port}",
+            "--prop",
+            "measurementtype=raw",
+            "--prop",
+            f"measurement.raw.output_file={timings_file}",
             "--property_file",
-            self.config.workload,
+            self.path_to_workload(),
         ]
         if self.config.tls:
             bench += [
@@ -103,6 +111,12 @@ class YCSBenchmark(common.Benchmark):
                 f"etcd.key_file={store.key()}",
             ]
         return bench
+
+    def path_to_workload(self) -> str:
+        """
+        Return the path to the workload file.
+        """
+        return os.path.join("3rdparty/go-ycsb/workloads", self.config.workload)
 
 
 def run_benchmark(config: YCSBConfig, store: Store, benchmark: YCSBenchmark) -> str:
@@ -153,6 +167,9 @@ def run_metrics(name: str, cmd: str, file: str):
     """
     Run metric gathering.
     """
+    if not os.path.exists(file):
+        logging.warning("no metrics file found at %s", file)
+        return
     data = pd.read_csv(file)
 
     start = data["start_micros"].min()
@@ -230,7 +247,7 @@ def make_configurations(args: argparse.Namespace) -> List[YCSBConfig]:
     port = 8000
 
     for workload in ["a", "b", "c", "d", "e", "f"]:
-        workload = f"3rdparty/go-ycsb/workloads/workload{workload}"
+        workload = f"workload{workload}"
         logging.debug("adding workload: %s", workload)
         if args.insecure:
             logging.debug("adding insecure etcd")
