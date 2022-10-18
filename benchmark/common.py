@@ -6,15 +6,18 @@
 Common module for benchmark utils.
 """
 
-import logging
-from dataclasses import dataclass, asdict
-import os
-import copy
-from typing import List
 import abc
 import argparse
+import copy
+import logging
+import os
+import shutil
 import time
+from dataclasses import asdict, dataclass
 from subprocess import Popen
+from typing import Callable, List, TypeVar
+
+import cimetrics.upload  # type: ignore
 import typing_extensions
 
 # want runs to take a limited number of seconds if they can handle the rate
@@ -35,12 +38,11 @@ class Config:
     sgx: bool
     worker_threads: int
 
-    @abc.abstractmethod
     def bench_name(self) -> str:
         """
         Get the name of the benchmark.
         """
-        raise NotImplementedError
+        return "base"
 
     def output_dir(self) -> str:
         """
@@ -288,14 +290,13 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
 
     return configs
 
-def run(cmd: List[str], name:str, output_dir:str) -> Popen:
+
+def run(cmd: List[str], name: str, output_dir: str):
     """
     Make a popen object from a command.
     """
     logging.debug("running cmd: %s", cmd)
-    with open(
-        os.path.join(output_dir, f"{name}.out"), "w", encoding="utf-8"
-    ) as out:
+    with open(os.path.join(output_dir, f"{name}.out"), "w", encoding="utf-8") as out:
         with open(
             os.path.join(output_dir, f"{name}.err"),
             "w",
@@ -304,3 +305,38 @@ def run(cmd: List[str], name:str, output_dir:str) -> Popen:
             # pylint: disable=consider-using-with
             proc = Popen(cmd, stdout=out, stderr=err)
             wait_with_timeout(proc, name=name)
+
+
+C = TypeVar("C", bound=Config)
+
+
+def main(
+    benchmark: str,
+    get_arguments: Callable[[], argparse.Namespace],
+    make_configurations:Callable[[argparse.Namespace], List[C]],
+    execute_config:Callable[[C], None],
+):
+    """
+    Run everything.
+    """
+    args = get_arguments()
+
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    bench_dir = os.path.join(BENCH_DIR, benchmark)
+
+    # make the bench directory
+    shutil.rmtree(bench_dir, ignore_errors=True)
+    os.makedirs(bench_dir)
+
+    configs = make_configurations(args)
+
+    logging.debug("made %d configurations", len(configs))
+
+    for i, config in enumerate(configs):
+        logging.info("executing config %d/%d: %s", i + 1, len(configs), config)
+        execute_config(config)
+
+    with cimetrics.upload.metrics():
+        pass

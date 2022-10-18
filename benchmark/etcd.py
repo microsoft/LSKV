@@ -9,7 +9,6 @@ Run benchmarks in various configurations for each defined datastore.
 import argparse
 import logging
 import os
-import shutil
 import subprocess
 import time
 from dataclasses import dataclass, field, asdict
@@ -25,7 +24,6 @@ from stores import EtcdStore, LSKVStore
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
 
-BENCH_DIR = os.path.join(common.BENCH_DIR, "etcd")
 
 # pylint: disable=too-many-instance-attributes
 @dataclass
@@ -338,30 +336,5 @@ def make_configurations(args: argparse.Namespace) -> List[EtcdConfig]:
     return configs
 
 
-def main():
-    """
-    Run everything.
-    """
-    args = get_arguments()
-
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-
-    # make the bench directory
-    shutil.rmtree(BENCH_DIR, ignore_errors=True)
-    os.makedirs(BENCH_DIR)
-
-    configs = make_configurations(args)
-
-    logging.debug("made %d configurations", len(configs))
-
-    for i, config in enumerate(configs):
-        logging.info("executing config %d/%d: %s", i + 1, len(configs), config)
-        execute_config(config)
-
-    with cimetrics.upload.metrics():
-        pass
-
-
 if __name__ == "__main__":
-    main()
+    common.main("etcd", get_arguments, make_configurations, execute_config)

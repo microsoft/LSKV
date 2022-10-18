@@ -9,11 +9,8 @@ Run benchmarks in various configurations for each defined datastore.
 import argparse
 import logging
 import os
-import shutil
 from dataclasses import dataclass, asdict
 from typing import List
-
-import cimetrics.upload  # type: ignore
 
 import common
 from common import Store
@@ -126,7 +123,6 @@ def run_benchmark(config: YCSBConfig, store: Store, benchmark: YCSBenchmark) -> 
         common.run(load_cmd, "load", config.output_dir())
         logging.info("finished load phase")
 
-
         logging.info("starting benchmark")
         run_cmd = benchmark.run_cmd(store)
         common.run(run_cmd, "bench", config.output_dir())
@@ -147,6 +143,7 @@ def run_metrics(_name: str, _cmd: str, file: str):
         return
     logging.warning("no metrics implemented yet")
 
+
 def get_arguments():
     """
     Parse command line arguments.
@@ -160,6 +157,7 @@ def get_arguments():
     return args
 
 
+# pylint: disable=duplicate-code
 def execute_config(config: YCSBConfig):
     """
     Execute the given configuration.
@@ -198,30 +196,5 @@ def make_configurations(args: argparse.Namespace) -> List[YCSBConfig]:
     return configs
 
 
-def main():
-    """
-    Run everything.
-    """
-    args = get_arguments()
-
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-
-    # make the bench directory
-    shutil.rmtree(BENCH_DIR, ignore_errors=True)
-    os.makedirs(BENCH_DIR)
-
-    configs = make_configurations(args)
-
-    logging.debug("made %d configurations", len(configs))
-
-    for i, config in enumerate(configs):
-        logging.info("executing config %d/%d: %s", i + 1, len(configs), config)
-        execute_config(config)
-
-    with cimetrics.upload.metrics():
-        pass
-
-
 if __name__ == "__main__":
-    main()
+    common.main("ycsb", get_arguments, make_configurations, execute_config)
