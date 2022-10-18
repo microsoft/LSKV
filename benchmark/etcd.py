@@ -304,7 +304,7 @@ def execute_config(config: EtcdConfig):
     """
     Execute the given configuration.
     """
-    store = EtcdStore(config) if config.name == "etcd" else LSKVStore(config)
+    store = EtcdStore(config) if config.store == "etcd" else LSKVStore(config)
     benchmark = EtcdBenchmark(config)
 
     timings_file = run_benchmark(
