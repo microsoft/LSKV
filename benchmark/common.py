@@ -7,6 +7,7 @@ Common module for benchmark utils.
 """
 
 import logging
+from dataclasses import dataclass
 import os
 from typing import List
 import abc
@@ -16,10 +17,16 @@ from subprocess import Popen
 import typing_extensions
 
 
+@dataclass
 class Config(abc.ABC):
     """
     Store of config to setup and run a benchmark instance.
     """
+
+    port: int
+    tls: bool
+    sgx: bool
+    worker_threads: int
 
     def output_dir(self) -> str:
         """
@@ -30,6 +37,13 @@ class Config(abc.ABC):
             logging.info("creating output dir: %s", out_dir)
             os.makedirs(out_dir)
         return out_dir
+
+    @abc.abstractmethod
+    def scheme(self) -> str:
+        """
+        Return the scheme used to connect to this store.
+        """
+        raise NotImplementedError
 
     @abc.abstractmethod
     def to_str(self) -> str:
@@ -162,7 +176,7 @@ class Benchmark(abc.ABC):
         raise NotImplementedError
 
 
-def get_argument_parser()->argparse.ArgumentParser:
+def get_argument_parser() -> argparse.ArgumentParser:
     """
     Get the default argument parser with common flags.
     """
@@ -170,8 +184,10 @@ def get_argument_parser()->argparse.ArgumentParser:
     parser.add_argument("-v", "--verbose", action="store_true", help="verbose output")
     return parser
 
+
 # want runs to take a limited number of seconds if they can handle the rate
 DESIRED_DURATION_S = 20
+
 
 def wait_with_timeout(process: Popen, duration_seconds=2 * DESIRED_DURATION_S, name=""):
     """

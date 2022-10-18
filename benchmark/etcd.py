@@ -21,7 +21,7 @@ import cimetrics.upload  # type: ignore
 import pandas as pd  # type: ignore
 
 import common
-from common import Benchmark, Config, Store, wait_with_timeout, DESIRED_DURATION_S
+from common import Store, wait_with_timeout, DESIRED_DURATION_S
 from stores import EtcdStore, LSKVStore
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
@@ -29,17 +29,13 @@ logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=loggin
 
 # pylint: disable=too-many-instance-attributes
 @dataclass
-class EtcdConfig(Config):
+class EtcdConfig(common.Config):
     """
     Config holds the configuration options for a given benchmark run.
     """
 
     bench_args: List[str]
     name: str
-    port: int
-    tls: bool
-    sgx: bool
-    worker_threads: int
     clients: int
     connections: int
     prefill_num_keys: int
@@ -87,29 +83,32 @@ class EtcdConfig(Config):
         return total
 
 
-class EtcdBenchmark(Benchmark):
+class EtcdBenchmark(common.Benchmark):
     """
     Etcd benchmark.
     """
+
+    def __init__(self, config: EtcdConfig):
+        self.config = config
 
     def run_cmd(self, store: Store) -> List[str]:
         """
         Return the command to run the benchmark for the given store.
         """
-        timings_file = os.path.join(store.config.output_dir(), "timings.csv")
+        timings_file = os.path.join(self.config.output_dir(), "timings.csv")
         bench = [
             "bin/benchmark",
             "--endpoints",
-            f"{store.config.scheme()}://127.0.0.1:{store.config.port}",
+            f"{self.config.scheme()}://127.0.0.1:{self.config.port}",
             "--clients",
-            str(store.config.clients),
+            str(self.config.clients),
             "--conns",
-            str(store.config.connections),
+            str(self.config.connections),
             "--csv-file",
             timings_file,
         ]
-        bench += ["--rate", str(store.config.rate), "--total", str(store.config.total)]
-        if store.config.tls:
+        bench += ["--rate", str(self.config.rate), "--total", str(self.config.total)]
+        if self.config.tls:
             bench += [
                 "--cacert",
                 store.cacert(),
@@ -118,7 +117,7 @@ class EtcdBenchmark(Benchmark):
                 "--key",
                 store.key(),
             ]
-        bench += store.config.bench_args
+        bench += self.config.bench_args
         return bench
 
     def name(self) -> str:
@@ -128,15 +127,15 @@ class EtcdBenchmark(Benchmark):
         return "etcd"
 
 
-def prefill_datastore(store: Store, start: int, end: int):
+def prefill_datastore(config: EtcdConfig, store: Store, start: int, end: int):
     """
     Fill the datastore with a range of keys.
     """
     time.sleep(1)
     client = store.client()
     i = 0
-    num_keys = store.config.prefill_num_keys
-    value_size = store.config.prefill_value_size
+    num_keys = config.prefill_num_keys
+    value_size = config.prefill_value_size
     logging.debug("prefilling %s keys", num_keys)
     end_size = len(str(end))
     if num_keys:
@@ -156,34 +155,34 @@ def prefill_datastore(store: Store, start: int, end: int):
     logging.debug("prefilled %s keys", i)
 
 
-def run_benchmark(store: Store, benchmark: Benchmark) -> str:
+def run_benchmark(config: EtcdConfig, store: Store, benchmark: EtcdBenchmark) -> str:
     """
     Run the benchmark for the given store with the given bench command.
     """
     with store:
         store.wait_for_ready()
 
-        if store.config.bench_args[0] == "range":
+        if config.bench_args[0] == "range":
             # need to prefill the store with data for it to get
-            start = int(store.config.bench_args[1])
-            end = int(store.config.bench_args[2])
+            start = int(config.bench_args[1])
+            end = int(config.bench_args[2])
             logging.info(
                 "prefilling datastore with %s keys in range [%s, %s)",
-                store.config.prefill_num_keys,
+                config.prefill_num_keys,
                 start,
                 end,
             )
-            prefill_datastore(store, start, end)
+            prefill_datastore(config, store, start, end)
 
         logging.info("starting benchmark")
-        timings_file = os.path.join(store.config.output_dir(), "timings.csv")
+        timings_file = os.path.join(config.output_dir(), "timings.csv")
 
         run_cmd = benchmark.run_cmd(store)
         with open(
-            os.path.join(store.config.output_dir(), "bench.out"), "w", encoding="utf-8"
+            os.path.join(config.output_dir(), "bench.out"), "w", encoding="utf-8"
         ) as out:
             with open(
-                os.path.join(store.config.output_dir(), "bench.err"),
+                os.path.join(config.output_dir(), "bench.err"),
                 "w",
                 encoding="utf-8",
             ) as err:
@@ -191,7 +190,7 @@ def run_benchmark(store: Store, benchmark: Benchmark) -> str:
                 proc = Popen(run_cmd, stdout=out, stderr=err)
                 wait_with_timeout(proc, name="benchmark")
 
-        logging.info("stopping benchmark for %s", store.config.to_str())
+        logging.info("stopping benchmark for %s", config.to_str())
 
     return timings_file
 
@@ -310,107 +309,15 @@ def get_arguments():
     return args
 
 
-def run_bench_configuration(
-    benchmark: Benchmark, args: argparse.Namespace, bench_args: List[str]
-):
-    """
-    Run a benchmark configuration.
-    """
-    port = 8000
-    for clients in args.clients:
-        for conns in args.connections:
-            # for prefill_num_keys in get_prefill_num_keys(
-            #     bench_args, args.prefill_num_keys
-            # ):
-            #     for prefill_value_size in get_prefill_num_keys(
-            #         bench_args, args.prefill_value_size
-            #     ):
-            for rate in args.rate:
-                if args.no_tls:
-                    etcd_config = EtcdConfig(
-                        bench_args,
-                        "etcd",
-                        port,
-                        tls=False,
-                        sgx=False,
-                        worker_threads=0,
-                        clients=clients,
-                        connections=conns,
-                        prefill_num_keys=0,
-                        prefill_value_size=0,
-                        rate=rate,
-                    )
-                    store = EtcdStore(etcd_config)
-                    timings_file = run_benchmark(store, benchmark)
-                    run_metrics(store.config.to_str(), bench_args[0], timings_file)
-
-                etcd_config = EtcdConfig(
-                    bench_args,
-                    "etcd",
-                    port,
-                    tls=True,
-                    sgx=False,
-                    worker_threads=0,
-                    clients=clients,
-                    connections=conns,
-                    prefill_num_keys=0,
-                    prefill_value_size=0,
-                    rate=rate,
-                )
-                store = EtcdStore(etcd_config)
-                timings_file = run_benchmark(store, benchmark)
-                run_metrics(store.config.to_str(), bench_args[0], timings_file)
-
-                for worker_threads in args.worker_threads:
-                    lskv_config = EtcdConfig(
-                        bench_args,
-                        "lskv",
-                        port,
-                        tls=True,
-                        sgx=False,
-                        worker_threads=worker_threads,
-                        clients=clients,
-                        connections=conns,
-                        prefill_num_keys=0,
-                        prefill_value_size=0,
-                        rate=rate,
-                    )
-                    if args.no_sgx:
-                        # virtual
-                        store = LSKVStore(lskv_config)
-                        timings_file = run_benchmark(
-                            store,
-                            benchmark,
-                        )
-                        run_metrics(
-                            store.config.to_str(),
-                            bench_args[0],
-                            timings_file,
-                        )
-
-                    # sgx
-                    if args.sgx:
-                        lskv_config.sgx = True
-                        store = LSKVStore(lskv_config)
-                        timings_file = run_benchmark(
-                            store,
-                            benchmark,
-                        )
-                        run_metrics(
-                            store.config.to_str(),
-                            bench_args[0],
-                            timings_file,
-                        )
-
-
 def execute_config(config: EtcdConfig):
     """
     Execute the given configuration.
     """
     store = EtcdStore(config) if config.name == "etcd" else LSKVStore(config)
-    benchmark = EtcdBenchmark()
+    benchmark = EtcdBenchmark(config)
 
     timings_file = run_benchmark(
+        config,
         store,
         benchmark,
     )
@@ -421,7 +328,7 @@ def execute_config(config: EtcdConfig):
     )
 
 
-def make_configurations(args: argparse.Namespace) -> List[Config]:
+def make_configurations(args: argparse.Namespace) -> List[EtcdConfig]:
     """
     Build up a list of configurations to run.
     """
@@ -450,9 +357,9 @@ def make_configurations(args: argparse.Namespace) -> List[Config]:
                             if args.no_tls:
                                 logging.debug("adding no_tls etcd")
                                 etcd_config = EtcdConfig(
-                                    bench_args,
-                                    "etcd",
-                                    port,
+                                    bench_args=bench_args,
+                                    name="etcd",
+                                    port=port,
                                     tls=False,
                                     sgx=False,
                                     worker_threads=0,
@@ -466,9 +373,9 @@ def make_configurations(args: argparse.Namespace) -> List[Config]:
 
                             logging.debug("adding tls etcd")
                             etcd_config = EtcdConfig(
-                                bench_args,
-                                "etcd",
-                                port,
+                                bench_args=bench_args,
+                                name="etcd",
+                                port=port,
                                 tls=True,
                                 sgx=False,
                                 worker_threads=0,
@@ -485,9 +392,9 @@ def make_configurations(args: argparse.Namespace) -> List[Config]:
                                     "adding worker threads: %s", worker_threads
                                 )
                                 lskv_config = EtcdConfig(
-                                    bench_args,
-                                    "lskv",
-                                    port,
+                                    bench_args=bench_args,
+                                    name="lskv",
+                                    port=port,
                                     tls=True,
                                     sgx=False,
                                     worker_threads=worker_threads,
