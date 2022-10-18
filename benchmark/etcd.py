@@ -26,6 +26,7 @@ from stores import EtcdStore, LSKVStore
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
 
+BENCH_DIR = os.path.join(common.BENCH_DIR, "etcd")
 
 # pylint: disable=too-many-instance-attributes
 @dataclass
@@ -51,18 +52,12 @@ class EtcdConfig(common.Config):
         # this is based off the rate so calculate it once we know that.
         self.total = self.calculate_total()
 
-    def to_str(self) -> str:
+    def bench_name(self) -> str:
         """
-        Convert the config to a string.
+        Get the name of the benchmark.
         """
-        config_dict = asdict(self)
-        string_parts = []
-        for k, value in config_dict.items():
-            if isinstance(value, list):
-                string_parts.append(f"{k}={'_'.join(value)}")
-            else:
-                string_parts.append(f"{k}={value}")
-        return ",".join(string_parts)
+        return "etcd"
+
 
     def calculate_total(self) -> int:
         """
@@ -110,13 +105,6 @@ class EtcdBenchmark(common.Benchmark):
             ]
         bench += self.config.bench_args
         return bench
-
-    def name(self) -> str:
-        """
-        Get the name of the benchmark.
-        """
-        return "etcd"
-
 
 def prefill_datastore(config: EtcdConfig, store: Store, start: int, end: int):
     """
@@ -420,8 +408,8 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     # make the bench directory
-    shutil.rmtree(common.BENCH_DIR, ignore_errors=True)
-    os.makedirs(common.BENCH_DIR)
+    shutil.rmtree(BENCH_DIR, ignore_errors=True)
+    os.makedirs(BENCH_DIR)
 
     configs = make_configurations(args)
 

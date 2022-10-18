@@ -34,11 +34,18 @@ class Config(abc.ABC):
     sgx: bool
     worker_threads: int
 
+    @abc.abstractmethod
+    def bench_name(self) -> str:
+        """
+        Get the name of the benchmark.
+        """
+        raise NotImplementedError
+
     def output_dir(self) -> str:
         """
         Return the output directory for this datastore.
         """
-        out_dir = os.path.join(BENCH_DIR, self.to_str())
+        out_dir = os.path.join(BENCH_DIR, self.bench_name(), self.to_str())
         if not os.path.exists(out_dir):
             logging.info("creating output dir: %s", out_dir)
             os.makedirs(out_dir)
@@ -176,14 +183,6 @@ class Benchmark(abc.ABC):
         """
         # not everything needs setup
         return []
-
-    @abc.abstractmethod
-    def name(self) -> str:
-        """
-        Get the name of the benchmark.
-        """
-        raise NotImplementedError
-
 
 def get_argument_parser() -> argparse.ArgumentParser:
     """
