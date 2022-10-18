@@ -212,10 +212,6 @@ def get_arguments():
     Parse command line arguments.
     """
     parser = common.get_argument_parser()
-    parser.add_argument("--sgx", action="store_true")
-    parser.add_argument("--virtual", action="store_true")
-    parser.add_argument("--insecure", action="store_true")
-    parser.add_argument("--worker-threads", action="extend", nargs="+", type=int)
     parser.add_argument("--clients", action="extend", nargs="+", type=int)
     parser.add_argument("--connections", action="extend", nargs="+", type=int)
     parser.add_argument(
