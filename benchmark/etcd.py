@@ -248,7 +248,7 @@ def get_arguments():
     parser = common.get_argument_parser()
     parser.add_argument("--sgx", action="store_true")
     parser.add_argument("--virtual", action="store_true")
-    parser.add_argument("--no-tls", action="store_true")
+    parser.add_argument("--insecure", action="store_true")
     parser.add_argument("--worker-threads", action="extend", nargs="+", type=int)
     parser.add_argument("--clients", action="extend", nargs="+", type=int)
     parser.add_argument("--connections", action="extend", nargs="+", type=int)
@@ -354,8 +354,8 @@ def make_configurations(args: argparse.Namespace) -> List[EtcdConfig]:
                         )
                         for rate in args.rate:
                             logging.debug("adding rate: %s", rate)
-                            if args.no_tls:
-                                logging.debug("adding no_tls etcd")
+                            if args.insecure:
+                                logging.debug("adding insecure etcd")
                                 etcd_config = EtcdConfig(
                                     bench_args=bench_args,
                                     name="etcd",
