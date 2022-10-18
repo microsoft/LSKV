@@ -65,14 +65,6 @@ class EtcdConfig(common.Config):
                 string_parts.append(f"{k}={value}")
         return ",".join(string_parts)
 
-    def scheme(self) -> str:
-        """
-        Return the scheme for the config.
-        """
-        if self.tls:
-            return "https"
-        return "http"
-
     def calculate_total(self) -> int:
         """
         Return the total number of requests to execute.

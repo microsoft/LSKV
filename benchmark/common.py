@@ -7,7 +7,7 @@ Common module for benchmark utils.
 """
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import os
 from typing import List
 import abc
@@ -43,19 +43,26 @@ class Config(abc.ABC):
             os.makedirs(out_dir)
         return out_dir
 
-    @abc.abstractmethod
     def scheme(self) -> str:
         """
         Return the scheme used to connect to this store.
         """
-        raise NotImplementedError
+        if self.tls:
+            return "https"
+        return "http"
 
-    @abc.abstractmethod
     def to_str(self) -> str:
         """
-        Return the string representation of this config.
+        Convert the config to a string.
         """
-        raise NotImplementedError
+        config_dict = asdict(self)
+        string_parts = []
+        for k, value in config_dict.items():
+            if isinstance(value, list):
+                string_parts.append(f"{k}={'_'.join(value)}")
+            else:
+                string_parts.append(f"{k}={value}")
+        return ",".join(string_parts)
 
 
 
