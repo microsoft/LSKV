@@ -6,8 +6,8 @@
 Run benchmarks in various configurations for each defined datastore.
 """
 
-import abc
 import argparse
+import copy
 import logging
 import os
 import shutil
@@ -19,7 +19,8 @@ from typing import List
 
 import cimetrics.upload  # type: ignore
 import pandas as pd  # type: ignore
-import typing_extensions
+
+from common import Benchmark, Config, Store
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
 
@@ -29,7 +30,7 @@ DESIRED_DURATION_S = 20
 
 # pylint: disable=too-many-instance-attributes
 @dataclass
-class Config:
+class EtcdConfig(Config):
     """
     Config holds the configuration options for a given benchmark run.
     """
@@ -87,134 +88,6 @@ class Config:
         return total
 
 
-class Store(abc.ABC):
-    """
-    The base store for running benchmarks against.
-    """
-
-    def __init__(self, bench_dir: str, config: Config):
-        self.config = config
-        self.bench_dir = bench_dir
-        self.proc = None
-
-    def __enter__(self):
-        self.proc = self.spawn()
-
-    def __exit__(
-        self, ex_type, ex_value, ex_traceback
-    ) -> typing_extensions.Literal[False]:
-        if self.proc:
-            self.proc.terminate()
-            self.proc.wait()
-            logging.info("stopped %s", self.config.to_str())
-
-        self.cleanup()
-        return False
-
-    @abc.abstractmethod
-    def spawn(self) -> Popen:
-        """
-        Spawn the datastore process.
-        """
-        raise NotImplementedError
-
-    def wait_for_ready(self):
-        """
-        Wait for the datastore to be ready to accept requests.
-        """
-        self._wait_for_ready(self.config.port)
-
-    def _wait_for_ready(self, port: int, tries=60) -> bool:
-        client = self.client()
-        for i in range(0, tries):
-            logging.debug("running ready check with cmd %s", client)
-            # pylint: disable=consider-using-with
-            proc = Popen(client + ["get", "missing key"])
-            if proc.wait() == 0:
-                logging.info(
-                    "finished waiting for port (%s) to be open, try %s", port, i
-                )
-                return True
-            logging.info("waiting for port (%s) to be open, try %s", port, i)
-            time.sleep(1)
-        logging.error("took too long waiting for port %s (%ss)", port, tries)
-        return False
-
-    def output_dir(self) -> str:
-        """
-        Return the output directory for this datastore.
-        """
-        out_dir = os.path.join(self.bench_dir, self.config.to_str())
-        if not os.path.exists(out_dir):
-            logging.info("creating output dir: %s", out_dir)
-            os.makedirs(out_dir)
-        return out_dir
-
-    def cleanup(self):
-        """
-        Cleanup resources used for this datastore.
-        """
-        # no cleanup for the base class to do and not a required method
-
-    @abc.abstractmethod
-    def key(self) -> str:
-        """
-        Return the path to the key for the client certificate.
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def cert(self) -> str:
-        """
-        Return the path to the client certificate.
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def cacert(self) -> str:
-        """
-        Return the path to the CA certificate.
-        """
-        raise NotImplementedError
-
-    # get the etcd client for this datastore
-    def client(self) -> List[str]:
-        """
-        Get the etcdctl client command for this datastore.
-        """
-        return [
-            "bin/etcdctl",
-            "--endpoints",
-            f"{self.config.scheme()}://127.0.0.1:{self.config.port}",
-            "--cacert",
-            self.cacert(),
-            "--cert",
-            self.cert(),
-            "--key",
-            self.key(),
-        ]
-
-
-class Benchmark(abc.ABC):
-    """
-    Type of benchmark to run.
-    """
-
-    def setup_cmd(self, _store: Store) -> List[str]:
-        """
-        Return the command to setup the benchmark.
-        """
-        # not everything needs setup
-        return []
-
-    @abc.abstractmethod
-    def run_cmd(self, store: Store) -> List[str]:
-        """
-        Return the command to run the benchmark.
-        """
-        raise NotImplementedError
-
-
 class EtcdBenchmark(Benchmark):
     """
     Etcd benchmark.
@@ -224,7 +97,7 @@ class EtcdBenchmark(Benchmark):
         """
         Return the command to run the benchmark for the given store.
         """
-        timings_file = os.path.join(store.output_dir(), "timings.csv")
+        timings_file = os.path.join(store.config.output_dir(), "timings.csv")
         bench = [
             "bin/benchmark",
             "--endpoints",
@@ -249,37 +122,11 @@ class EtcdBenchmark(Benchmark):
         bench += store.config.bench_args
         return bench
 
-
-class YCSB(Benchmark):
-    """
-    Yahoo!'s cloud serving benchmark
-    """
-
-    def setup_cmd(self, _store: Store) -> List[str]:
+    def name(self) -> str:
         """
-        Setup the YCSB benchmark.
+        Get the name of the benchmark.
         """
-        load = [
-            "bin/go-ycsb",
-            "load",
-            "etcd",
-            "-P",
-            "workload",
-        ]
-        return load
-
-    def run_cmd(self, store: Store) -> List[str]:
-        """
-        Return the command to run the benchmark for the given store.
-        """
-        bench = [
-            "bin/go-ycsb",
-            "run",
-            "etcd",
-            "-P",
-        ]
-        bench += store.config.bench_args
-        return bench
+        return "etcd"
 
 
 class EtcdStore(Store):
@@ -288,13 +135,15 @@ class EtcdStore(Store):
     """
 
     def spawn(self) -> Popen:
-        logging.info("spawning %s", self.config.to_str())
+        logging.debug("spawning etcd")
         client_urls = f"{self.config.scheme()}://127.0.0.1:{self.config.port}"
         with open(
-            os.path.join(self.output_dir(), "node.out"), "w", encoding="utf-8"
+            os.path.join(self.config.output_dir(), "node.out"), "w", encoding="utf-8"
         ) as out:
             with open(
-                os.path.join(self.output_dir(), "node.err"), "w", encoding="utf-8"
+                os.path.join(self.config.output_dir(), "node.err"),
+                "w",
+                encoding="utf-8",
             ) as err:
                 etcd_cmd = [
                     "bin/etcd",
@@ -342,12 +191,14 @@ class LSKVStore(Store):
     """
 
     def spawn(self) -> Popen:
-        logging.info("spawning %s", self.config.to_str())
+        logging.info("spawning lskv")
         with open(
-            os.path.join(self.output_dir(), "node.out"), "w", encoding="utf-8"
+            os.path.join(self.config.output_dir(), "node.out"), "w", encoding="utf-8"
         ) as out:
             with open(
-                os.path.join(self.output_dir(), "node.err"), "w", encoding="utf-8"
+                os.path.join(self.config.output_dir(), "node.err"),
+                "w",
+                encoding="utf-8",
             ) as err:
                 libargs = ["build/liblskv.virtual.so"]
                 if self.config.sgx:
@@ -372,7 +223,7 @@ class LSKVStore(Store):
         """
         Return the workspace directory for this store.
         """
-        return os.path.join(os.getcwd(), self.output_dir(), "workspace")
+        return os.path.join(os.getcwd(), self.config.output_dir(), "workspace")
 
     def cacert(self) -> str:
         """
@@ -401,7 +252,7 @@ def wait_with_timeout(process: Popen, duration_seconds=2 * DESIRED_DURATION_S, n
         res = process.poll()
         if res is None:
             # process still running
-            logging.info("waiting for %s process to complete, try %s", name, i)
+            logging.debug("waiting for %s process to complete, try %s", name, i)
             time.sleep(1)
         else:
             # process finished
@@ -433,7 +284,7 @@ def prefill_datastore(store: Store, start: int, end: int):
     i = 0
     num_keys = store.config.prefill_num_keys
     value_size = store.config.prefill_value_size
-    logging.info("prefilling %s keys", num_keys)
+    logging.debug("prefilling %s keys", num_keys)
     end_size = len(str(end))
     if num_keys:
         for k in range(start, end, (end - start) // num_keys):
@@ -449,7 +300,7 @@ def prefill_datastore(store: Store, start: int, end: int):
             )
             if proc.wait() != 0:
                 raise Exception("failed to fill datastore")
-    logging.info("prefilled %s keys", i)
+    logging.debug("prefilled %s keys", i)
 
 
 def run_benchmark(store: Store, benchmark: Benchmark) -> str:
@@ -471,24 +322,17 @@ def run_benchmark(store: Store, benchmark: Benchmark) -> str:
             )
             prefill_datastore(store, start, end)
 
-        logging.info("starting benchmark for %s", store.config.to_str())
-        timings_file = os.path.join(store.output_dir(), "timings.csv")
-
-        setup_cmd = benchmark.setup_cmd(store)
-        if setup_cmd:
-            logging.info("running setup command: %s", setup_cmd)
-            # pylint: disable=consider-using-with
-            proc = Popen(
-                setup_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
-            wait_with_timeout(proc, name="setup")
+        logging.info("starting benchmark")
+        timings_file = os.path.join(store.config.output_dir(), "timings.csv")
 
         run_cmd = benchmark.run_cmd(store)
         with open(
-            os.path.join(store.output_dir(), "bench.out"), "w", encoding="utf-8"
+            os.path.join(store.config.output_dir(), "bench.out"), "w", encoding="utf-8"
         ) as out:
             with open(
-                os.path.join(store.output_dir(), "bench.err"), "w", encoding="utf-8"
+                os.path.join(store.config.output_dir(), "bench.err"),
+                "w",
+                encoding="utf-8",
             ) as err:
                 # pylint: disable=consider-using-with
                 proc = Popen(run_cmd, stdout=out, stderr=err)
@@ -550,6 +394,7 @@ def get_arguments():
     Parse command line arguments.
     """
     parser = argparse.ArgumentParser()
+    parser.add_argument("-v", "--verbose", action="store_true", help="verbose output")
     parser.add_argument("--sgx", action="store_true")
     parser.add_argument("--no-sgx", action="store_true")
     parser.add_argument("--no-tls", action="store_true")
@@ -613,40 +458,147 @@ def get_arguments():
     return args
 
 
-def main():
+def run_bench_configuration(
+    benchmark: Benchmark, args: argparse.Namespace, bench_args: List[str]
+):
     """
-    Run everything.
+    Run a benchmark configuration.
     """
-    args = get_arguments()
-
+    port = 8000
     bench_dir = "bench"
+    for clients in args.clients:
+        for conns in args.connections:
+            # for prefill_num_keys in get_prefill_num_keys(
+            #     bench_args, args.prefill_num_keys
+            # ):
+            #     for prefill_value_size in get_prefill_num_keys(
+            #         bench_args, args.prefill_value_size
+            #     ):
+            for rate in args.rate:
+                if args.no_tls:
+                    etcd_config = EtcdConfig(
+                        bench_args,
+                        "etcd",
+                        port,
+                        tls=False,
+                        sgx=False,
+                        worker_threads=0,
+                        clients=clients,
+                        connections=conns,
+                        prefill_num_keys=0,
+                        prefill_value_size=0,
+                        rate=rate,
+                    )
+                    store = EtcdStore(etcd_config)
+                    timings_file = run_benchmark(store, benchmark)
+                    run_metrics(store.config.to_str(), bench_args[0], timings_file)
+
+                etcd_config = EtcdConfig(
+                    bench_args,
+                    "etcd",
+                    port,
+                    tls=True,
+                    sgx=False,
+                    worker_threads=0,
+                    clients=clients,
+                    connections=conns,
+                    prefill_num_keys=0,
+                    prefill_value_size=0,
+                    rate=rate,
+                )
+                store = EtcdStore(etcd_config)
+                timings_file = run_benchmark(store, benchmark)
+                run_metrics(store.config.to_str(), bench_args[0], timings_file)
+
+                for worker_threads in args.worker_threads:
+                    lskv_config = EtcdConfig(
+                        bench_args,
+                        "lskv",
+                        port,
+                        tls=True,
+                        sgx=False,
+                        worker_threads=worker_threads,
+                        clients=clients,
+                        connections=conns,
+                        prefill_num_keys=0,
+                        prefill_value_size=0,
+                        rate=rate,
+                    )
+                    if args.no_sgx:
+                        # virtual
+                        store = LSKVStore(lskv_config)
+                        timings_file = run_benchmark(
+                            store,
+                            benchmark,
+                        )
+                        run_metrics(
+                            store.config.to_str(),
+                            bench_args[0],
+                            timings_file,
+                        )
+
+                    # sgx
+                    if args.sgx:
+                        lskv_config.sgx = True
+                        store = LSKVStore(lskv_config)
+                        timings_file = run_benchmark(
+                            store,
+                            benchmark,
+                        )
+                        run_metrics(
+                            store.config.to_str(),
+                            bench_args[0],
+                            timings_file,
+                        )
+
+
+def execute_config(config: EtcdConfig):
+    """
+    Execute the given configuration.
+    """
+    store = EtcdStore(config) if config.name == "etcd" else LSKVStore(config)
+    benchmark = EtcdBenchmark()
+
+    timings_file = run_benchmark(
+        store,
+        benchmark,
+    )
+    run_metrics(
+        config.to_str(),
+        config.bench_args[0],
+        timings_file,
+    )
+
+
+def make_configurations(args: argparse.Namespace) -> List[Config]:
+    """
+    Build up a list of configurations to run.
+    """
+    configs = []
     port = 8000
 
-    # make the bench directory
-    shutil.rmtree(bench_dir, ignore_errors=True)
-    os.makedirs(bench_dir)
-
-    # pylint: disable=too-many-nested-blocks
+    # pylint disable=too-many-nested-blocks
     for bench_args in args.bench_args:
-        logging.info("benching with extra args %s", bench_args)
-
-        bench_args_string = "_".join(bench_args)
-        bench_dir = os.path.join(bench_dir, bench_args_string)
-        os.makedirs(bench_dir)
-
-        benchmark = EtcdBenchmark()
-
+        logging.debug("adding bench-args: %s", bench_args)
         for clients in args.clients:
+            logging.debug("adding clients: %s", clients)
             for conns in args.connections:
+                logging.debug("adding connections: %s", conns)
                 for prefill_num_keys in get_prefill_num_keys(
                     bench_args, args.prefill_num_keys
                 ):
+                    logging.debug("adding prefill_num_keys: %s", prefill_num_keys)
                     for prefill_value_size in get_prefill_num_keys(
                         bench_args, args.prefill_value_size
                     ):
+                        logging.debug(
+                            "adding prefill_value_size: %s", prefill_value_size
+                        )
                         for rate in args.rate:
+                            logging.debug("adding rate: %s", rate)
                             if args.no_tls:
-                                etcd_config = Config(
+                                logging.debug("adding no_tls etcd")
+                                etcd_config = EtcdConfig(
                                     bench_args,
                                     "etcd",
                                     port,
@@ -659,13 +611,10 @@ def main():
                                     prefill_value_size=prefill_value_size,
                                     rate=rate,
                                 )
-                                store = EtcdStore(bench_dir, etcd_config)
-                                timings_file = run_benchmark(store, benchmark)
-                                run_metrics(
-                                    store.config.to_str(), bench_args[0], timings_file
-                                )
+                                configs.append(etcd_config)
 
-                            etcd_config = Config(
+                            logging.debug("adding tls etcd")
+                            etcd_config = EtcdConfig(
                                 bench_args,
                                 "etcd",
                                 port,
@@ -678,14 +627,13 @@ def main():
                                 prefill_value_size=prefill_value_size,
                                 rate=rate,
                             )
-                            store = EtcdStore(bench_dir, etcd_config)
-                            timings_file = run_benchmark(store, benchmark)
-                            run_metrics(
-                                store.config.to_str(), bench_args[0], timings_file
-                            )
+                            configs.append(etcd_config)
 
                             for worker_threads in args.worker_threads:
-                                lskv_config = Config(
+                                logging.debug(
+                                    "adding worker threads: %s", worker_threads
+                                )
+                                lskv_config = EtcdConfig(
                                     bench_args,
                                     "lskv",
                                     port,
@@ -700,30 +648,41 @@ def main():
                                 )
                                 if args.no_sgx:
                                     # virtual
-                                    store = LSKVStore(bench_dir, lskv_config)
-                                    timings_file = run_benchmark(
-                                        store,
-                                        benchmark,
-                                    )
-                                    run_metrics(
-                                        store.config.to_str(),
-                                        bench_args[0],
-                                        timings_file,
-                                    )
+                                    logging.debug("adding no_sgx lskv")
+                                    configs.append(lskv_config)
 
                                 # sgx
                                 if args.sgx:
+                                    logging.debug("adding sgx lskv")
+                                    lskv_config = copy.deepcopy(lskv_config)
                                     lskv_config.sgx = True
-                                    store = LSKVStore(bench_dir, lskv_config)
-                                    timings_file = run_benchmark(
-                                        store,
-                                        benchmark,
-                                    )
-                                    run_metrics(
-                                        store.config.to_str(),
-                                        bench_args[0],
-                                        timings_file,
-                                    )
+                                    configs.append(lskv_config)
+
+    return configs
+
+
+def main():
+    """
+    Run everything.
+    """
+    args = get_arguments()
+
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    bench_dir = "bench"
+
+    # make the bench directory
+    shutil.rmtree(bench_dir, ignore_errors=True)
+    os.makedirs(bench_dir)
+
+    configs = make_configurations(args)
+
+    logging.debug("made %d configurations", len(configs))
+
+    for i, config in enumerate(configs):
+        logging.info("executing config %d/%d: %s", i + 1, len(configs), config)
+        execute_config(config)
 
     with cimetrics.upload.metrics():
         pass
