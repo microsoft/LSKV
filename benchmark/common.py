@@ -16,6 +16,11 @@ import time
 from subprocess import Popen
 import typing_extensions
 
+# want runs to take a limited number of seconds if they can handle the rate
+DESIRED_DURATION_S = 20
+
+BENCH_DIR = "bench"
+
 
 @dataclass
 class Config(abc.ABC):
@@ -32,7 +37,7 @@ class Config(abc.ABC):
         """
         Return the output directory for this datastore.
         """
-        out_dir = os.path.join(self.bench_dir(), self.to_str())
+        out_dir = os.path.join(BENCH_DIR, self.to_str())
         if not os.path.exists(out_dir):
             logging.info("creating output dir: %s", out_dir)
             os.makedirs(out_dir)
@@ -52,11 +57,7 @@ class Config(abc.ABC):
         """
         raise NotImplementedError
 
-    def bench_dir(self) -> str:
-        """
-        Return the benchmark directory.
-        """
-        return "bench"
+
 
 
 class Store(abc.ABC):
@@ -185,8 +186,6 @@ def get_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
-# want runs to take a limited number of seconds if they can handle the rate
-DESIRED_DURATION_S = 20
 
 
 def wait_with_timeout(process: Popen, duration_seconds=2 * DESIRED_DURATION_S, name=""):

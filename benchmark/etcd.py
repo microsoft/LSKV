@@ -428,11 +428,9 @@ def main():
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    bench_dir = "bench"
-
     # make the bench directory
-    shutil.rmtree(bench_dir, ignore_errors=True)
-    os.makedirs(bench_dir)
+    shutil.rmtree(common.BENCH_DIR, ignore_errors=True)
+    os.makedirs(common.BENCH_DIR)
 
     configs = make_configurations(args)
 
