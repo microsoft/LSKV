@@ -428,7 +428,7 @@ def make_configurations(args: argparse.Namespace) -> List[Config]:
     configs = []
     port = 8000
 
-    # pylint disable=too-many-nested-blocks
+    # pylint: disable=too-many-nested-blocks
     for bench_args in args.bench_args:
         logging.debug("adding bench-args: %s", bench_args)
         for clients in args.clients:
