@@ -263,9 +263,9 @@ def get_arguments():
     if not args.bench_args:
         args.bench_args = [
             ["put"],
-            ["range", "0000", "1000"],
-            ["txn-put"],
-            ["txn-mixed", "txn-mixed-key"],
+            # ["range", "0000", "1000"],
+            # ["txn-put"],
+            # ["txn-mixed", "txn-mixed-key"],
         ]
 
     return args
