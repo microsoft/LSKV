@@ -2,8 +2,8 @@ name: PR Assignee
 
 on:
   pull_request_target:
-    # types:
-    # - opened
+    types:
+      - opened
 
 jobs:
   assign:
@@ -20,6 +20,6 @@ jobs:
 
       - name: Assign PR to author
         run: |
-          gh pr edit ${{ github.ref }} --add-assignee ${{ github.event.pull_request.user.login }}
+          gh pr edit ${{ github.event.number }} --add-assignee ${{ github.event.user.login }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
