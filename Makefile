@@ -71,18 +71,21 @@ $(BIN_DIR)/etcd:
 
 $(BIN_DIR)/etcdctl: $(BIN_DIR)/etcd
 
+$(BIN_DIR)/go-ycsb:
+	cd 3rdparty/go-ycsb && make && mv bin/go-ycsb ../../bin/.
+
 .PHONY: benchmark-virtual
 benchmark-virtual: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual .venv certs
-	. .venv/bin/activate && python3 benchmark.py --no-sgx
+	. .venv/bin/activate && python3 benchmark/etcd.py --virtual
 
 
 .PHONY: benchmark-sgx
 benchmark-sgx: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual build-sgx .venv certs
-	. .venv/bin/activate && python3 benchmark.py --sgx
+	. .venv/bin/activate && python3 benchmark/etcd.py --sgx
 
 .PHONY: benchmark-all
 benchmark-all: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual build-sgx .venv certs
-	. .venv/bin/activate && python3 benchmark.py --sgx --no-sgx --no-tls --worker-threads 0 2 4 8 --clients 1 10 100 --connections 1 10 100 --prefill-num-keys 0 10 100 1000 --prefill-value-size 10 40 160 640 --rate 10 100 1000
+	. .venv/bin/activate && python3 benchmark/etcd.py --sgx --virtual --insecure --worker-threads 0 2 4 8 --clients 1 10 100 --connections 1 10 100 --prefill-num-keys 0 10 100 1000 --prefill-value-size 10 40 160 640 --rate 10 100 1000
 
 .venv: requirements.txt
 	python3 -m venv .venv
