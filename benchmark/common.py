@@ -9,6 +9,7 @@ Common module for benchmark utils.
 import logging
 from dataclasses import dataclass, asdict
 import os
+import copy
 from typing import List
 import abc
 import argparse
@@ -23,7 +24,7 @@ BENCH_DIR = "bench"
 
 
 @dataclass
-class Config(abc.ABC):
+class Config:
     """
     Store of config to setup and run a benchmark instance.
     """
@@ -71,8 +72,6 @@ class Config(abc.ABC):
             else:
                 string_parts.append(f"{k}={value}")
         return ",".join(string_parts)
-
-
 
 
 class Store(abc.ABC):
@@ -172,6 +171,7 @@ class Store(abc.ABC):
         ]
 
 
+# pylint: disable=too-few-public-methods
 class Benchmark(abc.ABC):
     """
     Type of benchmark to run.
@@ -184,15 +184,27 @@ class Benchmark(abc.ABC):
         # not everything needs setup
         return []
 
+
 def get_argument_parser() -> argparse.ArgumentParser:
     """
     Get the default argument parser with common flags.
     """
     parser = argparse.ArgumentParser(description="Benchmark")
     parser.add_argument("-v", "--verbose", action="store_true", help="verbose output")
+    parser.add_argument("--sgx", action="store_true")
+    parser.add_argument("--virtual", action="store_true")
+    parser.add_argument("--insecure", action="store_true")
+    parser.add_argument("--worker-threads", action="extend", nargs="+", type=int)
     return parser
 
 
+def set_default_args(args: argparse.Namespace):
+    """
+    Set the default arguments for common args.
+    """
+    # set default if not set
+    if not args.worker_threads:
+        args.worker_threads = [0]
 
 
 def wait_with_timeout(process: Popen, duration_seconds=2 * DESIRED_DURATION_S, name=""):
@@ -224,3 +236,71 @@ def wait_with_timeout(process: Popen, duration_seconds=2 * DESIRED_DURATION_S, n
     process.kill()
     process.wait()
     return
+
+
+def make_common_configurations(args: argparse.Namespace) -> List[Config]:
+    """
+    Make the common configurations to run benchmarks against.
+    """
+    port = 8000
+    configs = []
+    if args.insecure:
+        logging.debug("adding insecure etcd")
+        etcd_config = Config(
+            store="etcd",
+            port=port,
+            tls=False,
+            sgx=False,
+            worker_threads=0,
+        )
+        configs.append(etcd_config)
+
+    logging.debug("adding tls etcd")
+    etcd_config = Config(
+        store="etcd",
+        port=port,
+        tls=True,
+        sgx=False,
+        worker_threads=0,
+    )
+    configs.append(etcd_config)
+
+    for worker_threads in args.worker_threads:
+        logging.debug("adding worker threads: %s", worker_threads)
+        lskv_config = Config(
+            store="lskv",
+            port=port,
+            tls=True,
+            sgx=False,
+            worker_threads=worker_threads,
+        )
+        if args.virtual:
+            # virtual
+            logging.debug("adding virtual lskv")
+            configs.append(lskv_config)
+
+        # sgx
+        if args.sgx:
+            logging.debug("adding sgx lskv")
+            lskv_config = copy.deepcopy(lskv_config)
+            lskv_config.sgx = True
+            configs.append(lskv_config)
+
+    return configs
+
+def run(cmd: List[str], name:str, output_dir:str) -> Popen:
+    """
+    Make a popen object from a command.
+    """
+    logging.debug("running cmd: %s", cmd)
+    with open(
+        os.path.join(output_dir, f"{name}.out"), "w", encoding="utf-8"
+    ) as out:
+        with open(
+            os.path.join(output_dir, f"{name}.err"),
+            "w",
+            encoding="utf-8",
+        ) as err:
+            # pylint: disable=consider-using-with
+            proc = Popen(cmd, stdout=out, stderr=err)
+            wait_with_timeout(proc, name=name)

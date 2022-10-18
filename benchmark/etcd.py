@@ -7,13 +7,12 @@ Run benchmarks in various configurations for each defined datastore.
 """
 
 import argparse
-import copy
 import logging
 import os
 import shutil
 import subprocess
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field, asdict
 from subprocess import Popen
 from typing import List
 
@@ -21,7 +20,7 @@ import cimetrics.upload  # type: ignore
 import pandas as pd  # type: ignore
 
 import common
-from common import Store, wait_with_timeout, DESIRED_DURATION_S
+from common import Store, DESIRED_DURATION_S
 from stores import EtcdStore, LSKVStore
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
@@ -57,7 +56,6 @@ class EtcdConfig(common.Config):
         Get the name of the benchmark.
         """
         return "etcd"
-
 
     def calculate_total(self) -> int:
         """
@@ -105,6 +103,7 @@ class EtcdBenchmark(common.Benchmark):
             ]
         bench += self.config.bench_args
         return bench
+
 
 def prefill_datastore(config: EtcdConfig, store: Store, start: int, end: int):
     """
@@ -157,17 +156,7 @@ def run_benchmark(config: EtcdConfig, store: Store, benchmark: EtcdBenchmark) ->
         timings_file = os.path.join(config.output_dir(), "timings.csv")
 
         run_cmd = benchmark.run_cmd(store)
-        with open(
-            os.path.join(config.output_dir(), "bench.out"), "w", encoding="utf-8"
-        ) as out:
-            with open(
-                os.path.join(config.output_dir(), "bench.err"),
-                "w",
-                encoding="utf-8",
-            ) as err:
-                # pylint: disable=consider-using-with
-                proc = Popen(run_cmd, stdout=out, stderr=err)
-                wait_with_timeout(proc, name="benchmark")
+        common.run(run_cmd, "bench", config.output_dir())
 
         logging.info("stopping benchmark for %s", config.to_str())
 
@@ -312,7 +301,6 @@ def make_configurations(args: argparse.Namespace) -> List[EtcdConfig]:
     Build up a list of configurations to run.
     """
     configs = []
-    port = 8000
 
     # pylint: disable=too-many-nested-blocks
     for bench_args in args.bench_args:
@@ -333,67 +321,19 @@ def make_configurations(args: argparse.Namespace) -> List[EtcdConfig]:
                         )
                         for rate in args.rate:
                             logging.debug("adding rate: %s", rate)
-                            if args.insecure:
-                                logging.debug("adding insecure etcd")
-                                etcd_config = EtcdConfig(
-                                    bench_args=bench_args,
-                                    store="etcd",
-                                    port=port,
-                                    tls=False,
-                                    sgx=False,
-                                    worker_threads=0,
+
+                            for common_config in common.make_common_configurations(
+                                args
+                            ):
+                                conf = EtcdConfig(
+                                    **asdict(common_config),
                                     clients=clients,
                                     connections=conns,
                                     prefill_num_keys=prefill_num_keys,
                                     prefill_value_size=prefill_value_size,
                                     rate=rate,
                                 )
-                                configs.append(etcd_config)
-
-                            logging.debug("adding tls etcd")
-                            etcd_config = EtcdConfig(
-                                bench_args=bench_args,
-                                store="etcd",
-                                port=port,
-                                tls=True,
-                                sgx=False,
-                                worker_threads=0,
-                                clients=clients,
-                                connections=conns,
-                                prefill_num_keys=prefill_num_keys,
-                                prefill_value_size=prefill_value_size,
-                                rate=rate,
-                            )
-                            configs.append(etcd_config)
-
-                            for worker_threads in args.worker_threads:
-                                logging.debug(
-                                    "adding worker threads: %s", worker_threads
-                                )
-                                lskv_config = EtcdConfig(
-                                    bench_args=bench_args,
-                                    store="lskv",
-                                    port=port,
-                                    tls=True,
-                                    sgx=False,
-                                    worker_threads=worker_threads,
-                                    clients=clients,
-                                    connections=conns,
-                                    prefill_num_keys=prefill_num_keys,
-                                    prefill_value_size=prefill_value_size,
-                                    rate=rate,
-                                )
-                                if args.virtual:
-                                    # virtual
-                                    logging.debug("adding virtual lskv")
-                                    configs.append(lskv_config)
-
-                                # sgx
-                                if args.sgx:
-                                    logging.debug("adding sgx lskv")
-                                    lskv_config = copy.deepcopy(lskv_config)
-                                    lskv_config.sgx = True
-                                    configs.append(lskv_config)
+                                configs.append(conf)
 
     return configs
 
