@@ -321,6 +321,7 @@ def make_configurations(args: argparse.Namespace) -> List[EtcdConfig]:
                             ):
                                 conf = EtcdConfig(
                                     **asdict(common_config),
+                                    bench_args=bench_args,
                                     clients=clients,
                                     connections=conns,
                                     prefill_num_keys=prefill_num_keys,
