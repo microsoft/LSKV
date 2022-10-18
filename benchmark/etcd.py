@@ -247,7 +247,7 @@ def get_arguments():
     """
     parser = common.get_argument_parser()
     parser.add_argument("--sgx", action="store_true")
-    parser.add_argument("--no-sgx", action="store_true")
+    parser.add_argument("--virtual", action="store_true")
     parser.add_argument("--no-tls", action="store_true")
     parser.add_argument("--worker-threads", action="extend", nargs="+", type=int)
     parser.add_argument("--clients", action="extend", nargs="+", type=int)
@@ -404,9 +404,9 @@ def make_configurations(args: argparse.Namespace) -> List[EtcdConfig]:
                                     prefill_value_size=prefill_value_size,
                                     rate=rate,
                                 )
-                                if args.no_sgx:
+                                if args.virtual:
                                     # virtual
-                                    logging.debug("adding no_sgx lskv")
+                                    logging.debug("adding virtual lskv")
                                     configs.append(lskv_config)
 
                                 # sgx
