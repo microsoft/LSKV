@@ -159,3 +159,37 @@ class Benchmark(abc.ABC):
         Get the name of the benchmark.
         """
         raise NotImplementedError
+
+
+# want runs to take a limited number of seconds if they can handle the rate
+DESIRED_DURATION_S = 20
+
+def wait_with_timeout(process: Popen, duration_seconds=2 * DESIRED_DURATION_S, name=""):
+    """
+    Wait for a process to complete, but timeout after the given duration.
+    """
+    for i in range(0, duration_seconds):
+        res = process.poll()
+        if res is None:
+            # process still running
+            logging.debug("waiting for %s process to complete, try %s", name, i)
+            time.sleep(1)
+        else:
+            # process finished
+            if res == 0:
+                logging.info(
+                    "%s process completed successfully within timeout (took %ss)",
+                    name,
+                    i,
+                )
+            else:
+                logging.error(
+                    "%s process failed within timeout (took %ss): code %s", name, i, res
+                )
+            return
+
+    # didn't finish in time
+    logging.error("killing %s process after timeout of %ss", name, duration_seconds)
+    process.kill()
+    process.wait()
+    return

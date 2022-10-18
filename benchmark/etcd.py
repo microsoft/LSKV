@@ -20,12 +20,10 @@ from typing import List
 import cimetrics.upload  # type: ignore
 import pandas as pd  # type: ignore
 
-from common import Benchmark, Config, Store
+from common import Benchmark, Config, Store, wait_with_timeout, DESIRED_DURATION_S
+from stores import EtcdStore, LSKVStore
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
-
-# want runs to take a limited number of seconds if they can handle the rate
-DESIRED_DURATION_S = 20
 
 
 # pylint: disable=too-many-instance-attributes
@@ -127,152 +125,6 @@ class EtcdBenchmark(Benchmark):
         Get the name of the benchmark.
         """
         return "etcd"
-
-
-class EtcdStore(Store):
-    """
-    A store based on etcd.
-    """
-
-    def spawn(self) -> Popen:
-        logging.debug("spawning etcd")
-        client_urls = f"{self.config.scheme()}://127.0.0.1:{self.config.port}"
-        with open(
-            os.path.join(self.config.output_dir(), "node.out"), "w", encoding="utf-8"
-        ) as out:
-            with open(
-                os.path.join(self.config.output_dir(), "node.err"),
-                "w",
-                encoding="utf-8",
-            ) as err:
-                etcd_cmd = [
-                    "bin/etcd",
-                    "--listen-client-urls",
-                    client_urls,
-                    "--advertise-client-urls",
-                    client_urls,
-                ]
-                if self.config.tls:
-                    etcd_cmd += [
-                        "--cert-file",
-                        "certs/server.pem",
-                        "--key-file",
-                        "certs/server-key.pem",
-                        "--trusted-ca-file",
-                        "certs/ca.pem",
-                    ]
-                return Popen(etcd_cmd, stdout=out, stderr=err)
-
-    def cacert(self) -> str:
-        """
-        Return the path to the CA certificate.
-        """
-        return "certs/ca.pem"
-
-    def cert(self) -> str:
-        """
-        Return the path to the client certificate.
-        """
-        return "certs/client.pem"
-
-    def key(self) -> str:
-        """
-        Return the path to the key for the client certificate.
-        """
-        return "certs/client-key.pem"
-
-    def cleanup(self):
-        shutil.rmtree("default.etcd", ignore_errors=True)
-
-
-class LSKVStore(Store):
-    """
-    A store based on LSKV.
-    """
-
-    def spawn(self) -> Popen:
-        logging.info("spawning lskv")
-        with open(
-            os.path.join(self.config.output_dir(), "node.out"), "w", encoding="utf-8"
-        ) as out:
-            with open(
-                os.path.join(self.config.output_dir(), "node.err"),
-                "w",
-                encoding="utf-8",
-            ) as err:
-                libargs = ["build/liblskv.virtual.so"]
-                if self.config.sgx:
-                    libargs = ["build/liblskv.enclave.so.signed", "-e", "release"]
-                kvs_cmd = (
-                    ["/opt/ccf/bin/sandbox.sh", "-p"]
-                    + libargs
-                    + [
-                        "--worker-threads",
-                        str(self.config.worker_threads),
-                        "--workspace",
-                        self.workspace(),
-                        "--node",
-                        f"local://127.0.0.1:{self.config.port}",
-                        "--verbose",
-                        "--http2",
-                    ]
-                )
-                return Popen(kvs_cmd, stdout=out, stderr=err)
-
-    def workspace(self):
-        """
-        Return the workspace directory for this store.
-        """
-        return os.path.join(os.getcwd(), self.config.output_dir(), "workspace")
-
-    def cacert(self) -> str:
-        """
-        Return the path to the CA certificate.
-        """
-        return f"{self.workspace()}/sandbox_common/service_cert.pem"
-
-    def cert(self) -> str:
-        """
-        Return the path to the client certificate.
-        """
-        return f"{self.workspace()}/sandbox_common/user0_cert.pem"
-
-    def key(self) -> str:
-        """
-        Return the path to the key for the client certificate.
-        """
-        return f"{self.workspace()}/sandbox_common/user0_privk.pem"
-
-
-def wait_with_timeout(process: Popen, duration_seconds=2 * DESIRED_DURATION_S, name=""):
-    """
-    Wait for a process to complete, but timeout after the given duration.
-    """
-    for i in range(0, duration_seconds):
-        res = process.poll()
-        if res is None:
-            # process still running
-            logging.debug("waiting for %s process to complete, try %s", name, i)
-            time.sleep(1)
-        else:
-            # process finished
-            if res == 0:
-                logging.info(
-                    "%s process completed successfully within timeout (took %ss)",
-                    name,
-                    i,
-                )
-            else:
-                logging.error(
-                    "%s process failed within timeout (took %ss): code %s", name, i, res
-                )
-            return
-
-    # didn't finish in time
-    logging.error("killing %s process after timeout of %ss", name, duration_seconds)
-    process.kill()
-    process.wait()
-    return
 
 
 def prefill_datastore(store: Store, start: int, end: int):
@@ -465,7 +317,6 @@ def run_bench_configuration(
     Run a benchmark configuration.
     """
     port = 8000
-    bench_dir = "bench"
     for clients in args.clients:
         for conns in args.connections:
             # for prefill_num_keys in get_prefill_num_keys(
