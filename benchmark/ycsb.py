@@ -154,6 +154,15 @@ def get_arguments():
     parser = common.get_argument_parser()
 
     parser.add_argument(
+        "--workloads",
+        action="extend",
+        nargs="+",
+        type=str,
+        default=[],
+        help="Workload file suffixes to run",
+    )
+
+    parser.add_argument(
         "--rate",
         action="extend",
         nargs="+",
@@ -166,6 +175,8 @@ def get_arguments():
 
     common.set_default_args(args)
 
+    if not args.workloads:
+        args.workloads = ["a", "b", "c", "d", "e", "f"]
     if not args.rate:
         args.rate = [1000]
 
@@ -198,7 +209,7 @@ def make_configurations(args: argparse.Namespace) -> List[YCSBConfig]:
     """
     configs = []
 
-    for workload in ["a", "b", "c", "d", "e", "f"]:
+    for workload in args.workloads:
         workload = f"workload{workload}"
         logging.debug("adding workload: %s", workload)
         for rate in args.rate:
