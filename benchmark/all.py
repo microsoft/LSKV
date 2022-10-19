@@ -13,7 +13,7 @@ logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=loggin
 
 
 def all_etcd_configurations(args:argparse.Namespace)->List[etcd.EtcdConfig]:
-    args.bench_args = ["put"]
+    args.bench_args = [["put"]]
     args.clients = [1, 10, 100]
     args.connections = [1, 10, 100]
     args.rate = [100, 200, 300]
