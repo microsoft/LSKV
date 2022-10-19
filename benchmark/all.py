@@ -36,4 +36,4 @@ def all_ycsb_configurations(args:argparse.Namespace)->List[ycsb.YCSBConfig]:
 
 if __name__== "__main__":
     common.main("etcd", etcd.get_arguments, all_etcd_configurations, etcd.execute_config)
-    common.main("etcd", etcd.get_arguments, all_etcd_configurations, etcd.execute_config)
+    common.main("ycsb", etcd.get_arguments, all_etcd_configurations, etcd.execute_config)
