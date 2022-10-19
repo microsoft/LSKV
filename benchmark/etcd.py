@@ -234,6 +234,7 @@ def get_arguments():
         default=[],
         help="size of the values (in bytes) to use in prefilling for range queries",
     )
+    # pylint: disable=duplicate-code
     parser.add_argument(
         "--rate",
         action="extend",
