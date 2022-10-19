@@ -12,8 +12,16 @@ import argparse
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.DEBUG)
 
 
-def all_etcd_configurations(args:argparse.Namespace)->List[etcd.EtcdConfig]:
-    args.bench_args = [["put"]]
+def all_etcd_configurations(args: argparse.Namespace) -> List[etcd.EtcdConfig]:
+    """
+    Set args for all etcd configurations.
+    """
+    args.bench_args = [
+        ["put"],
+        ["range", "0000", "1000"],
+        ["txn-put"],
+        ["txn-mixed", "txn-mixed-key"],
+    ]
     args.clients = [1, 10, 100]
     args.connections = [1, 10, 100]
     args.rate = [100, 200, 300]
@@ -24,7 +32,11 @@ def all_etcd_configurations(args:argparse.Namespace)->List[etcd.EtcdConfig]:
 
     return etcd.make_configurations(args)
 
-def all_ycsb_configurations(args:argparse.Namespace)->List[ycsb.YCSBConfig]:
+
+def all_ycsb_configurations(args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
+    """
+    Set args for all ycsb configurations.
+    """
     args.workloads = ["a", "b", "c", "d", "e", "f"]
     args.rate = [100, 200, 300]
 
@@ -34,6 +46,11 @@ def all_ycsb_configurations(args:argparse.Namespace)->List[ycsb.YCSBConfig]:
 
     return etcd.make_configurations(args)
 
-if __name__== "__main__":
-    common.main("etcd", etcd.get_arguments, all_etcd_configurations, etcd.execute_config)
-    common.main("ycsb", etcd.get_arguments, all_etcd_configurations, etcd.execute_config)
+
+if __name__ == "__main__":
+    common.main(
+        "etcd", etcd.get_arguments, all_etcd_configurations, etcd.execute_config
+    )
+    common.main(
+        "ycsb", etcd.get_arguments, all_etcd_configurations, etcd.execute_config
+    )
