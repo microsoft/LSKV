@@ -30,6 +30,7 @@ class YCSBConfig(common.Config):
 
     workload: str
     rate: int
+    threads: int
 
     def bench_name(self) -> str:
         """
@@ -87,6 +88,8 @@ class YCSBenchmark(common.Benchmark):
             "etcd",
             "--target",
             str(self.config.rate),
+            "--threads",
+            str(self.config.threads),
             "--prop",
             f"etcd.endpoints={self.config.scheme()}://127.0.0.1:{self.config.port}",
             "--prop",
@@ -170,6 +173,15 @@ def get_arguments():
         default=[],
         help="Maximum requests per second (0 is no limit)",
     )
+    parser.add_argument(
+        "--threads",
+        action="extend",
+        nargs="+",
+        type=int,
+        default=[],
+        help="Threads to use in ycsb",
+    )
+
 
     args = parser.parse_args()
 
@@ -179,6 +191,8 @@ def get_arguments():
         args.workloads = ["a", "b", "c", "d", "e", "f"]
     if not args.rate:
         args.rate = [1000]
+    if not args.threads:
+        args.threads = [1]
 
     return args
 
@@ -214,13 +228,16 @@ def make_configurations(args: argparse.Namespace) -> List[YCSBConfig]:
         logging.debug("adding workload: %s", workload)
         for rate in args.rate:
             logging.debug("adding rate: %s", rate)
-            for common_config in common.make_common_configurations(args):
-                conf = YCSBConfig(
-                    **asdict(common_config),
-                    workload=workload,
-                    rate=rate,
-                )
-                configs.append(conf)
+            for threads in args.threads:
+                logging.debug("adding threads: %s", threads)
+                for common_config in common.make_common_configurations(args):
+                    conf = YCSBConfig(
+                        **asdict(common_config),
+                        workload=workload,
+                        rate=rate,
+                        threads=threads,
+                    )
+                    configs.append(conf)
 
     return configs
 

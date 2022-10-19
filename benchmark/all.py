@@ -39,6 +39,7 @@ def all_ycsb_configurations(args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     """
     args.workloads = ["a", "b", "c", "d", "e", "f"]
     args.rate = [100, 200, 300]
+    args.threads = [1, 2, 4]
 
     args.worker_threads = [1, 2, 4]
     args.virtual = True
