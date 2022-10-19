@@ -167,7 +167,7 @@ def get_arguments():
     common.set_default_args(args)
 
     if not args.rate:
-        args.rate = [0]
+        args.rate = [1000]
 
     return args
 
