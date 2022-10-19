@@ -59,7 +59,7 @@ class YCSBenchmark(common.Benchmark):
             "--prop",
             "measurementtype=raw",
             "--prop",
-            f"measurement.raw.output_file={timings_file}",
+            f"measurement.output_file={timings_file}",
             "--property_file",
             self.path_to_workload(),
         ]
@@ -89,7 +89,7 @@ class YCSBenchmark(common.Benchmark):
             "--prop",
             "measurementtype=raw",
             "--prop",
-            f"measurement.raw.output_file={timings_file}",
+            f"measurement.output_file={timings_file}",
             "--property_file",
             self.path_to_workload(),
         ]
