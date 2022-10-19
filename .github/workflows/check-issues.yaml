@@ -1,4 +1,4 @@
-name: "LSKV Issue checking"
+name: "Issue checking"
 
 on:
   pull_request:
