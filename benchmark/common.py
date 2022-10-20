@@ -25,6 +25,7 @@ DESIRED_DURATION_S = 20
 BENCH_DIR = "bench"
 
 
+# pylint: disable=too-many-instance-attributes
 @dataclass
 class Config:
     """
@@ -290,6 +291,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
     )
     configs.append(etcd_config)
 
+    # pylint: disable=too-many-nested-blocks
     for worker_threads in args.worker_threads:
         logging.debug("adding worker threads: %s", worker_threads)
         for sig_tx_interval in args.sig_tx_intervals:

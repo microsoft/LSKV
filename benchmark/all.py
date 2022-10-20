@@ -16,7 +16,11 @@ import ycsb
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.DEBUG)
 
-def all_common_configurations(args: argparse.Namespace) :
+
+def all_common_configurations(args: argparse.Namespace):
+    """
+    Fill in the args for all common configurations.
+    """
     args.worker_threads = [1, 2, 4]
     args.virtual = True
     args.sgx = True
@@ -25,7 +29,6 @@ def all_common_configurations(args: argparse.Namespace) :
     args.sig_ms_intervals = [100, 1000, 10000]
     args.ledger_chunk_bytes = ["20KB", "100KB", "1MB"]
     args.snapshot_tx_intervals = [10, 100, 1000]
-
 
 
 def all_etcd_configurations(args: argparse.Namespace) -> List[etcd.EtcdConfig]:
