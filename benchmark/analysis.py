@@ -6,33 +6,36 @@
 Analysis utils.
 """
 
+import os
+from typing import Tuple
+
 import pandas as pd
 import seaborn as sns
-from typing import Tuple
+
 import common
-import os
+
 
 class Analyser:
     """
     Analyser for helper functions.
     """
 
-    def __init__(self, benchmark:str):
+    def __init__(self, benchmark: str):
         """
         Initialise analyser.
         """
         self.benchmark = benchmark
 
-    def bench_dir(self)->str:
+    def bench_dir(self) -> str:
         return os.path.join("..", common.BENCH_DIR, self.benchmark)
 
-    def plot_dir(self)->str:
+    def plot_dir(self) -> str:
         d = os.path.join("..", "plots", self.benchmark)
         if not os.path.exists(d):
             os.makedirs(d)
         return d
 
-    def make_start_ms(self, data:pd.DataFrame)->Tuple[pd.DataFrame, int]:
+    def make_start_ms(self, data: pd.DataFrame) -> Tuple[pd.DataFrame, int]:
         if self.benchmark == "etcd":
             # fix csv files not being fully complete
             data = data[data["start_micros"] > 1666000000000000].copy()
@@ -47,7 +50,7 @@ class Analyser:
             data.drop(["timestamp_us"], axis=1, inplace=True)
             return data, 0
 
-    def make_end_ms(self, data:pd.DataFrame, start:int)->pd.DataFrame:
+    def make_end_ms(self, data: pd.DataFrame, start: int) -> pd.DataFrame:
         if self.benchmark == "etcd":
             data["end_micros"] -= start
             data["end_ms"] = data["end_micros"] / 1000
@@ -57,7 +60,7 @@ class Analyser:
             data["end_ms"] = data["start_ms"] + (data["latency_us"] / 1000)
             return data
 
-    def make_latency_ms(self, data:pd.DataFrame)->pd.DataFrame:
+    def make_latency_ms(self, data: pd.DataFrame) -> pd.DataFrame:
         if self.benchmark == "etcd":
             data["latency_ms"] = data["end_ms"] - data["start_ms"]
             return data
@@ -66,7 +69,7 @@ class Analyser:
             data.drop(["latency_us"], axis=1, inplace=True)
             return data
 
-    def get_data(self)->pd.DataFrame:
+    def get_data(self) -> pd.DataFrame:
         dfs = []
 
         bench_dir = self.bench_dir()
@@ -86,24 +89,31 @@ class Analyser:
             df = pd.read_csv(file)
 
             df, start = self.make_start_ms(df)
-            df = self.make_end_ms(df,start)
+            df = self.make_end_ms(df, start)
             df = self.make_latency_ms(df)
 
             for k, v in config.items():
                 if v.isdigit():
                     v = int(v)
                 df[k] = v
-                
+
             dfs.append(df)
 
         return pd.concat(dfs, ignore_index=True)
 
-    def plot_scatter(self, data:pd.DataFrame, x="start_ms", y="latency_ms", row="",col="" ,ignore_vars=[], filename=""):
+    def plot_scatter(
+        self,
+        data: pd.DataFrame,
+        x="start_ms",
+        y="latency_ms",
+        row="",
+        col="",
+        ignore_vars=[],
+        filename="",
+    ):
         hue = "vars"
 
-        var, invariant_vars = condense_vars(
-            data, [x, y, row, col, hue] + ignore_vars
-        )
+        var, invariant_vars = condense_vars(data, [x, y, row, col, hue] + ignore_vars)
         data[hue] = var
 
         p = sns.relplot(
@@ -134,12 +144,18 @@ class Analyser:
 
         return p
 
-    def plot_ecdf(self, data:pd.DataFrame, x="latency_ms", row="",col="" ,ignore_vars=[], filename=""):
+    def plot_ecdf(
+        self,
+        data: pd.DataFrame,
+        x="latency_ms",
+        row="",
+        col="",
+        ignore_vars=[],
+        filename="",
+    ):
         hue = "vars"
 
-        var, invariant_vars = condense_vars(
-            data, [x, row, col, hue] + ignore_vars
-        )
+        var, invariant_vars = condense_vars(data, [x, row, col, hue] + ignore_vars)
         data[hue] = var
 
         p = sns.displot(
@@ -169,14 +185,14 @@ class Analyser:
 
         return p
 
-    def plot_throughput_bar(self, data:pd.DataFrame, row="", col="", ignore_vars=[], filename=""):
+    def plot_throughput_bar(
+        self, data: pd.DataFrame, row="", col="", ignore_vars=[], filename=""
+    ):
         hue = "vars"
         x = "rate"
         y = "achieved_throughput_ratio"
 
-        var, invariant_vars = condense_vars(
-            data, [x, y, row, col, hue] + ignore_vars
-        )
+        var, invariant_vars = condense_vars(data, [x, y, row, col, hue] + ignore_vars)
         data[hue] = var
 
         grouped = data.groupby([hue, row, col])
@@ -185,7 +201,9 @@ class Analyser:
         durations = (grouped["end_ms"].max() - grouped["start_ms"].min()) / 1000
         counts = grouped["start_ms"].count()
         achieved_throughput = counts / durations
-        throughputs["achieved_throughput_ratio"] = achieved_throughput / throughputs["rate"]
+        throughputs["achieved_throughput_ratio"] = (
+            achieved_throughput / throughputs["rate"]
+        )
 
         throughputs.reset_index(inplace=True)
 
@@ -213,6 +231,7 @@ class Analyser:
         p.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
 
         return p
+
 
 def condense_vars(all_data, without):
     all_columns = list(all_data.columns)
