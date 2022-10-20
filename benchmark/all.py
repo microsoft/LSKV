@@ -16,6 +16,17 @@ import ycsb
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.DEBUG)
 
+def all_common_configurations(args: argparse.Namespace) :
+    args.worker_threads = [1, 2, 4]
+    args.virtual = True
+    args.sgx = True
+
+    args.sig_tx_intervals = [5000, 10000, 20000]
+    args.sig_ms_intervals = [100, 1000, 10000]
+    args.ledger_chunk_bytes = ["20KB", "100KB", "1MB"]
+    args.snapshot_tx_intervals = [10, 100, 1000]
+
+
 
 def all_etcd_configurations(args: argparse.Namespace) -> List[etcd.EtcdConfig]:
     """
@@ -31,10 +42,7 @@ def all_etcd_configurations(args: argparse.Namespace) -> List[etcd.EtcdConfig]:
     args.connections = [1, 10, 100]
     args.rate = [100, 200, 300]
 
-    args.worker_threads = [1, 2, 4]
-    args.virtual = True
-    args.sgx = True
-
+    all_common_configurations(args)
     return etcd.make_configurations(args)
 
 
@@ -46,10 +54,7 @@ def all_ycsb_configurations(args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     args.rate = [100, 200, 300]
     args.threads = [1, 2, 4]
 
-    args.worker_threads = [1, 2, 4]
-    args.virtual = True
-    args.sgx = True
-
+    all_common_configurations(args)
     return ycsb.make_configurations(args)
 
 
