@@ -11,7 +11,6 @@ import argparse
 import copy
 import logging
 import os
-import shutil
 import time
 from dataclasses import asdict, dataclass
 from subprocess import Popen
