@@ -36,6 +36,10 @@ class Config:
     tls: bool
     sgx: bool
     worker_threads: int
+    sig_tx_interval: int
+    sig_ms_interval: int
+    ledger_chunk_bytes: str
+    snapshot_tx_interval: int
 
     def bench_name(self) -> str:
         """
@@ -196,6 +200,10 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--virtual", action="store_true")
     parser.add_argument("--insecure", action="store_true")
     parser.add_argument("--worker-threads", action="extend", nargs="+", type=int)
+    parser.add_argument("--sig-tx-intervals", action="extend", nargs="+", type=int)
+    parser.add_argument("--sig-ms-intervals", action="extend", nargs="+", type=int)
+    parser.add_argument("--ledger-chunk-bytes", action="extend", nargs="+", type=str)
+    parser.add_argument("--snapshot-tx-interval", action="extend", nargs="+", type=int)
     return parser
 
 
@@ -206,6 +214,14 @@ def set_default_args(args: argparse.Namespace):
     # set default if not set
     if not args.worker_threads:
         args.worker_threads = [0]
+    if not args.sig_tx_intervals:
+        args.sig_tx_intervals = [5000]
+    if not args.sig_ms_intervals:
+        args.sig_ms_intervals = [100]
+    if not args.ledger_chunk_bytes:
+        args.ledger_chunk_bytes = ["20KB"]
+    if not args.snapshot_tx_intervals:
+        args.snapshot_tx_intervals = [10]
 
 
 def wait_with_timeout(process: Popen, duration_seconds=2 * DESIRED_DURATION_S, name=""):
@@ -253,6 +269,10 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
             tls=False,
             sgx=False,
             worker_threads=0,
+            sig_tx_interval=0,
+            sig_ms_interval=0,
+            ledger_chunk_bytes="",
+            snapshot_tx_interval=0,
         )
         configs.append(etcd_config)
 
@@ -263,29 +283,47 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
         tls=True,
         sgx=False,
         worker_threads=0,
+        sig_tx_interval=0,
+        sig_ms_interval=0,
+        ledger_chunk_bytes="",
+        snapshot_tx_interval=0,
     )
     configs.append(etcd_config)
 
     for worker_threads in args.worker_threads:
         logging.debug("adding worker threads: %s", worker_threads)
-        lskv_config = Config(
-            store="lskv",
-            port=port,
-            tls=True,
-            sgx=False,
-            worker_threads=worker_threads,
-        )
-        if args.virtual:
-            # virtual
-            logging.debug("adding virtual lskv")
-            configs.append(lskv_config)
+        for sig_tx_interval in args.sig_tx_intervals:
+            logging.debug("adding sig_tx_interval: %s", sig_tx_interval)
+            for sig_ms_interval in args.sig_ms_intervals:
+                logging.debug("adding sig_ms_interval: %s", sig_ms_interval)
+                for ledger_chunk_bytes in args.ledger_chunk_bytes:
+                    logging.debug("adding ledger_chunk_bytes: %s", ledger_chunk_bytes)
+                    for snapshot_tx_interval in args.snapshot_tx_intervals:
+                        logging.debug(
+                            "adding snapshot_tx_interval: %s", snapshot_tx_interval
+                        )
+                        lskv_config = Config(
+                            store="lskv",
+                            port=port,
+                            tls=True,
+                            sgx=False,
+                            worker_threads=worker_threads,
+                            sig_tx_interval=sig_tx_interval,
+                            sig_ms_interval=sig_ms_interval,
+                            ledger_chunk_bytes=ledger_chunk_bytes,
+                            snapshot_tx_interval=snapshot_tx_interval,
+                        )
+                        if args.virtual:
+                            # virtual
+                            logging.debug("adding virtual lskv")
+                            configs.append(lskv_config)
 
-        # sgx
-        if args.sgx:
-            logging.debug("adding sgx lskv")
-            lskv_config = copy.deepcopy(lskv_config)
-            lskv_config.sgx = True
-            configs.append(lskv_config)
+                        # sgx
+                        if args.sgx:
+                            logging.debug("adding sgx lskv")
+                            lskv_config = copy.deepcopy(lskv_config)
+                            lskv_config.sgx = True
+                            configs.append(lskv_config)
 
     return configs
 
