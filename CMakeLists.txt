@@ -14,7 +14,9 @@ add_subdirectory(proto)
 option(
   PUBLIC_MAPS
   "If enabled, all keys and values are recorded in plaintext in the ledger (insecure!)"
-  OFF)
+  OFF) 
+
+option(VERBOSE_LOGGING "enable verbose logging" OFF)
 
 add_ccf_app(
   lskv
@@ -37,6 +39,9 @@ add_ccf_app(
 
 if(PUBLIC_MAPS)
   add_compile_definitions(PUBLIC_MAPS)
+endif()
+if(VERBOSE_LOGGING)
+  add_compile_definitions(VERBOSE_LOGGING)
 endif()
 
 # Generate an ephemeral signing key

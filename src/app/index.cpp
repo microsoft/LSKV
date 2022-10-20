@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-#define VERBOSE_LOGGING
-
 #include "index.h"
 
 #include "ccf/app_interface.h"
