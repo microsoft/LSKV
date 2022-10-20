@@ -7,10 +7,10 @@ Analysis utils.
 """
 
 import os
-from typing import Tuple
+from typing import Tuple, List
 
-import pandas as pd
-import seaborn as sns
+import pandas as pd  # type: ignore
+import seaborn as sns  # type: ignore
 
 import common
 
@@ -27,15 +27,24 @@ class Analyser:
         self.benchmark = benchmark
 
     def bench_dir(self) -> str:
+        """
+        Return the bench directory where results are stored.
+        """
         return os.path.join("..", common.BENCH_DIR, self.benchmark)
 
     def plot_dir(self) -> str:
-        d = os.path.join("..", "plots", self.benchmark)
-        if not os.path.exists(d):
-            os.makedirs(d)
-        return d
+        """
+        Return the plot directory where plots are stored, making it if it doesn't exist.
+        """
+        plots_dir = os.path.join("..", "plots", self.benchmark)
+        if not os.path.exists(plots_dir):
+            os.makedirs(plots_dir)
+        return plots_dir
 
     def make_start_ms(self, data: pd.DataFrame) -> Tuple[pd.DataFrame, int]:
+        """
+        Make the start_ms column.
+        """
         if self.benchmark == "etcd":
             # fix csv files not being fully complete
             data = data[data["start_micros"] > 1666000000000000].copy()
@@ -45,32 +54,44 @@ class Analyser:
             data["start_ms"] = data["start_micros"] / 1000
             data.drop(["start_micros"], axis=1, inplace=True)
             return data, start
-        elif self.benchmark == "ycsb":
+        if self.benchmark == "ycsb":
             data["start_ms"] = data["timestamp_us"] / 1000
             data.drop(["timestamp_us"], axis=1, inplace=True)
             return data, 0
+        return data, 0
 
     def make_end_ms(self, data: pd.DataFrame, start: int) -> pd.DataFrame:
+        """
+        Make the end_ms column.
+        """
         if self.benchmark == "etcd":
             data["end_micros"] -= start
             data["end_ms"] = data["end_micros"] / 1000
             data.drop(["end_micros"], axis=1, inplace=True)
             return data
-        elif self.benchmark == "ycsb":
+        if self.benchmark == "ycsb":
             data["end_ms"] = data["start_ms"] + (data["latency_us"] / 1000)
             return data
+        return data
 
     def make_latency_ms(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Make the latency_ms column.
+        """
         if self.benchmark == "etcd":
             data["latency_ms"] = data["end_ms"] - data["start_ms"]
             return data
-        elif self.benchmark == "ycsb":
+        if self.benchmark == "ycsb":
             data["latency_ms"] = data["latency_us"] / 1000
             data.drop(["latency_us"], axis=1, inplace=True)
             return data
+        return data
 
     def get_data(self) -> pd.DataFrame:
-        dfs = []
+        """
+        Load the data for the benchmark, adding config values as columns.
+        """
+        dataframes = []
 
         bench_dir = self.bench_dir()
         print(f"loading from {bench_dir}")
@@ -80,119 +101,147 @@ class Analyser:
             parts = store_config.split(",")
             config = {}
             for part in parts:
-                kv = part.split("=")
-                config[kv[0]] = kv[1]
+                keyvalue = part.split("=")
+                config[keyvalue[0]] = keyvalue[1]
 
             file = os.path.join(bench_dir, store_config, "timings.csv")
             if not os.path.exists(file):
                 continue
-            df = pd.read_csv(file)
+            dataframe = pd.read_csv(file)
 
-            df, start = self.make_start_ms(df)
-            df = self.make_end_ms(df, start)
-            df = self.make_latency_ms(df)
+            dataframe, start = self.make_start_ms(dataframe)
+            dataframe = self.make_end_ms(dataframe, start)
+            dataframe = self.make_latency_ms(dataframe)
 
-            for k, v in config.items():
-                if v.isdigit():
-                    v = int(v)
-                df[k] = v
+            for key, value in config.items():
+                if value.isdigit():
+                    dataframe[key] = int(value)
+                else:
+                    dataframe[key] = value
 
-            dfs.append(df)
+            dataframes.append(dataframe)
 
-        return pd.concat(dfs, ignore_index=True)
+        return pd.concat(dataframes, ignore_index=True)
 
+    # pylint: disable=too-many-arguments
     def plot_scatter(
         self,
         data: pd.DataFrame,
-        x="start_ms",
-        y="latency_ms",
+        x_column="start_ms",
+        y_column="latency_ms",
         row="",
         col="",
+        # pylint: disable=dangerous-default-value
         ignore_vars=[],
         filename="",
     ):
+        """
+        Plot a scatter graph.
+        """
         hue = "vars"
 
-        var, invariant_vars = condense_vars(data, [x, y, row, col, hue] + ignore_vars)
+        var, invariant_vars = condense_vars(
+            data, [x_column, y_column, row, col, hue] + ignore_vars
+        )
         data[hue] = var
 
-        p = sns.relplot(
+        plot = sns.relplot(
             kind="scatter",
             data=data,
-            x=x,
-            y=y,
+            x=x_column,
+            y=y_column,
             row=row,
             col=col,
             hue=hue,
             alpha=0.5,
         )
 
-        p.figure.subplots_adjust(top=0.9)
-        p.figure.suptitle(",".join(invariant_vars))
+        plot.figure.subplots_adjust(top=0.9)
+        plot.figure.suptitle(",".join(invariant_vars))
 
         # add tick labels to each x axis
-        for ax in p.axes.flatten():
-            ax.tick_params(labelbottom=True)
+        for axes in plot.axes.flatten():
+            axes.tick_params(labelbottom=True)
 
         #     ax.set_xlim([20,21])
 
         if not filename:
-            filename = f"scatter-{x}-{y}-{row}-{col}-{hue}"
+            filename = f"scatter-{x_column}-{y_column}-{row}-{col}-{hue}"
 
-        p.savefig(os.path.join(self.plot_dir(), f"{filename}.svg"))
-        p.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
+        plot.savefig(os.path.join(self.plot_dir(), f"{filename}.svg"))
+        plot.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
 
-        return p
+        return plot
 
+    # pylint: disable=too-many-arguments
     def plot_ecdf(
         self,
         data: pd.DataFrame,
-        x="latency_ms",
+        x_column="latency_ms",
         row="",
         col="",
+        # pylint: disable=dangerous-default-value
         ignore_vars=[],
         filename="",
     ):
+        """
+        Plot an ecdf graph.
+        """
         hue = "vars"
 
-        var, invariant_vars = condense_vars(data, [x, row, col, hue] + ignore_vars)
+        var, invariant_vars = condense_vars(
+            data, [x_column, row, col, hue] + ignore_vars
+        )
         data[hue] = var
 
-        p = sns.displot(
+        plot = sns.displot(
             kind="ecdf",
             data=data,
-            x=x,
+            x=x_column,
             row=row,
             col=col,
             hue=hue,
             alpha=0.5,
         )
 
-        p.figure.subplots_adjust(top=0.9)
-        p.figure.suptitle(",".join(invariant_vars))
+        plot.figure.subplots_adjust(top=0.9)
+        plot.figure.suptitle(",".join(invariant_vars))
 
         # add tick labels to each x axis
-        for ax in p.axes.flatten():
-            ax.tick_params(labelbottom=True)
+        for axes in plot.axes.flatten():
+            axes.tick_params(labelbottom=True)
 
         #     ax.set_xlim([20,21])
 
         if not filename:
-            filename = f"ecdf-{x}-{row}-{col}-{hue}"
+            filename = f"ecdf-{x_column}-{row}-{col}-{hue}"
 
-        p.savefig(os.path.join(self.plot_dir(), f"{filename}.svg"))
-        p.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
+        plot.savefig(os.path.join(self.plot_dir(), f"{filename}.svg"))
+        plot.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
 
-        return p
+        return plot
 
+    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-locals
     def plot_throughput_bar(
-        self, data: pd.DataFrame, row="", col="", ignore_vars=[], filename=""
+        self,
+        data: pd.DataFrame,
+        row="",
+        col="",
+        # pylint: disable=dangerous-default-value
+        ignore_vars=[],
+        filename="",
     ):
+        """
+        Plot a bar graph of throughput.
+        """
         hue = "vars"
-        x = "rate"
-        y = "achieved_throughput_ratio"
+        x_column = "rate"
+        y_column = "achieved_throughput_ratio"
 
-        var, invariant_vars = condense_vars(data, [x, y, row, col, hue] + ignore_vars)
+        var, invariant_vars = condense_vars(
+            data, [x_column, y_column, row, col, hue] + ignore_vars
+        )
         data[hue] = var
 
         grouped = data.groupby([hue, row, col])
@@ -207,33 +256,38 @@ class Analyser:
 
         throughputs.reset_index(inplace=True)
 
-        p = sns.catplot(
+        plot = sns.catplot(
             kind="bar",
             data=throughputs,
-            x=x,
-            y=y,
+            x=x_column,
+            y=y_column,
             row=row,
             col=col,
             hue=hue,
         )
 
-        p.figure.subplots_adjust(top=0.9)
-        p.figure.suptitle(",".join(invariant_vars))
+        plot.figure.subplots_adjust(top=0.9)
+        plot.figure.suptitle(",".join(invariant_vars))
 
         # add tick labels to each x axis
-        for ax in p.axes.flatten():
-            ax.tick_params(labelbottom=True)
+        for axes in plot.axes.flatten():
+            axes.tick_params(labelbottom=True)
 
         if not filename:
-            filename = f"throughput_bar-{x}-{row}-{col}-{hue}"
+            filename = f"throughput_bar-{x_column}-{row}-{col}-{hue}"
 
-        p.savefig(os.path.join(self.plot_dir(), f"{filename}.svg"))
-        p.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
+        plot.savefig(os.path.join(self.plot_dir(), f"{filename}.svg"))
+        plot.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
 
-        return p
+        return plot
 
 
-def condense_vars(all_data, without):
+def condense_vars(all_data, without) -> Tuple[pd.Series, List[str]]:
+    """
+    Condense columns into those that have multiple values and those that don't.
+    Returning a new series for those that do vary with a string for
+    differentiating them and a list of the invariant columns.
+    """
     all_columns = list(all_data.columns)
     data_columns = ["start_ms", "end_ms", "latency_ms"]
     # variable columns are all the ones left
@@ -243,29 +297,28 @@ def condense_vars(all_data, without):
     def make_new_column(name):
         if name == "store":
             return all_data[name].astype(str)
-        elif name == "tls":
+        if name == "tls":
             return all_data[name].map(lambda t: "tls" if t else "notls")
-        else:
-            return f"{name}=" + all_data[name].astype(str)
+        return f"{name}=" + all_data[name].astype(str)
 
     invariant_columns = []
     variant_columns = []
-    for c in remaining_columns:
-        data = all_data[c]
+    for column in remaining_columns:
+        data = all_data[column]
         if len(set(data)) == 1:
-            n = make_new_column(c)
-            invariant_columns.append(n.iat[0])
+            new_column = make_new_column(column)
+            invariant_columns.append(new_column.iat[0])
         else:
-            variant_columns.append(c)
+            variant_columns.append(column)
 
     variant_column = pd.Series()
     num_cols = len(variant_columns)
-    for i, c in enumerate(variant_columns):
-        n = make_new_column(c)
+    for i, column in enumerate(variant_columns):
+        new_column = make_new_column(column)
         if num_cols != i + 1:
-            n = n + ","
+            new_column = new_column + ","
         if i != 0:
-            n = variant_column + n
-        variant_column = n
+            new_column = variant_column + new_column
+        variant_column = new_column
 
     return variant_column, invariant_columns
