@@ -166,6 +166,9 @@ def run_metrics(name: str, cmd: str, file: str):
     """
     Run metric gathering.
     """
+    if not os.path.exists(file):
+        logging.warning("no metrics file found at %s", file)
+        return
     data = pd.read_csv(file)
 
     start = data["start_micros"].min()

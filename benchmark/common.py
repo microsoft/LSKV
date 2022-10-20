@@ -11,7 +11,6 @@ import argparse
 import copy
 import logging
 import os
-import shutil
 import time
 from dataclasses import asdict, dataclass
 from subprocess import Popen
@@ -313,8 +312,8 @@ C = TypeVar("C", bound=Config)
 def main(
     benchmark: str,
     get_arguments: Callable[[], argparse.Namespace],
-    make_configurations:Callable[[argparse.Namespace], List[C]],
-    execute_config:Callable[[C], None],
+    make_configurations: Callable[[argparse.Namespace], List[C]],
+    execute_config: Callable[[C], None],
 ):
     """
     Run everything.
@@ -327,14 +326,21 @@ def main(
     bench_dir = os.path.join(BENCH_DIR, benchmark)
 
     # make the bench directory
-    shutil.rmtree(bench_dir, ignore_errors=True)
-    os.makedirs(bench_dir)
+    os.makedirs(bench_dir, exist_ok=True)
 
     configs = make_configurations(args)
 
     logging.debug("made %d configurations", len(configs))
 
     for i, config in enumerate(configs):
+        if os.path.exists(config.output_dir()):
+            logging.warning(
+                "skipping config (output dir already exists) %d/%d: %s",
+                i + 1,
+                len(configs),
+                config,
+            )
+            continue
         logging.info("executing config %d/%d: %s", i + 1, len(configs), config)
         execute_config(config)
 

@@ -76,7 +76,6 @@ class LSKVStore(Store):
     """
 
     def spawn(self) -> Popen:
-        logging.info("spawning lskv")
         with open(
             os.path.join(self.config.output_dir(), "node.out"), "w", encoding="utf-8"
         ) as out:
@@ -102,6 +101,7 @@ class LSKVStore(Store):
                         "--http2",
                     ]
                 )
+                logging.info("spawning lskv %s", kvs_cmd)
                 return Popen(kvs_cmd, stdout=out, stderr=err)
 
     def workspace(self):
