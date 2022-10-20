@@ -14,7 +14,7 @@ add_subdirectory(proto)
 option(
   PUBLIC_MAPS
   "If enabled, all keys and values are recorded in plaintext in the ledger (insecure!)"
-  OFF) 
+  OFF)
 
 option(VERBOSE_LOGGING "enable verbose logging" OFF)
 
