@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-#define VERBOSE_LOGGING
-
 #include "ccf/app_interface.h"
 #include "ccf/common_auth_policies.h"
 #include "ccf/crypto/sha256.h"
