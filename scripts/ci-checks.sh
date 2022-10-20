@@ -70,9 +70,9 @@ pip install -r requirements.txt
 echo "$CHECK_DELIMITER"
 echo "-- Python format"
 if [ $FIX -ne 0 ]; then
-  git ls-files scripts/ | grep -e '\.py$' | xargs black
+  git ls-files | grep -e '\.py$' | xargs black
 else
-  git ls-files scripts/ | grep -e '\.py$' | xargs black --check
+  git ls-files | grep -e '\.py$' | xargs black --check
 fi
 
 echo "$CHECK_DELIMITER"
