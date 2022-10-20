@@ -60,7 +60,7 @@ class EtcdConfig(common.Config):
         Return the total number of requests to execute.
         """
         # default requests per second (things can time out)
-        rate = self.rate if self.rate > 0 else 1_000
+        rate = self.rate
         total = DESIRED_DURATION_S * rate
         return total
 
@@ -258,15 +258,15 @@ def get_arguments():
     if not args.prefill_value_size:
         args.prefill_value_size = [10]
     if not args.rate:
-        args.rate = [0]
+        args.rate = [1000]
 
     args.bench_args = [s.split() for s in args.bench_args]
     if not args.bench_args:
         args.bench_args = [
             ["put"],
-            ["range", "0000", "1000"],
-            ["txn-put"],
-            ["txn-mixed", "txn-mixed-key"],
+            # ["range", "0000", "1000"],
+            # ["txn-put"],
+            # ["txn-mixed", "txn-mixed-key"],
         ]
 
     return args
