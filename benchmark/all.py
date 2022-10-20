@@ -45,7 +45,7 @@ def all_ycsb_configurations(args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     args.virtual = True
     args.sgx = True
 
-    return etcd.make_configurations(args)
+    return ycsb.make_configurations(args)
 
 
 if __name__ == "__main__":
@@ -53,5 +53,5 @@ if __name__ == "__main__":
         "etcd", etcd.get_arguments, all_etcd_configurations, etcd.execute_config
     )
     common.main(
-        "ycsb", etcd.get_arguments, all_etcd_configurations, etcd.execute_config
+        "ycsb", ycsb.get_arguments, all_ycsb_configurations, ycsb.execute_config
     )
