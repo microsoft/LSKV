@@ -54,7 +54,7 @@ jobs:
       - name: Commit and push plots
         run: |
           set -x
-          git checkout -- analysis.ipynb 
+          git checkout -- benchmark
           git checkout ci-plots 
           mkdir ${{ github.sha }} 
           mv plots/*.jpg ${{ github.sha }} 
