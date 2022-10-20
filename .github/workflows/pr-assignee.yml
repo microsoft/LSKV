@@ -20,6 +20,6 @@ jobs:
 
       - name: Assign PR to author
         run: |
-          gh pr edit ${{ github.event.number }} --add-assignee ${{ github.event.sender.login }}
+          gh pr edit ${{ github.event.number }} --add-assignee ${{ github.event.sender.login }} --repo ${{ github.repository }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
