@@ -101,7 +101,7 @@ execute-notebook: .venv
 
 .PHONY: clear-notebook
 clear-notebook: .venv
-	. .venv/bin/activate && jupyter nbconvert --clear-output *.ipynb
+	. .venv/bin/activate && jupyter nbconvert --clear-output **/*.ipynb
 
 $(BIN_DIR)/cfssl:
 	mkdir -p $(BIN_DIR)
