@@ -29,6 +29,7 @@ class YCSBConfig(common.Config):
     """
 
     workload: str
+    rate: int
 
     def bench_name(self) -> str:
         """
@@ -59,7 +60,7 @@ class YCSBenchmark(common.Benchmark):
             "--prop",
             "measurementtype=raw",
             "--prop",
-            f"measurement.raw.output_file={timings_file}",
+            f"measurement.output_file={timings_file}",
             "--property_file",
             self.path_to_workload(),
         ]
@@ -84,12 +85,14 @@ class YCSBenchmark(common.Benchmark):
             "bin/go-ycsb",
             "run",
             "etcd",
+            "--target",
+            str(self.config.rate),
             "--prop",
             f"etcd.endpoints={self.config.scheme()}://127.0.0.1:{self.config.port}",
             "--prop",
             "measurementtype=raw",
             "--prop",
-            f"measurement.raw.output_file={timings_file}",
+            f"measurement.output_file={timings_file}",
             "--property_file",
             self.path_to_workload(),
         ]
@@ -150,9 +153,21 @@ def get_arguments():
     """
     parser = common.get_argument_parser()
 
+    parser.add_argument(
+        "--rate",
+        action="extend",
+        nargs="+",
+        type=int,
+        default=[],
+        help="Maximum requests per second (0 is no limit)",
+    )
+
     args = parser.parse_args()
 
     common.set_default_args(args)
+
+    if not args.rate:
+        args.rate = [1000]
 
     return args
 
@@ -186,12 +201,15 @@ def make_configurations(args: argparse.Namespace) -> List[YCSBConfig]:
     for workload in ["a", "b", "c", "d", "e", "f"]:
         workload = f"workload{workload}"
         logging.debug("adding workload: %s", workload)
-        for common_config in common.make_common_configurations(args):
-            conf = YCSBConfig(
-                **asdict(common_config),
-                workload=workload,
-            )
-            configs.append(conf)
+        for rate in args.rate:
+            logging.debug("adding rate: %s", rate)
+            for common_config in common.make_common_configurations(args):
+                conf = YCSBConfig(
+                    **asdict(common_config),
+                    workload=workload,
+                    rate=rate,
+                )
+                configs.append(conf)
 
     return configs
 
