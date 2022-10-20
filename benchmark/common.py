@@ -204,7 +204,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--sig-tx-intervals", action="extend", nargs="+", type=int)
     parser.add_argument("--sig-ms-intervals", action="extend", nargs="+", type=int)
     parser.add_argument("--ledger-chunk-bytes", action="extend", nargs="+", type=str)
-    parser.add_argument("--snapshot-tx-interval", action="extend", nargs="+", type=int)
+    parser.add_argument("--snapshot-tx-intervals", action="extend", nargs="+", type=int)
     return parser
 
 
