@@ -18,3 +18,5 @@ default.etcd/
 
 /.ipynb_checkpoints/
 /plots/
+
+*.pyc
