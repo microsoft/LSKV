@@ -53,9 +53,6 @@ class Config:
         Return the output directory for this datastore.
         """
         out_dir = os.path.join(BENCH_DIR, self.bench_name(), self.to_str())
-        if not os.path.exists(out_dir):
-            logging.info("creating output dir: %s", out_dir)
-            os.makedirs(out_dir)
         return out_dir
 
     def scheme(self) -> str:
@@ -382,6 +379,7 @@ def main(
                 config,
             )
             continue
+        os.makedirs(config.output_dir())
         logging.info("executing config %d/%d: %s", i + 1, len(configs), config)
         execute_config(config)
 
