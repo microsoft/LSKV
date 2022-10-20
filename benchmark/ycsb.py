@@ -182,7 +182,6 @@ def get_arguments():
         help="Threads to use in ycsb",
     )
 
-
     args = parser.parse_args()
 
     common.set_default_args(args)
