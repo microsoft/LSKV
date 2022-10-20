@@ -64,6 +64,13 @@ Alternatively, it is possible to build a runtime image of this application via d
 $ docker build -t lskv-sgx -f Dockerfile.sgx .
 ```
 
+## Build options
+
+The cmake build can be configured with the following lskv-specific options:
+
+- `PUBLIC_MAPS`: store data in public maps (publicly visible in the ledger)
+- `VERBOSE_LOGGING`: enable verbose logging which may output private data to logs
+
 ## Testing
 
 ### Etcd integration tests
