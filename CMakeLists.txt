@@ -38,10 +38,17 @@ add_ccf_app(
   protobuf.virtual)
 
 if(PUBLIC_MAPS)
+  message(STATUS "Using public maps")
   add_compile_definitions(PUBLIC_MAPS)
+else()
+  message(STATUS "Using private maps")
 endif()
+
 if(VERBOSE_LOGGING)
+  message(STATUS "Using verbose logging")
   add_compile_definitions(VERBOSE_LOGGING)
+else()
+  message(STATUS "Using terse logging")
 endif()
 
 # Generate an ephemeral signing key
