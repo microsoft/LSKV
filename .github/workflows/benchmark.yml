@@ -38,7 +38,7 @@ jobs:
         run: make build-virtual
 
       - name: Run benchmark
-        run: export PATH=$PATH:/usr/local/go/bin && make benchmark-virtual
+        run: export PATH=$PATH:/usr/local/go/bin && python3 benchmark/ci.py
 
       - name: Plot results
         run: make execute-notebook
