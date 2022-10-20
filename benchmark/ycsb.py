@@ -184,8 +184,6 @@ def get_arguments():
 
     args = parser.parse_args()
 
-    common.set_default_args(args)
-
     if not args.workloads:
         args.workloads = ["a", "b", "c", "d", "e", "f"]
     if not args.rate:

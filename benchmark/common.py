@@ -359,6 +359,7 @@ def main(
     Run everything.
     """
     args = get_arguments()
+    set_default_args(args)
 
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
