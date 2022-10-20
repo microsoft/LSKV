@@ -97,7 +97,8 @@ notebook: .venv
 
 .PHONY: execute-notebook
 execute-notebook: .venv
-	. .venv/bin/activate && jupyter nbconvert --execute --to notebook --inplace analysis.ipynb
+	. .venv/bin/activate && jupyter nbconvert --execute --to notebook --inplace etcd-analysis.ipynb
+	. .venv/bin/activate && jupyter nbconvert --execute --to notebook --inplace ycsb-analysis.ipynb
 
 .PHONY: clear-notebook
 clear-notebook: .venv
