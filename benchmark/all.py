@@ -6,12 +6,13 @@
 Run all configurations of the benchmarks
 """
 
-import etcd
+import argparse
 import logging
 from typing import List
+
 import common
+import etcd
 import ycsb
-import argparse
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.DEBUG)
 

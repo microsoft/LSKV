@@ -313,8 +313,8 @@ C = TypeVar("C", bound=Config)
 def main(
     benchmark: str,
     get_arguments: Callable[[], argparse.Namespace],
-    make_configurations:Callable[[argparse.Namespace], List[C]],
-    execute_config:Callable[[C], None],
+    make_configurations: Callable[[argparse.Namespace], List[C]],
+    execute_config: Callable[[C], None],
 ):
     """
     Run everything.
@@ -335,7 +335,12 @@ def main(
 
     for i, config in enumerate(configs):
         if os.path.exists(config.output_dir()):
-            logging.warning("skipping config (output dir already exists) %d/%d: %s", i+1, len(configs), config)
+            logging.warning(
+                "skipping config (output dir already exists) %d/%d: %s",
+                i + 1,
+                len(configs),
+                config,
+            )
             continue
         logging.info("executing config %d/%d: %s", i + 1, len(configs), config)
         execute_config(config)
