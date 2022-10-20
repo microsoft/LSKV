@@ -34,11 +34,20 @@ jobs:
       - name: Build benchmark
         run: export PATH=$PATH:/usr/local/go/bin && make bin/benchmark
 
-      - name: Build app
+      - name: Build app (Virtual)
         run: make build-virtual
 
+      - name: Build app (SGX)
+        run: make build-sgx
+
+      - name: Make .venv
+        run: make .venv
+
+      - name: Make certs
+        run: make certs
+
       - name: Run benchmark
-        run: export PATH=$PATH:/usr/local/go/bin && python3 benchmark/ci.py
+        run: export PATH=$PATH:/usr/local/go/bin && . .venv/bin/activate && python3 benchmark/ci.py
 
       - name: Plot results
         run: make execute-notebook
