@@ -71,6 +71,7 @@ $(BIN_DIR)/etcd:
 
 $(BIN_DIR)/etcdctl: $(BIN_DIR)/etcd
 
+.PHONY: $(BIN_DIR)/go-ycsb
 $(BIN_DIR)/go-ycsb:
 	cd 3rdparty/go-ycsb && make && mv bin/go-ycsb ../../bin/.
 
