@@ -98,11 +98,12 @@ notebook: .venv
 
 .PHONY: execute-notebook
 execute-notebook: .venv
-	. .venv/bin/activate && jupyter nbconvert --execute --to notebook --inplace analysis.ipynb
+	. .venv/bin/activate && jupyter nbconvert --execute --to notebook --inplace benchmark/etcd-analysis.ipynb
+	. .venv/bin/activate && jupyter nbconvert --execute --to notebook --inplace benchmark/ycsb-analysis.ipynb
 
 .PHONY: clear-notebook
 clear-notebook: .venv
-	. .venv/bin/activate && jupyter nbconvert --clear-output *.ipynb
+	. .venv/bin/activate && jupyter nbconvert --clear-output **/*.ipynb
 
 $(BIN_DIR)/cfssl:
 	mkdir -p $(BIN_DIR)
