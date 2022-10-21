@@ -37,7 +37,7 @@ def ycsb_configurations(args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     """
     Set args for all ycsb configurations.
     """
-    args.workloads = ["a", "b", "c", "d", "e", "f"]
+    args.workloads = ["a"]
     args.rate = [1000]
     args.threads = [10]
 
