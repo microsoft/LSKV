@@ -73,12 +73,12 @@ def all_perf_configurations(args: argparse.Namespace) -> List[perf_system.PerfCo
 
 
 if __name__ == "__main__":
-    # common.main(
-    #     "etcd", etcd.get_arguments, all_etcd_configurations, etcd.execute_config
-    # )
-    # common.main(
-    #     "ycsb", ycsb.get_arguments, all_ycsb_configurations, ycsb.execute_config
-    # )
+    common.main(
+        "etcd", etcd.get_arguments, all_etcd_configurations, etcd.execute_config
+    )
+    common.main(
+        "ycsb", ycsb.get_arguments, all_ycsb_configurations, ycsb.execute_config
+    )
     common.main(
         "perf", perf_system.get_arguments, all_perf_configurations, perf_system.execute_config
     )
