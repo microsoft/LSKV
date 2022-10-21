@@ -47,7 +47,10 @@ class YCSBenchmark(common.Benchmark):
     def __init__(self, config: YCSBConfig):
         self.config = config
 
-    def ycsb_cmd(self, store:Store, subcmd: str)->List[str]:
+    def ycsb_cmd(self, store: Store, subcmd: str) -> List[str]:
+        """
+        Make a core ycsb command.
+        """
         bench = [
             "bin/go-ycsb",
             subcmd,
@@ -78,7 +81,7 @@ class YCSBenchmark(common.Benchmark):
         """
         Return the command to run the benchmark for the given store.
         """
-        bench = self.ycsb_cmd(store,"load")
+        bench = self.ycsb_cmd(store, "load")
         logging.debug("load cmd: %s", bench)
         return bench
 
@@ -87,7 +90,7 @@ class YCSBenchmark(common.Benchmark):
         Return the command to run the benchmark for the given store.
         """
         timings_file = os.path.join(self.config.output_dir(), "timings.csv")
-        bench = self.ycsb_cmd(store, "run")+[
+        bench = self.ycsb_cmd(store, "run") + [
             "--prop",
             "measurementtype=raw",
             "--prop",
