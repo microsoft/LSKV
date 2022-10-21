@@ -71,6 +71,7 @@ jobs:
           git pull origin ci-plots
           mkdir ${{ github.sha }} 
           mv plots/* ${{ github.sha }}/.
+          rm -f ${{ github.sha }}/**/*.svg
           git add ${{ github.sha }}/**/*.jpg
           git commit -m "add plots for ${{ github.sha }}"
           git push origin ci-plots
