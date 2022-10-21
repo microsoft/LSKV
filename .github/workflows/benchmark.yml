@@ -68,6 +68,7 @@ jobs:
           set -x
           git checkout -- analysis.ipynb 
           git checkout ci-plots 
+          git pull origin ci-plots
           mkdir ${{ github.sha }} 
           mv plots/*.jpg ${{ github.sha }}
           git add ${{ github.sha}}
