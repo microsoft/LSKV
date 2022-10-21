@@ -71,3 +71,15 @@ jobs:
 
       - name: Run checks
         run: ./scripts/ci-checks.sh
+
+  check-issues:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Check issues
+        run: ./scripts/check-issues.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
