@@ -39,7 +39,7 @@ def ycsb_configurations(args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     """
     args.workloads = ["a"]
     args.rate = [1000]
-    args.threads = [10]
+    args.threads = [1]
 
     args.worker_threads = [0]
     args.virtual = True
@@ -49,5 +49,5 @@ def ycsb_configurations(args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
 
 
 if __name__ == "__main__":
-    common.main("etcd", etcd.get_arguments, etcd_configurations, etcd.execute_config)
+    # common.main("etcd", etcd.get_arguments, etcd_configurations, etcd.execute_config)
     common.main("ycsb", ycsb.get_arguments, ycsb_configurations, ycsb.execute_config)
