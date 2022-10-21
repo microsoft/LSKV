@@ -70,8 +70,8 @@ jobs:
           git checkout ci-plots 
           git pull origin ci-plots
           mkdir ${{ github.sha }} 
-          mv plots/*.jpg ${{ github.sha }}
-          git add ${{ github.sha}}
+          mv plots/* ${{ github.sha }}/.
+          git add ${{ github.sha }}/**/*.jpg
           git commit -m "add plots for ${{ github.sha }}"
           git push origin ci-plots
 
@@ -82,12 +82,14 @@ jobs:
           echo >> comment.md
           echo "> Available from [here](${repo_url}/tree/ci-plots/${{ github.sha }})" >> comment.md
           echo >> comment.md
-          for f in ${{ github.sha }}/*; do
-            short="${f#*/}"
-            echo "<details>" >> comment.md
-            echo "<summary><b>$short</b></summary>" >> comment.md
-            echo "<a href=\"${repo_url}/blob/ci-plots/$f?raw=true\"><img src=\"${repo_url}/blob/ci-plots/$f?raw=true\"></a>" >> comment.md
-            echo "</details>" >> comment.md
+          for dir in ${{ github.sha }}/*; do
+            for f in $dir/*; do
+              short="${f#*/}"
+              echo "<details>" >> comment.md
+              echo "<summary><b>$short</b></summary>" >> comment.md
+              echo "<a href=\"${repo_url}/blob/ci-plots/$f?raw=true\"><img src=\"${repo_url}/blob/ci-plots/$f?raw=true\"></a>" >> comment.md
+              echo "</details>" >> comment.md
+            done
           done
 
       - name: Upload plots to PR
