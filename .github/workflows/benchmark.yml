@@ -34,7 +34,7 @@ jobs:
       - name: Build benchmark
         run: export PATH=$PATH:/usr/local/go/bin && make bin/benchmark
 
-      - name: Build benchmark
+      - name: Build go-ycsb
         run: export PATH=$PATH:/usr/local/go/bin && make bin/go-ycsb
 
       - name: Build app (Virtual)
