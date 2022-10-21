@@ -222,7 +222,9 @@ def set_default_args(args: argparse.Namespace):
         args.snapshot_tx_intervals = [10]
 
 
-def wait_with_timeout(process: Popen, duration_seconds=10 * DESIRED_DURATION_S, name=""):
+def wait_with_timeout(
+    process: Popen, duration_seconds=10 * DESIRED_DURATION_S, name=""
+):
     """
     Wait for a process to complete, but timeout after the given duration.
     """
