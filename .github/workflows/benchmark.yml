@@ -69,7 +69,11 @@ jobs:
           git checkout -- analysis.ipynb 
           git checkout ci-plots 
           mkdir ${{ github.sha }} 
-          mv plots/**/*.jpg ${{ github.sha }} 
+          for dir in plots/*; do
+            mkdir -p ${{ github.sha }}/$(basename $dir)
+            mv $dir/*.jpg ${{ github.sha }}/$(basename $dir)
+          done
+          tree ${{ github.sha }}
           git add ${{ github.sha}}
           git commit -m "add plots for ${{ github.sha }}"
           git push origin ci-plots
@@ -80,12 +84,15 @@ jobs:
           echo >> comment.md
           echo "> Available from [here](../tree/ci-plots/${{ github.sha }})" >> comment.md
           echo >> comment.md
-          for f in ${{ github.sha }}/**/*; do
-            short="${f#*/}"
-            echo "<details>" >> comment.md
-            echo "<summary><b>$short</b></summary>" >> comment.md
-            echo "<a href=\"../blob/ci-plots/$f?raw=true\"><img src=\"../blob/ci-plots/$f?raw=true\"></a>" >> comment.md
-            echo "</details>" >> comment.md
+          echo $SHELL
+          for dir in ${{ github.sha }}/*; do
+            for f in $dir/*; do
+              short="${f#*/}"
+              echo "<details>" >> comment.md
+              echo "<summary><b>$short</b></summary>" >> comment.md
+              echo "<a href=\"../blob/ci-plots/$f?raw=true\"><img src=\"../blob/ci-plots/$f?raw=true\"></a>" >> comment.md
+              echo "</details>" >> comment.md
+            done
           done
 
       - name: Upload plots to PR
