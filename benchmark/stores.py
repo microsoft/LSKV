@@ -98,9 +98,10 @@ class LSKVStore(Store):
                         "--node",
                         f"local://127.0.0.1:{self.config.port}",
                         "--verbose",
-                        "--http2",
                     ]
                 )
+                if self.config.http2:
+                    kvs_cmd += ["--http2"]
                 logging.info("spawning lskv %s", kvs_cmd)
                 return Popen(kvs_cmd, stdout=out, stderr=err)
 

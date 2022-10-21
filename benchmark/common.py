@@ -41,6 +41,8 @@ class Config:
     sig_ms_interval: int
     ledger_chunk_bytes: str
     snapshot_tx_interval: int
+    http1: bool
+    http2: bool
 
     def bench_name(self) -> str:
         """
@@ -115,10 +117,29 @@ class Store(abc.ABC):
 
     def _wait_for_ready(self, port: int, tries=60) -> bool:
         client = self.client()
+        client += ["get", "missing key"]
+        if self.config.http1:
+            client = [
+                "curl",
+                "--cacert",
+                self.cacert(),
+                "--cert",
+                self.cert(),
+                "--key",
+                self.key(),
+                "-X",
+                "POST",
+                f"{self.config.scheme()}://127.0.0.1:{self.config.port}/v3/kv/range",
+                "-d",
+                '{"key":"bWlzc2luZyBrZXkK"}',
+                "-H",
+                "Content-Type: application/json",
+            ]
+
         for i in range(0, tries):
             logging.debug("running ready check with cmd %s", client)
             # pylint: disable=consider-using-with
-            proc = Popen(client + ["get", "missing key"])
+            proc = Popen(client)
             if proc.wait() == 0:
                 logging.info(
                     "finished waiting for port (%s) to be open, try %s", port, i
@@ -196,6 +217,8 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("-v", "--verbose", action="store_true", help="verbose output")
     parser.add_argument("--sgx", action="store_true")
     parser.add_argument("--virtual", action="store_true")
+    parser.add_argument("--http1", action="store_true")
+    parser.add_argument("--http2", action="store_true")
     parser.add_argument("--insecure", action="store_true")
     parser.add_argument("--worker-threads", action="extend", nargs="+", type=int)
     parser.add_argument("--sig-tx-intervals", action="extend", nargs="+", type=int)
@@ -268,6 +291,8 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
             port=port,
             tls=False,
             sgx=False,
+            http1=False,
+            http2=True,
             worker_threads=0,
             sig_tx_interval=0,
             sig_ms_interval=0,
@@ -282,6 +307,8 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
         port=port,
         tls=True,
         sgx=False,
+        http1=False,
+        http2=True,
         worker_threads=0,
         sig_tx_interval=0,
         sig_ms_interval=0,
@@ -308,6 +335,8 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                             port=port,
                             tls=True,
                             sgx=False,
+                            http1=False,
+                            http2=False,
                             worker_threads=worker_threads,
                             sig_tx_interval=sig_tx_interval,
                             sig_ms_interval=sig_ms_interval,
@@ -315,16 +344,34 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                             snapshot_tx_interval=snapshot_tx_interval,
                         )
                         if args.virtual:
-                            # virtual
+                            lskv_config = copy.deepcopy(lskv_config)
                             logging.debug("adding virtual lskv")
-                            configs.append(lskv_config)
+                            if args.http1:
+                                lskv_config = copy.deepcopy(lskv_config)
+                                lskv_config.http1 = True
+                                logging.debug("adding http1 lskv")
+                                configs.append(lskv_config)
+                            if args.http2:
+                                lskv_config = copy.deepcopy(lskv_config)
+                                lskv_config.http2 = True
+                                logging.debug("adding http2 lskv")
+                                configs.append(lskv_config)
 
                         # sgx
                         if args.sgx:
                             logging.debug("adding sgx lskv")
                             lskv_config = copy.deepcopy(lskv_config)
                             lskv_config.sgx = True
-                            configs.append(lskv_config)
+                            if args.http1:
+                                lskv_config = copy.deepcopy(lskv_config)
+                                lskv_config.http1 = True
+                                logging.debug("adding http1 lskv")
+                                configs.append(lskv_config)
+                            if args.http2:
+                                lskv_config = copy.deepcopy(lskv_config)
+                                lskv_config.http2 = True
+                                logging.debug("adding http2 lskv")
+                                configs.append(lskv_config)
 
     return configs
 
@@ -381,7 +428,7 @@ def main(
                 config,
             )
             continue
-        os.makedirs(config.output_dir())
+        os.makedirs(config.output_dir(), exist_ok=True)
         logging.info("executing config %d/%d: %s", i + 1, len(configs), config)
         execute_config(config)
 
