@@ -55,6 +55,8 @@ class Analyser:
             data.drop(["start_micros"], axis=1, inplace=True)
             return data, start
         if self.benchmark == "ycsb":
+            start = data["timestamp_us"].min()
+            data["timestamp_us"] -= start
             data["start_ms"] = data["timestamp_us"] / 1000
             data.drop(["timestamp_us"], axis=1, inplace=True)
             return data, 0
