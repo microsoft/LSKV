@@ -24,7 +24,7 @@ def common_configurations(args: argparse.Namespace):
     """
     args.worker_threads = [0]
     args.virtual = True
-    args.sgx = True
+    # args.sgx = True
     args.http2 = True
 
 
