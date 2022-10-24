@@ -47,25 +47,25 @@ class YCSBenchmark(common.Benchmark):
     def __init__(self, config: YCSBConfig):
         self.config = config
 
-    def load_cmd(self, store: Store) -> List[str]:
+    def ycsb_cmd(self, store: Store, subcmd: str) -> List[str]:
         """
-        Return the command to run the benchmark for the given store.
+        Make a core ycsb command.
         """
-        timings_file = os.path.join(self.config.output_dir(), "timings.csv")
         bench = [
             "bin/go-ycsb",
-            "load",
+            subcmd,
             "etcd",
+            "--target",
+            str(self.config.rate),
+            "--threads",
+            str(self.config.threads),
+            "--prop",
+            "silence=false",
             "--prop",
             f"etcd.endpoints={self.config.scheme()}://127.0.0.1:{self.config.port}",
-            "--prop",
-            "measurementtype=raw",
-            "--prop",
-            f"measurement.output_file={timings_file}",
             "--property_file",
             self.path_to_workload(),
         ]
-        logging.debug("load cmd: %s", bench)
         if self.config.tls:
             bench += [
                 "--prop",
@@ -77,37 +77,26 @@ class YCSBenchmark(common.Benchmark):
             ]
         return bench
 
+    def load_cmd(self, store: Store) -> List[str]:
+        """
+        Return the command to run the benchmark for the given store.
+        """
+        bench = self.ycsb_cmd(store, "load")
+        logging.debug("load cmd: %s", bench)
+        return bench
+
     def run_cmd(self, store: Store) -> List[str]:
         """
         Return the command to run the benchmark for the given store.
         """
         timings_file = os.path.join(self.config.output_dir(), "timings.csv")
-        bench = [
-            "bin/go-ycsb",
-            "run",
-            "etcd",
-            "--target",
-            str(self.config.rate),
-            "--threads",
-            str(self.config.threads),
-            "--prop",
-            f"etcd.endpoints={self.config.scheme()}://127.0.0.1:{self.config.port}",
+        bench = self.ycsb_cmd(store, "run") + [
             "--prop",
             "measurementtype=raw",
             "--prop",
             f"measurement.output_file={timings_file}",
-            "--property_file",
-            self.path_to_workload(),
         ]
-        if self.config.tls:
-            bench += [
-                "--prop",
-                f"etcd.cacert_file={store.cacert()}",
-                "--prop",
-                f"etcd.cert_file={store.cert()}",
-                "--prop",
-                f"etcd.key_file={store.key()}",
-            ]
+        logging.debug("run cmd: %s", bench)
         return bench
 
     def path_to_workload(self) -> str:
