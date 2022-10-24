@@ -28,7 +28,7 @@ from stores import LSKVStore
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
 
 logger.remove(0)
-logger.add(sys.stdout, level="DEBUG")
+logger.add(sys.stdout, level="INFO")
 
 BENCH_DIR = os.path.join(common.BENCH_DIR, "perf")
 
