@@ -58,6 +58,12 @@ class Analyser:
             data["start_ms"] = data["timestamp_us"] / 1000
             data.drop(["timestamp_us"], axis=1, inplace=True)
             return data, 0
+        if self.benchmark == "perf":
+            start = data["start_us"].min()
+            data["start_us"] -= start
+            data["start_ms"] = data["start_us"] / 1000
+            data.drop(["start_us"], axis=1, inplace=True)
+            return data, 0
         return data, 0
 
     def make_end_ms(self, data: pd.DataFrame, start: int) -> pd.DataFrame:
@@ -72,6 +78,9 @@ class Analyser:
         if self.benchmark == "ycsb":
             data["end_ms"] = data["start_ms"] + (data["latency_us"] / 1000)
             return data
+        if self.benchmark == "perf":
+            data["end_ms"] = data["start_ms"] + (data["latency_us"] / 1000)
+            return data
         return data
 
     def make_latency_ms(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -82,6 +91,10 @@ class Analyser:
             data["latency_ms"] = data["end_ms"] - data["start_ms"]
             return data
         if self.benchmark == "ycsb":
+            data["latency_ms"] = data["latency_us"] / 1000
+            data.drop(["latency_us"], axis=1, inplace=True)
+            return data
+        if self.benchmark == "perf":
             data["latency_ms"] = data["latency_us"] / 1000
             data.drop(["latency_us"], axis=1, inplace=True)
             return data
