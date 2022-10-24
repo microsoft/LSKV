@@ -1,0 +1,25 @@
+FROM mcr.microsoft.com/ccf/app/dev:3.0.0-dev6-sgx
+
+COPY Makefile .
+
+# install go
+RUN curl -L -o go1.19.1.linux-amd64.tar.gz https://go.dev/dl/go1.19.1.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.19.1.linux-amd64.tar.gz && \
+    rm go1.19.1.linux-amd64.tar.gz && \
+    echo "export PATH=$PATH:/usr/local/go/bin" >> ~/.bashrc && \
+    echo "export GOPATH=$HOME/go" >> ~/.bashrc && \
+    echo "export PATH=$PATH:$GOPATH/bin" >> ~/.bashrc && \
+    source ~/.bashrc && \
+    # make etcd
+    make bin/etcd && \
+    # make benchmark
+    make bin/benchmark && \
+    # build go-ycsb
+    make bin/go-ycsb && \
+    # install gh cli 
+    type -p curl >/dev/null || sudo apt install curl -y && \
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
+    sudo apt update && \
+    sudo apt install gh -y
