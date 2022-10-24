@@ -9,6 +9,15 @@
           "commitHash": "b886bbc89f31d7ac59bdfbb3d14a4263dae85a1b"
         }
       }
+    },
+    {
+      "component": {
+        "type": "git",
+        "git": {
+          "repositoryUrl": "https://github.com/pingcap/go-ycsb",
+          "commitHash": "4d727a7e6c043fdda3e064476709ca7c672913c4"
+        }
+      }
     }
   ],
   "Version": 1

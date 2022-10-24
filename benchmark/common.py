@@ -53,9 +53,6 @@ class Config:
         Return the output directory for this datastore.
         """
         out_dir = os.path.join(BENCH_DIR, self.bench_name(), self.to_str())
-        if not os.path.exists(out_dir):
-            logging.info("creating output dir: %s", out_dir)
-            os.makedirs(out_dir)
         return out_dir
 
     def scheme(self) -> str:
@@ -204,7 +201,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--sig-tx-intervals", action="extend", nargs="+", type=int)
     parser.add_argument("--sig-ms-intervals", action="extend", nargs="+", type=int)
     parser.add_argument("--ledger-chunk-bytes", action="extend", nargs="+", type=str)
-    parser.add_argument("--snapshot-tx-interval", action="extend", nargs="+", type=int)
+    parser.add_argument("--snapshot-tx-intervals", action="extend", nargs="+", type=int)
     return parser
 
 
@@ -225,7 +222,9 @@ def set_default_args(args: argparse.Namespace):
         args.snapshot_tx_intervals = [10]
 
 
-def wait_with_timeout(process: Popen, duration_seconds=2 * DESIRED_DURATION_S, name=""):
+def wait_with_timeout(
+    process: Popen, duration_seconds=10 * DESIRED_DURATION_S, name=""
+):
     """
     Wait for a process to complete, but timeout after the given duration.
     """
@@ -382,6 +381,7 @@ def main(
                 config,
             )
             continue
+        os.makedirs(config.output_dir())
         logging.info("executing config %d/%d: %s", i + 1, len(configs), config)
         execute_config(config)
 
