@@ -101,6 +101,7 @@ notebook: .venv
 execute-notebook: .venv
 	. .venv/bin/activate && jupyter nbconvert --execute --to notebook --inplace benchmark/etcd-analysis.ipynb
 	. .venv/bin/activate && jupyter nbconvert --execute --to notebook --inplace benchmark/ycsb-analysis.ipynb
+	. .venv/bin/activate && jupyter nbconvert --execute --to notebook --inplace benchmark/perf-analysis.ipynb
 
 .PHONY: clear-notebook
 clear-notebook: .venv
