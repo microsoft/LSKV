@@ -61,12 +61,13 @@ def all_ycsb_configurations(args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     all_common_configurations(args)
     return ycsb.make_configurations(args)
 
+
 def all_perf_configurations(args: argparse.Namespace) -> List[perf_system.PerfConfig]:
     """
     Set args for all perf configurations.
     """
-    args.http1=True
-    args.http2=True
+    args.http1 = True
+    args.http2 = True
 
     all_common_configurations(args)
     return perf_system.make_configurations(args)
@@ -80,5 +81,8 @@ if __name__ == "__main__":
         "ycsb", ycsb.get_arguments, all_ycsb_configurations, ycsb.execute_config
     )
     common.main(
-        "perf", perf_system.get_arguments, all_perf_configurations, perf_system.execute_config
+        "perf",
+        perf_system.get_arguments,
+        all_perf_configurations,
+        perf_system.execute_config,
     )
