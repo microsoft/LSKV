@@ -25,6 +25,7 @@ def all_common_configurations(args: argparse.Namespace):
     args.worker_threads = [1, 2, 4]
     args.virtual = True
     args.sgx = True
+    args.http2 = True
 
     args.sig_tx_intervals = [5000, 10000, 20000]
     args.sig_ms_intervals = [100, 1000, 10000]
@@ -67,7 +68,6 @@ def all_perf_configurations(args: argparse.Namespace) -> List[perf_system.PerfCo
     Set args for all perf configurations.
     """
     args.http1 = True
-    args.http2 = True
 
     all_common_configurations(args)
     return perf_system.make_configurations(args)
