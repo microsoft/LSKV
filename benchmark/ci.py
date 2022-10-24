@@ -17,6 +17,7 @@ import perf_system as perf
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.DEBUG)
 
+
 def common_configurations(args: argparse.Namespace):
     """
     Fill in the args for all common configurations.
@@ -52,6 +53,7 @@ def ycsb_configurations(args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     common_configurations(args)
 
     return ycsb.make_configurations(args)
+
 
 def perf_configurations(args: argparse.Namespace) -> List[perf.PerfConfig]:
     """
