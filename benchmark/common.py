@@ -114,7 +114,7 @@ class Store(abc.ABC):
         """
         self._wait_for_ready(self.config.port)
 
-    def _wait_for_ready(self, port: int, tries=60) -> bool:
+    def _wait_for_ready(self, port: int, tries=120) -> bool:
         client = self.client()
         client += ["get", "missing key"]
         if self.config.http == 1:
