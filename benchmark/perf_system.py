@@ -95,7 +95,7 @@ class PerfBenchmark(common.Benchmark):
             cacert = store.cacert()
             client_cert = (store.cert(), store.key())
             with httpx.Client(
-                http2=self.config.http2, verify=cacert, cert=client_cert
+                http2=self.config.http == 2, verify=cacert, cert=client_cert
             ) as client:
                 for i in range(100):
                     send_request(

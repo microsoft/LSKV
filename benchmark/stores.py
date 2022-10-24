@@ -100,7 +100,7 @@ class LSKVStore(Store):
                         "--verbose",
                     ]
                 )
-                if self.config.http2:
+                if self.config.http == 2:
                     kvs_cmd += ["--http2"]
                 logging.info("spawning lskv %s", kvs_cmd)
                 return Popen(kvs_cmd, stdout=out, stderr=err)

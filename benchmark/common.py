@@ -41,8 +41,7 @@ class Config:
     sig_ms_interval: int
     ledger_chunk_bytes: str
     snapshot_tx_interval: int
-    http1: bool
-    http2: bool
+    http: int
 
     def bench_name(self) -> str:
         """
@@ -118,7 +117,7 @@ class Store(abc.ABC):
     def _wait_for_ready(self, port: int, tries=60) -> bool:
         client = self.client()
         client += ["get", "missing key"]
-        if self.config.http1:
+        if self.config.http == 1:
             client = [
                 "curl",
                 "--cacert",
@@ -291,8 +290,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
             port=port,
             tls=False,
             sgx=False,
-            http1=False,
-            http2=True,
+            http=2,
             worker_threads=0,
             sig_tx_interval=0,
             sig_ms_interval=0,
@@ -307,8 +305,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
         port=port,
         tls=True,
         sgx=False,
-        http1=False,
-        http2=True,
+        http=2,
         worker_threads=0,
         sig_tx_interval=0,
         sig_ms_interval=0,
@@ -335,8 +332,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                             port=port,
                             tls=True,
                             sgx=False,
-                            http1=False,
-                            http2=False,
+                            http=1,
                             worker_threads=worker_threads,
                             sig_tx_interval=sig_tx_interval,
                             sig_ms_interval=sig_ms_interval,
@@ -348,12 +344,12 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                             logging.debug("adding virtual lskv")
                             if args.http1:
                                 lskv_config = copy.deepcopy(lskv_config)
-                                lskv_config.http1 = True
+                                lskv_config.http = 1
                                 logging.debug("adding http1 lskv")
                                 configs.append(lskv_config)
                             if args.http2:
                                 lskv_config = copy.deepcopy(lskv_config)
-                                lskv_config.http2 = True
+                                lskv_config.http = 2
                                 logging.debug("adding http2 lskv")
                                 configs.append(lskv_config)
 
@@ -364,12 +360,12 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                             lskv_config.sgx = True
                             if args.http1:
                                 lskv_config = copy.deepcopy(lskv_config)
-                                lskv_config.http1 = True
+                                lskv_config.http = 1
                                 logging.debug("adding http1 lskv")
                                 configs.append(lskv_config)
                             if args.http2:
                                 lskv_config = copy.deepcopy(lskv_config)
-                                lskv_config.http2 = True
+                                lskv_config.http = 2
                                 logging.debug("adding http2 lskv")
                                 configs.append(lskv_config)
 
