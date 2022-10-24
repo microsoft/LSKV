@@ -13,8 +13,18 @@ from typing import List
 import common
 import etcd
 import ycsb
+import perf_system as perf
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.DEBUG)
+
+def common_configurations(args: argparse.Namespace):
+    """
+    Fill in the args for all common configurations.
+    """
+    args.worker_threads = [0]
+    args.virtual = True
+    args.sgx = True
+    args.http2 = True
 
 
 def etcd_configurations(args: argparse.Namespace) -> List[etcd.EtcdConfig]:
@@ -26,9 +36,7 @@ def etcd_configurations(args: argparse.Namespace) -> List[etcd.EtcdConfig]:
     args.connections = [10]
     args.rate = [1000]
 
-    args.worker_threads = [0]
-    args.virtual = True
-    args.sgx = True
+    common_configurations(args)
 
     return etcd.make_configurations(args)
 
@@ -41,13 +49,21 @@ def ycsb_configurations(args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     args.rate = [1000]
     args.threads = [1]
 
-    args.worker_threads = [0]
-    args.virtual = True
-    args.sgx = True
+    common_configurations(args)
 
     return ycsb.make_configurations(args)
+
+def perf_configurations(args: argparse.Namespace) -> List[perf.PerfConfig]:
+    """
+    Set args for all perf configurations.
+    """
+    common_configurations(args)
+    args.http1 = True
+
+    return perf.make_configurations(args)
 
 
 if __name__ == "__main__":
     common.main("etcd", etcd.get_arguments, etcd_configurations, etcd.execute_config)
     common.main("ycsb", ycsb.get_arguments, ycsb_configurations, ycsb.execute_config)
+    common.main("perf", perf.get_arguments, perf_configurations, perf.execute_config)
