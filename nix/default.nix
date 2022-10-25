@@ -16,7 +16,9 @@ pkgs.lib.makeScope pkgs.newScope (self: rec {
 
   ccf-sandbox = self.callPackage ./ccf-sandbox.nix { };
 
-  lskv = self.callPackage ./lskv.nix { };
+  lskv = self.callPackage ./lskv.nix {
+    stdenv = pkgs.llvmPackages_10.libcxxStdenv;
+   };
 
   ci-checks = self.callPackage ./ci-checks.nix { };
 
@@ -30,8 +32,8 @@ pkgs.lib.makeScope pkgs.newScope (self: rec {
       string-color = pself.callPackage ./python/string-color.nix { };
       adtk = pself.callPackage ./python/adtk.nix { };
       cimetrics = pself.callPackage ./python/cimetrics.nix { };
-
       better-exceptions = pself.callPackage ./python/better-exceptions.nix { };
+
       python-ccf = pself.callPackage ./python/python-ccf.nix {
         ccf = self.ccf;
       };
