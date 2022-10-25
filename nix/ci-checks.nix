@@ -40,6 +40,11 @@
     mkdir $out
   '';
 
+  black-fix = writeShellScriptBin "black"
+     ''
+      git ls-files -- . ':!:3rdparty/' | grep -e '\.py$' | xargs ${python3Packages.black}/bin/black
+  '';
+
   pylint = runCommand "pylint"
     {
       buildInputs = [ python3Packages.pylint python3Packages.pandas python3Packages.seaborn python3Packages.setuptools ];
