@@ -25,6 +25,13 @@
     mkdir $out
   '';
 
+  prettier-fix = writeShellScriptBin "prettier"
+    ''
+      for e in ts js md yaml yml json; do
+        git ls-files -- . ':!:3rdparty/' | grep -e '\.ts$' -e '\.js$' -e '\.md$' -e '\.yaml$' -e '\.yml$' -e '\.json$' | xargs npx ${nodePackages.prettier}/bin/prettier --write
+      done
+    '';
+
   black = runCommand "black"
     {
       buildInputs = [ python3Packages.black ];
@@ -67,6 +74,6 @@
 
   nixfmt-fix = writeShellScriptBin "nixfmt"
     ''
-      ${nixpkgs-fmt}/bin/nixpkgs-fmt ./**/*.nix
+      git ls-files -- . ':!:3rdparty/' | grep -e '\.nix$' | xargs ${nixpkgs-fmt}/bin/nixpkgs-fmt 
     '';
 }
