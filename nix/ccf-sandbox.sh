@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -xe
+set -e
 
 is_package_specified=false
 is_js_bundle_specified=false
