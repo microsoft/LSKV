@@ -6,12 +6,12 @@
 Stores to run benchmarks against.
 """
 
-import logging
 import os
 import shutil
 from subprocess import Popen
 
 from common import Store
+from loguru import logger
 
 
 class EtcdStore(Store):
@@ -20,7 +20,7 @@ class EtcdStore(Store):
     """
 
     def spawn(self) -> Popen:
-        logging.debug("spawning etcd")
+        logger.debug("spawning etcd")
         client_urls = f"{self.config.scheme()}://127.0.0.1:{self.config.port}"
         with open(
             os.path.join(self.config.output_dir(), "node.out"), "w", encoding="utf-8"
@@ -104,7 +104,7 @@ class LSKVStore(Store):
                 )
                 if self.config.http_version == 2:
                     kvs_cmd += ["--http2"]
-                logging.info("spawning lskv %s", kvs_cmd)
+                logger.info("spawning lskv {}", kvs_cmd)
                 return Popen(kvs_cmd, stdout=out, stderr=err, env=env)
 
     def workspace(self):

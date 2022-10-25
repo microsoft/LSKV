@@ -7,15 +7,12 @@ Run ci pull_request configurations of the benchmarks
 """
 
 import argparse
-import logging
 from typing import List
 
 import common
 import etcd
-import ycsb
 import perf_system as perf
-
-logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.DEBUG)
+import ycsb
 
 
 def common_configurations(args: argparse.Namespace):
