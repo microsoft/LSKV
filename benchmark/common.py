@@ -11,6 +11,7 @@ import argparse
 import copy
 import json
 import os
+import sys
 import time
 from dataclasses import asdict, dataclass
 from hashlib import sha256
@@ -409,7 +410,7 @@ def main(
 
     if args.verbose:
         logger.remove()
-        logger.add(level="DEBUG")
+        logger.add(sys.stdout, level="DEBUG")
 
     bench_dir = os.path.join(BENCH_DIR, benchmark)
 

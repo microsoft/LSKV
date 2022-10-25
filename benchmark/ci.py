@@ -13,7 +13,6 @@ import common
 import etcd
 import perf_system as perf
 import ycsb
-from loguru import logger
 
 
 def common_configurations(args: argparse.Namespace):
