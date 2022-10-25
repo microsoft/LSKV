@@ -1,8 +1,10 @@
 { runCommand
+, writeShellScriptBin
 , shellcheck
 , nodePackages
 , python3Packages
 , cpplint
+, nixpkgs-fmt
 }:
 {
   shellcheck = runCommand "shellcheck"
@@ -54,4 +56,17 @@
     cpplint --filter=-whitespace/braces,-whitespace/indent,-whitespace/comments,-whitespace/newline,-build/include_order,-build/include_subdir,-runtime/references,-runtime/indentation_namespace ${../.}/src/**/*.cpp ${../.}/src/**/*.h
     mkdir $out
   '';
+
+  nixfmt = runCommand "nixfmt"
+    {
+      buildInputs = [ nixpkgs-fmt ];
+    } ''
+    nixpkgs-fmt --check ${../.}/**/*.nix
+    mkdir $out
+  '';
+
+  nixfmt-fix = writeShellScriptBin "nixfmt"
+    ''
+      ${nixpkgs-fmt}/bin/nixpkgs-fmt ./**/*.nix
+    '';
 }
