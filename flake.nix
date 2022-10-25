@@ -3,24 +3,25 @@
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
+  inputs.nix-filter.url = "github:numtide/nix-filter";
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs, flake-utils, nix-filter }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs {
         system = system;
+        overlays = [nix-filter.overlays.default];
+      };
+      nix= import ./nix {
+        inherit pkgs;
       };
     in
     {
-      packages.${system} = flake-utils.lib.filterPackages system (import ./nix {
-        inherit pkgs;
-      });
+      packages.${system} = flake-utils.lib.filterPackages system nix;
 
       checks.${system} = pkgs.lib.attrsets.filterAttrs
         (name: value: name != "override" && name != "overrideDerivation")
-        (import ./nix {
-          inherit pkgs;
-        }).ci-checks;
+        nix.ci-checks;
 
       apps.${system} = {
         ccf-sandbox = flake-utils.lib.mkApp {
