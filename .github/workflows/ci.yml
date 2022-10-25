@@ -57,3 +57,29 @@ jobs:
 
       - name: Build container
         run: docker build -t lskv-sgx -f Dockerfile.sgx .
+
+  checks:
+    runs-on: ubuntu-latest
+    container: ccfmsrc.azurecr.io/ccf/ci/sgx:oe-0.18.2-protoc
+
+    steps:
+      - name: Make sure github workspace is git safe
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Run checks
+        run: ./scripts/ci-checks.sh
+
+  check-issues:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Check issues
+        run: ./scripts/check-issues.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
