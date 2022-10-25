@@ -18,9 +18,9 @@ pkgs.lib.makeScope pkgs.newScope (self: rec {
 
   lskv = self.callPackage ./lskv.nix {
     stdenv = pkgs.llvmPackages_10.libcxxStdenv;
-   };
+  };
 
-   lskv-sandbox = self.callPackage ./lskv-sandbox.nix { };
+  lskv-sandbox = self.callPackage ./lskv-sandbox.nix { };
 
   ci-checks = self.callPackage ./ci-checks.nix { };
 

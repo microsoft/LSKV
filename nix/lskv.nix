@@ -19,10 +19,12 @@ stdenv.mkDerivation rec {
     ];
   };
 
-  nativeBuildInputs = [ cmake ninja 
-  ccf 
-  openenclave
-  protobuf
+  nativeBuildInputs = [
+    cmake
+    ninja
+    ccf
+    openenclave
+    protobuf
   ];
 
   cmakeFlags = [
