@@ -22,3 +22,5 @@ default.etcd/
 *.pyc
 
 /.direnv/
+
+/result
