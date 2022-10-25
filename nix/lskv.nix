@@ -1,22 +1,26 @@
 { fetchFromGitHub
 , stdenv
 , cmake
+, openenclave
 , ninja
+, protobuf
 , ccf
 }:
 stdenv.mkDerivation rec {
   pname = "lskv";
   version = "0.1.0";
-  src = fetchFromGitHub {
-    owner = "microsoft";
-    repo = "LSKV";
-    name = "lskv-${version}";
-    rev = "main";
-    hash = "";
-  };
+  src = ./..;
 
-  nativeBuildInputs = [ cmake ninja ccf ];
+  nativeBuildInputs = [ cmake ninja 
+  ccf 
+  openenclave
+  protobuf
+  ];
+
+  cmakeFlags = [
+    "-DLVI_MITIGATIONS=OFF"
+    "-DCOMPILE_TARGETS=virtual"
+  ];
 
   NIX_CFLAGS_COMPILE = "-Wno-unused-command-line-argument";
-  NIX_NO_SELF_RPATH = "1";
 }
