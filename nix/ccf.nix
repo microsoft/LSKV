@@ -42,14 +42,14 @@ stdenv.mkDerivation rec {
   NIX_CFLAGS_COMPILE = "-Wno-unused-command-line-argument";
   # NIX_NO_SELF_RPATH = "1";
 
-  # postInstall = ''
-  #   wrapProgram $out/bin/cchost \
-  #     --suffix LD_LIBRARY_PATH ':' "${az-dcap}/lib:${sgx-psw}/lib:${sgx-dcap}/lib"
+  postInstall = ''
+    wrapProgram $out/bin/cchost \
+      --suffix LD_LIBRARY_PATH ':' "${az-dcap}/lib:${sgx-psw}/lib:${sgx-dcap}/lib"
 
-  #   # These are signed with a randomly generated key, which makes the build non-reproducible
-  #   rm $out/lib/libjs_generic.enclave.so.debuggable \
-  #      $out/lib/libjs_generic.enclave.so.signed
-  # '';
+    # These are signed with a randomly generated key, which makes the build non-reproducible
+    rm $out/lib/libjs_generic.enclave.so.debuggable \
+       $out/lib/libjs_generic.enclave.so.signed
+  '';
 
   # dontFixup = true;
 
