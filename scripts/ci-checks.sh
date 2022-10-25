@@ -57,12 +57,14 @@ fi
 echo "$CHECK_DELIMITER"
 echo "-- Python dependencies"
 # Virtual Environment w/ dependencies for Python steps
-if [ ! -f "scripts/env/bin/activate" ]
+VENV_DIR=.venv
+if [ ! -f "${VENV_DIR}/bin/activate" ]
     then
-        python3.8 -m venv scripts/env
+        python3.8 -m venv ${VENV_DIR}
 fi
 
-source scripts/env/bin/activate
+# shellcheck source=/dev/null
+source ${VENV_DIR}/bin/activate
 pip install -U pip
 pip install -U wheel black pylint mypy cpplint 1>/dev/null
 pip install -r requirements.txt

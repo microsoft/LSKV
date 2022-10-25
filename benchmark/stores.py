@@ -87,6 +87,8 @@ class LSKVStore(Store):
                 libargs = ["build/liblskv.virtual.so"]
                 if self.config.sgx:
                     libargs = ["build/liblskv.enclave.so.signed", "-e", "release"]
+                env = os.environ.copy()
+                env["VENV_DIR"] = os.path.join(os.getcwd(), ".venv")
                 kvs_cmd = (
                     ["/opt/ccf/bin/sandbox.sh", "-p"]
                     + libargs
@@ -98,11 +100,12 @@ class LSKVStore(Store):
                         "--node",
                         f"local://127.0.0.1:{self.config.port}",
                         "--verbose",
-                        "--http2",
                     ]
                 )
+                if self.config.http_version == 2:
+                    kvs_cmd += ["--http2"]
                 logging.info("spawning lskv %s", kvs_cmd)
-                return Popen(kvs_cmd, stdout=out, stderr=err)
+                return Popen(kvs_cmd, stdout=out, stderr=err, env=env)
 
     def workspace(self):
         """

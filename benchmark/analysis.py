@@ -6,13 +6,13 @@
 Analysis utils.
 """
 
+import json
 import os
-from typing import Tuple, List
-
-import pandas as pd  # type: ignore
-import seaborn as sns  # type: ignore
+from typing import List, Tuple
 
 import common
+import pandas as pd  # type: ignore
+import seaborn as sns  # type: ignore
 
 
 class Analyser:
@@ -55,8 +55,16 @@ class Analyser:
             data.drop(["start_micros"], axis=1, inplace=True)
             return data, start
         if self.benchmark == "ycsb":
+            start = data["timestamp_us"].min()
+            data["timestamp_us"] -= start
             data["start_ms"] = data["timestamp_us"] / 1000
             data.drop(["timestamp_us"], axis=1, inplace=True)
+            return data, 0
+        if self.benchmark == "perf":
+            start = data["start_us"].min()
+            data["start_us"] -= start
+            data["start_ms"] = data["start_us"] / 1000
+            data.drop(["start_us"], axis=1, inplace=True)
             return data, 0
         return data, 0
 
@@ -72,6 +80,9 @@ class Analyser:
         if self.benchmark == "ycsb":
             data["end_ms"] = data["start_ms"] + (data["latency_us"] / 1000)
             return data
+        if self.benchmark == "perf":
+            data["end_ms"] = data["start_ms"] + (data["latency_us"] / 1000)
+            return data
         return data
 
     def make_latency_ms(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -82,6 +93,10 @@ class Analyser:
             data["latency_ms"] = data["end_ms"] - data["start_ms"]
             return data
         if self.benchmark == "ycsb":
+            data["latency_ms"] = data["latency_us"] / 1000
+            data.drop(["latency_us"], axis=1, inplace=True)
+            return data
+        if self.benchmark == "perf":
             data["latency_ms"] = data["latency_us"] / 1000
             data.drop(["latency_us"], axis=1, inplace=True)
             return data
@@ -96,15 +111,16 @@ class Analyser:
         bench_dir = self.bench_dir()
         print(f"loading from {bench_dir}")
 
-        for store_config in os.listdir(bench_dir):
-            print(f"processing {store_config}")
-            parts = store_config.split(",")
-            config = {}
-            for part in parts:
-                keyvalue = part.split("=")
-                config[keyvalue[0]] = keyvalue[1]
+        for config_hash in os.listdir(bench_dir):
+            print(f"processing {config_hash}")
+            with open(
+                os.path.join(bench_dir, config_hash, "config.json"),
+                "r",
+                encoding="utf-8",
+            ) as config_f:
+                config = json.loads(config_f.read())
 
-            file = os.path.join(bench_dir, store_config, "timings.csv")
+            file = os.path.join(bench_dir, config_hash, "timings.csv")
             if not os.path.exists(file):
                 continue
             dataframe = pd.read_csv(file)
@@ -114,8 +130,8 @@ class Analyser:
             dataframe = self.make_latency_ms(dataframe)
 
             for key, value in config.items():
-                if value.isdigit():
-                    dataframe[key] = int(value)
+                if isinstance(value, list):
+                    dataframe[key] = "_".join(value)
                 else:
                     dataframe[key] = value
 
