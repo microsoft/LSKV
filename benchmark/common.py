@@ -9,10 +9,12 @@ Common module for benchmark utils.
 import abc
 import argparse
 import copy
+import json
 import logging
 import os
 import time
 from dataclasses import asdict, dataclass
+from hashlib import sha256
 from subprocess import Popen
 from typing import Callable, List, TypeVar
 
@@ -53,7 +55,9 @@ class Config:
         """
         Return the output directory for this datastore.
         """
-        out_dir = os.path.join(BENCH_DIR, self.bench_name(), self.to_str())
+        config_str = json.dumps(asdict(self))
+        hashed_config = sha256(config_str.encode("utf-8")).hexdigest()
+        out_dir = os.path.join(BENCH_DIR, self.bench_name(), hashed_config)
         return out_dir
 
     def scheme(self) -> str:
@@ -424,7 +428,15 @@ def main(
                 config,
             )
             continue
+        # setup results dir
         os.makedirs(config.output_dir(), exist_ok=True)
+        # write the config out
+        config_path = os.path.join(config.output_dir(), "config.json")
+        with open(config_path, "w", encoding="utf-8") as config_f:
+            config_dict = asdict(config)
+            logging.info("writing config to file %s", config_path)
+            config_f.write(json.dumps(config_dict, indent=2))
+
         logging.info("executing config %d/%d: %s", i + 1, len(configs), config)
         execute_config(config)
 

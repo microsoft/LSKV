@@ -6,13 +6,13 @@
 Analysis utils.
 """
 
+import json
 import os
-from typing import Tuple, List
-
-import pandas as pd  # type: ignore
-import seaborn as sns  # type: ignore
+from typing import List, Tuple
 
 import common
+import pandas as pd  # type: ignore
+import seaborn as sns  # type: ignore
 
 
 class Analyser:
@@ -111,15 +111,16 @@ class Analyser:
         bench_dir = self.bench_dir()
         print(f"loading from {bench_dir}")
 
-        for store_config in os.listdir(bench_dir):
-            print(f"processing {store_config}")
-            parts = store_config.split(",")
-            config = {}
-            for part in parts:
-                keyvalue = part.split("=")
-                config[keyvalue[0]] = keyvalue[1]
+        for config_hash in os.listdir(bench_dir):
+            print(f"processing {config_hash}")
+            with open(
+                os.path.join(bench_dir, config_hash, "config.json"),
+                "r",
+                encoding="utf-8",
+            ) as config_f:
+                config = json.loads(config_f.read())
 
-            file = os.path.join(bench_dir, store_config, "timings.csv")
+            file = os.path.join(bench_dir, config_hash, "timings.csv")
             if not os.path.exists(file):
                 continue
             dataframe = pd.read_csv(file)
@@ -129,8 +130,8 @@ class Analyser:
             dataframe = self.make_latency_ms(dataframe)
 
             for key, value in config.items():
-                if value.isdigit():
-                    dataframe[key] = int(value)
+                if isinstance(value, list):
+                    dataframe[key] = "_".join(value)
                 else:
                     dataframe[key] = value
 
