@@ -26,8 +26,8 @@ stdenv.mkDerivation rec {
   patches = [ patches/ccf-no-python.diff patches/ccf-no-python-pb2.diff patches/ccf-protoc-binary.diff ];
 
   nativeBuildInputs = [ cmake ninja ];
-  buildInputs = [ 
-    openenclave 
+  buildInputs = [
+    openenclave
     libuv
     protobuf
     makeWrapper
