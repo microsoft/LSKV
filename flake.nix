@@ -27,6 +27,11 @@
           drv = self.packages.${system}.ccf-sandbox;
           exePath = "/bin/sandbox.sh";
         };
+
+        lskv-sandbox = flake-utils.lib.mkApp {
+          drv = self.packages.${system}.lskv-sandbox;
+          exePath = "/bin/lskv-sandbox.sh";
+        };
       };
 
       devShells.${system}.default = pkgs.mkShell {

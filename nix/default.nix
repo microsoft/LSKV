@@ -20,6 +20,8 @@ pkgs.lib.makeScope pkgs.newScope (self: rec {
     stdenv = pkgs.llvmPackages_10.libcxxStdenv;
    };
 
+   lskv-sandbox = self.callPackage ./lskv-sandbox.nix { };
+
   ci-checks = self.callPackage ./ci-checks.nix { };
 
   # A python3 derivation that is extended with some CC related
