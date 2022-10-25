@@ -5,11 +5,19 @@
 , ninja
 , protobuf
 , ccf
+, nix-filter
 }:
 stdenv.mkDerivation rec {
   pname = "lskv";
   version = "0.1.0";
-  src = ./..;
+  src = nix-filter {
+    root = ./..;
+    include = [
+      "CMakeLists.txt"
+      "src"
+      "proto"
+    ];
+  };
 
   nativeBuildInputs = [ cmake ninja 
   ccf 
