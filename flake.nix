@@ -10,9 +10,9 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs {
         system = system;
-        overlays = [nix-filter.overlays.default];
+        overlays = [ nix-filter.overlays.default ];
       };
-      nix= import ./nix {
+      nix = import ./nix {
         inherit pkgs;
       };
     in
