@@ -80,3 +80,6 @@ add_custom_target(app_signing_key ALL
 
 sign_app_library(lskv.enclave ${CMAKE_CURRENT_SOURCE_DIR}/oe_sign.conf
                  ${CMAKE_CURRENT_BINARY_DIR}/signing_key.pem)
+
+
+install(TARGETS lskv.virtual DESTINATION lib EXPORT lskv)
