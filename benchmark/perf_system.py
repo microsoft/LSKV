@@ -11,24 +11,16 @@ This benchmark is primarily for comparing http1 and http2 performance of LSKV ov
 import argparse
 import base64
 import csv
-import logging
 import os
-import sys
 import time
 from dataclasses import asdict, dataclass
 from typing import Dict, List
 
-import httpx
-from loguru import logger
-
 import common
+import httpx
 from common import Store
+from loguru import logger
 from stores import LSKVStore
-
-logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
-
-logger.remove(0)
-logger.add(sys.stdout, level="INFO")
 
 BENCH_DIR = os.path.join(common.BENCH_DIR, "perf")
 
@@ -158,9 +150,9 @@ def run_metrics(_name: str, _cmd: str, file: str):
     Run metric gathering.
     """
     if not os.path.exists(file):
-        logging.warning("no metrics file found at %s", file)
+        logger.warning("no metrics file found at {}", file)
         return
-    logging.warning("no metrics implemented yet")
+    logger.warning("no metrics implemented yet")
 
 
 def get_arguments():

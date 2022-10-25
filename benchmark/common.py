@@ -10,7 +10,6 @@ import abc
 import argparse
 import copy
 import json
-import logging
 import os
 import time
 from dataclasses import asdict, dataclass
@@ -20,6 +19,7 @@ from typing import Callable, List, TypeVar
 
 import cimetrics.upload  # type: ignore
 import typing_extensions
+from loguru import logger
 
 # want runs to take a limited number of seconds if they can handle the rate
 DESIRED_DURATION_S = 20
@@ -100,7 +100,7 @@ class Store(abc.ABC):
         if self.proc:
             self.proc.terminate()
             self.proc.wait()
-            logging.info("stopped %s", self.config.to_str())
+            logger.info("stopped {}", self.config.to_str())
 
         self.cleanup()
         return False
@@ -140,17 +140,17 @@ class Store(abc.ABC):
             ]
 
         for i in range(0, tries):
-            logging.debug("running ready check with cmd %s", client)
+            logger.debug("running ready check with cmd {}", client)
             # pylint: disable=consider-using-with
             proc = Popen(client)
             if proc.wait() == 0:
-                logging.info(
-                    "finished waiting for port (%s) to be open, try %s", port, i
+                logger.info(
+                    "finished waiting for port ({}) to be open, try {}", port, i
                 )
                 return True
-            logging.debug("waiting for port (%s) to be open, try %s", port, i)
+            logger.debug("waiting for port ({}) to be open, try {}", port, i)
             time.sleep(1)
-        logging.error("took too long waiting for port %s (%ss)", port, tries)
+        logger.error("took too long waiting for port {} ({}s)", port, tries)
         return False
 
     def cleanup(self):
@@ -258,24 +258,24 @@ def wait_with_timeout(
         res = process.poll()
         if res is None:
             # process still running
-            logging.debug("waiting for %s process to complete, try %s", name, i)
+            logger.debug("waiting for {} process to complete, try {}", name, i)
             time.sleep(1)
         else:
             # process finished
             if res == 0:
-                logging.info(
-                    "%s process completed successfully within timeout (took %ss)",
+                logger.info(
+                    "{} process completed successfully within timeout (took {}s)",
                     name,
                     i,
                 )
             else:
-                logging.error(
-                    "%s process failed within timeout (took %ss): code %s", name, i, res
+                logger.error(
+                    "{} process failed within timeout (took {}s): code {}", name, i, res
                 )
             return
 
     # didn't finish in time
-    logging.error("killing %s process after timeout of %ss", name, duration_seconds)
+    logger.error("killing {} process after timeout of {}s", name, duration_seconds)
     process.kill()
     process.wait()
     return
@@ -288,7 +288,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
     port = 8000
     configs = []
     if args.insecure:
-        logging.debug("adding insecure etcd")
+        logger.debug("adding insecure etcd")
         etcd_config = Config(
             store="etcd",
             port=port,
@@ -303,7 +303,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
         )
         configs.append(etcd_config)
 
-    logging.debug("adding tls etcd")
+    logger.debug("adding tls etcd")
     etcd_config = Config(
         store="etcd",
         port=port,
@@ -320,16 +320,16 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
 
     # pylint: disable=too-many-nested-blocks
     for worker_threads in args.worker_threads:
-        logging.debug("adding worker threads: %s", worker_threads)
+        logger.debug("adding worker threads: {}", worker_threads)
         for sig_tx_interval in args.sig_tx_intervals:
-            logging.debug("adding sig_tx_interval: %s", sig_tx_interval)
+            logger.debug("adding sig_tx_interval: {}", sig_tx_interval)
             for sig_ms_interval in args.sig_ms_intervals:
-                logging.debug("adding sig_ms_interval: %s", sig_ms_interval)
+                logger.debug("adding sig_ms_interval: {}", sig_ms_interval)
                 for ledger_chunk_bytes in args.ledger_chunk_bytes:
-                    logging.debug("adding ledger_chunk_bytes: %s", ledger_chunk_bytes)
+                    logger.debug("adding ledger_chunk_bytes: {}", ledger_chunk_bytes)
                     for snapshot_tx_interval in args.snapshot_tx_intervals:
-                        logging.debug(
-                            "adding snapshot_tx_interval: %s", snapshot_tx_interval
+                        logger.debug(
+                            "adding snapshot_tx_interval: {}", snapshot_tx_interval
                         )
                         lskv_config = Config(
                             store="lskv",
@@ -345,32 +345,32 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                         )
                         if args.virtual:
                             lskv_config = copy.deepcopy(lskv_config)
-                            logging.debug("adding virtual lskv")
+                            logger.debug("adding virtual lskv")
                             if args.http1:
                                 lskv_config = copy.deepcopy(lskv_config)
                                 lskv_config.http_version = 1
-                                logging.debug("adding http1 lskv")
+                                logger.debug("adding http1 lskv")
                                 configs.append(lskv_config)
                             if args.http2:
                                 lskv_config = copy.deepcopy(lskv_config)
                                 lskv_config.http_version = 2
-                                logging.debug("adding http2 lskv")
+                                logger.debug("adding http2 lskv")
                                 configs.append(lskv_config)
 
                         # sgx
                         if args.sgx:
-                            logging.debug("adding sgx lskv")
+                            logger.debug("adding sgx lskv")
                             lskv_config = copy.deepcopy(lskv_config)
                             lskv_config.sgx = True
                             if args.http1:
                                 lskv_config = copy.deepcopy(lskv_config)
                                 lskv_config.http_version = 1
-                                logging.debug("adding http1 lskv")
+                                logger.debug("adding http1 lskv")
                                 configs.append(lskv_config)
                             if args.http2:
                                 lskv_config = copy.deepcopy(lskv_config)
                                 lskv_config.http_version = 2
-                                logging.debug("adding http2 lskv")
+                                logger.debug("adding http2 lskv")
                                 configs.append(lskv_config)
 
     return configs
@@ -380,7 +380,7 @@ def run(cmd: List[str], name: str, output_dir: str):
     """
     Make a popen object from a command.
     """
-    logging.debug("running cmd: %s", cmd)
+    logger.debug("running cmd: {}", cmd)
     with open(os.path.join(output_dir, f"{name}.out"), "w", encoding="utf-8") as out:
         with open(
             os.path.join(output_dir, f"{name}.err"),
@@ -408,7 +408,8 @@ def main(
     set_default_args(args)
 
     if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
+        logger.remove()
+        logger.add(level="DEBUG")
 
     bench_dir = os.path.join(BENCH_DIR, benchmark)
 
@@ -417,12 +418,12 @@ def main(
 
     configs = make_configurations(args)
 
-    logging.debug("made %d configurations", len(configs))
+    logger.debug("made %d configurations", len(configs))
 
     for i, config in enumerate(configs):
         if os.path.exists(config.output_dir()):
-            logging.warning(
-                "skipping config (output dir already exists) %d/%d: %s",
+            logger.warning(
+                "skipping config (output dir already exists) %d/%d: {}",
                 i + 1,
                 len(configs),
                 config,
@@ -434,10 +435,10 @@ def main(
         config_path = os.path.join(config.output_dir(), "config.json")
         with open(config_path, "w", encoding="utf-8") as config_f:
             config_dict = asdict(config)
-            logging.info("writing config to file %s", config_path)
+            logger.info("writing config to file {}", config_path)
             config_f.write(json.dumps(config_dict, indent=2))
 
-        logging.info("executing config %d/%d: %s", i + 1, len(configs), config)
+        logger.info("executing config %d/%d: {}", i + 1, len(configs), config)
         execute_config(config)
 
     with cimetrics.upload.metrics():

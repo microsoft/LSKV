@@ -7,16 +7,14 @@ Run benchmarks in various configurations for each defined datastore.
 """
 
 import argparse
-import logging
 import os
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from typing import List
 
 import common
 from common import Store
+from loguru import logger
 from stores import EtcdStore, LSKVStore
-
-logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
 
 BENCH_DIR = os.path.join(common.BENCH_DIR, "ycsb")
 
@@ -82,7 +80,7 @@ class YCSBenchmark(common.Benchmark):
         Return the command to run the benchmark for the given store.
         """
         bench = self.ycsb_cmd(store, "load")
-        logging.debug("load cmd: %s", bench)
+        logger.debug("load cmd: {}", bench)
         return bench
 
     def run_cmd(self, store: Store) -> List[str]:
@@ -96,7 +94,7 @@ class YCSBenchmark(common.Benchmark):
             "--prop",
             f"measurement.output_file={timings_file}",
         ]
-        logging.debug("run cmd: %s", bench)
+        logger.debug("run cmd: {}", bench)
         return bench
 
     def path_to_workload(self) -> str:
@@ -113,15 +111,15 @@ def run_benchmark(config: YCSBConfig, store: Store, benchmark: YCSBenchmark) -> 
     with store:
         store.wait_for_ready()
 
-        logging.info("starting load phase")
+        logger.info("starting load phase")
         load_cmd = benchmark.load_cmd(store)
         common.run(load_cmd, "load", config.output_dir())
-        logging.info("finished load phase")
+        logger.info("finished load phase")
 
-        logging.info("starting benchmark")
+        logger.info("starting benchmark")
         run_cmd = benchmark.run_cmd(store)
         common.run(run_cmd, "bench", config.output_dir())
-        logging.info("stopping benchmark")
+        logger.info("stopping benchmark")
 
         timings_file = os.path.join(config.output_dir(), "timings.csv")
 
@@ -134,9 +132,9 @@ def run_metrics(_name: str, _cmd: str, file: str):
     Run metric gathering.
     """
     if not os.path.exists(file):
-        logging.warning("no metrics file found at %s", file)
+        logger.warning("no metrics file found at {}", file)
         return
-    logging.warning("no metrics implemented yet")
+    logger.warning("no metrics implemented yet")
 
 
 def get_arguments():
@@ -211,11 +209,11 @@ def make_configurations(args: argparse.Namespace) -> List[YCSBConfig]:
 
     for workload in args.workloads:
         workload = f"workload{workload}"
-        logging.debug("adding workload: %s", workload)
+        logger.debug("adding workload: {}", workload)
         for rate in args.rate:
-            logging.debug("adding rate: %s", rate)
+            logger.debug("adding rate: {}", rate)
             for threads in args.threads:
-                logging.debug("adding threads: %s", threads)
+                logger.debug("adding threads: {}", threads)
                 for common_config in common.make_common_configurations(args):
                     conf = YCSBConfig(
                         **asdict(common_config),
