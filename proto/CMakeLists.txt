@@ -1,8 +1,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the
 # MIT License.
 
-# protoc should be installed under /opt/protoc
-set(PROTOC_BINARY_PATH "/opt/protoc/bin/protoc")
+find_program(PROTOC_BINARY_PATH "protoc")
 
 if(EXISTS ${PROTOC_BINARY_PATH})
   message(STATUS "Found protobuf compiler: ${PROTOC_BINARY_PATH}")
