@@ -15,13 +15,28 @@
       nix = import ./nix {
         inherit pkgs;
       };
+      ci-checks-all = pkgs.symlinkJoin {
+        name = "ci-checks-all";
+        paths = with nix.ci-checks; [ shellcheck prettier black pylint mypy cpplint nixfmt ];
+      };
+      ci-checks-all-fix = pkgs.writeShellScriptBin
+        "ci-checks-all"
+        ''
+          ${nix.ci-checks.prettier-fix}/bin/prettier
+          ${nix.ci-checks.black-fix}/bin/black
+          ${nix.ci-checks.nixfmt-fix}/bin/nixfmt
+        '';
     in
     {
-      packages.${system} = flake-utils.lib.filterPackages system nix;
+      packages.${system} = (flake-utils.lib.filterPackages system nix) // {
+        inherit ci-checks-all ci-checks-all-fix;
+      };
 
       checks.${system} = pkgs.lib.attrsets.filterAttrs
         (name: value: name != "override" && name != "overrideDerivation")
-        nix.ci-checks;
+        nix.ci-checks // {
+        inherit ci-checks-all ci-checks-all-fix;
+      };
 
       apps.${system} = {
         ccf-sandbox = flake-utils.lib.mkApp {
