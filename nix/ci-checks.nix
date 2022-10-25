@@ -41,9 +41,9 @@
   '';
 
   black-fix = writeShellScriptBin "black"
-     ''
+    ''
       git ls-files -- . ':!:3rdparty/' | grep -e '\.py$' | xargs ${python3Packages.black}/bin/black
-  '';
+    '';
 
   pylint = runCommand "pylint"
     {
