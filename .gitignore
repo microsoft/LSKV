@@ -28,3 +28,5 @@ bin/
 /docker-workspace/
 
 /.direnv/
+
+/result
