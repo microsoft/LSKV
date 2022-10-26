@@ -21,8 +21,11 @@ pkgs.lib.makeScope pkgs.newScope (self:
       lskv = self.callPackage ./lskv.nix {
         stdenv = pkgs.llvmPackages_10.libcxxStdenv;
       };
+      lskv-virtual = lskv;
+      lskv-sgx = lskv.override {enclave = "sgx";};
 
-      lskv-sandbox = self.callPackage ./lskv-sandbox.nix {};
+      lskv-sandbox-virtual = self.callPackage ./lskv-sandbox.nix {enclave = "virtual";};
+      lskv-sandbox-sgx = self.callPackage ./lskv-sandbox.nix {enclave = "sgx";};
 
       ci-checks = self.callPackage ./ci-checks.nix {};
 
