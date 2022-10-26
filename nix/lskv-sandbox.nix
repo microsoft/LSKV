@@ -13,7 +13,8 @@
     then "virtual"
     else "release";
   l = lskv.override {inherit enclave;};
+  sandbox = ccf-sandbox.override {inherit enclave;};
 in
   writeShellScriptBin "lskv-sandbox.sh" ''
-    ${ccf-sandbox}/bin/sandbox.sh -p ${l}/lib/${pkg} --enclave-type ${enclave_type} $@
+    ${sandbox}/bin/sandbox.sh -p ${l}/lib/${pkg} --enclave-type ${enclave_type} $@
   ''
