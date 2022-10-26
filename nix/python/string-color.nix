@@ -1,8 +1,9 @@
-{ buildPythonPackage
-, fetchPypi
-, lib
-, columnar
-, colorama
+{
+  buildPythonPackage,
+  fetchPypi,
+  lib,
+  columnar,
+  colorama,
 }:
 buildPythonPackage rec {
   pname = "string-color";

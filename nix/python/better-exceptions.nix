@@ -1,5 +1,6 @@
-{ buildPythonPackage
-, fetchPypi
+{
+  buildPythonPackage,
+  fetchPypi,
 }:
 buildPythonPackage rec {
   pname = "better-exceptions";

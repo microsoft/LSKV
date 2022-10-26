@@ -1,17 +1,18 @@
-{ fetchFromGitHub
-, cmake
-, ninja
-, stdenv
-, lib
-, openenclave
-, git
-, openssl
-, libuv
-, az-dcap
-, sgx-dcap
-, sgx-psw
-, makeWrapper
-, protobuf
+{
+  fetchFromGitHub,
+  cmake,
+  ninja,
+  stdenv,
+  lib,
+  openenclave,
+  git,
+  openssl,
+  libuv,
+  az-dcap,
+  sgx-dcap,
+  sgx-psw,
+  makeWrapper,
+  protobuf,
 }:
 stdenv.mkDerivation rec {
   pname = "ccf";
@@ -23,9 +24,9 @@ stdenv.mkDerivation rec {
     rev = "ccf-${version}";
     hash = "sha256-T4Vvh0841Bg8g6XE79w++WqZHVNaGi41eI//ebMHHUA=";
   };
-  patches = [ patches/ccf-no-python.diff patches/ccf-no-python-pb2.diff patches/ccf-protoc-binary.diff ];
+  patches = [patches/ccf-no-python.diff patches/ccf-no-python-pb2.diff patches/ccf-protoc-binary.diff];
 
-  nativeBuildInputs = [ cmake ninja ];
+  nativeBuildInputs = [cmake ninja];
   buildInputs = [
     openenclave
     libuv
