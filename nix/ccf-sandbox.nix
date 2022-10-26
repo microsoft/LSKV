@@ -3,12 +3,14 @@
   openenclave,
   python3,
   stdenv,
+  enclave ? "virtual",
 }: let
   infra = python3.pkgs.toPythonApplication (python3.pkgs.python-ccf-infra);
+  c = ccf.override {inherit enclave;};
 in
   stdenv.mkDerivation {
-    pname = "ccf-sandbox";
-    inherit (ccf) version src;
+    pname = "ccf-sandbox-${enclave}";
+    inherit (c) version src;
 
     installPhase = ''
       install -m755 -D ${./ccf-sandbox.sh} $out/bin/sandbox.sh
@@ -19,7 +21,7 @@ in
         samples/constitutions/default/apply.js
 
       substituteInPlace $out/bin/sandbox.sh \
-        --replace CCF_ROOT "${ccf}" \
+        --replace CCF_ROOT "${c}" \
         --replace OE_ROOT "${openenclave}" \
         --replace START_NETWORK_SCRIPT "${infra}/bin/start_network.py"
     '';
