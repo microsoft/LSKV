@@ -92,7 +92,7 @@ $ make run-virtual
 Or
 
 ```bash
-$ /opt/ccf/bin/sandbox.sh -p ./liblskv.virtual.so --http2
+$ /opt/ccf/bin/sandbox.sh -p build/liblskv.virtual.so --http2
 ```
 
 Producing:
@@ -110,7 +110,7 @@ Python environment successfully setup
 [12:00:00.000] Press Ctrl+C to shutdown the network
 ```
 
-Or, for an SGX-enabled application: `$ make run-sgx` or `$ /opt/ccf/bin/sandbox.sh -p ./liblskv.enclave.so.signed -e release --http2`.
+Or, for an SGX-enabled application: `$ make run-sgx` or `$ /opt/ccf/bin/sandbox.sh -p build/liblskv.enclave.so.signed -e release --http2`.
 
 ### With docker in Virtual mode
 

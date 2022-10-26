@@ -419,12 +419,12 @@ def main(
 
     configs = make_configurations(args)
 
-    logger.debug("made %d configurations", len(configs))
+    logger.debug("made {} configurations", len(configs))
 
     for i, config in enumerate(configs):
         if os.path.exists(config.output_dir()):
             logger.warning(
-                "skipping config (output dir already exists) %d/%d: {}",
+                "skipping config (output dir already exists) {}/{}: {}",
                 i + 1,
                 len(configs),
                 config,
@@ -439,7 +439,7 @@ def main(
             logger.info("writing config to file {}", config_path)
             config_f.write(json.dumps(config_dict, indent=2))
 
-        logger.info("executing config %d/%d: {}", i + 1, len(configs), config)
+        logger.info("executing config {}/{}: {}", i + 1, len(configs), config)
         execute_config(config)
 
     with cimetrics.upload.metrics():
