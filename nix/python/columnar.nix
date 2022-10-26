@@ -1,7 +1,8 @@
-{ buildPythonPackage
-, fetchPypi
-, wcwidth
-, toolz
+{
+  buildPythonPackage,
+  fetchPypi,
+  wcwidth,
+  toolz,
 }:
 buildPythonPackage rec {
   pname = "columnar";

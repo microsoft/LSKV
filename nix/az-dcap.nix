@@ -1,16 +1,18 @@
-{ fetchFromGitHub
-, stdenv
-, curl
-, nlohmann_json
-, makeWrapper
-, fetchurl
-, lib
-, openssl_1_1
-}:
-let
-  fetchFromIntelGitHub = { path, ... }@attrs: fetchurl ({
-    url = "https://raw.githubusercontent.com/intel/${path}";
-  } // removeAttrs attrs [ "path" ]);
+{
+  fetchFromGitHub,
+  stdenv,
+  curl,
+  nlohmann_json,
+  makeWrapper,
+  fetchurl,
+  lib,
+  openssl_1_1,
+}: let
+  fetchFromIntelGitHub = {path, ...} @ attrs:
+    fetchurl ({
+        url = "https://raw.githubusercontent.com/intel/${path}";
+      }
+      // removeAttrs attrs ["path"]);
 
   files = [
     (fetchFromIntelGitHub {
@@ -31,25 +33,25 @@ let
     })
   ];
 in
-stdenv.mkDerivation rec {
-  pname = "az-dcap";
-  version = "1.11.2";
-  src = fetchFromGitHub {
-    owner = "microsoft";
-    repo = "Azure-DCAP-Client";
-    rev = version;
-    hash = "sha256-EYj3jnzTyJRl6N7avNf9VrB8r9U6zIE6wBNeVsMtWCA=";
-  };
-  nativeBuildInputs = [ makeWrapper ];
-  buildInputs = [
-    (curl.override { openssl = openssl_1_1; })
-    nlohmann_json
-  ];
+  stdenv.mkDerivation rec {
+    pname = "az-dcap";
+    version = "1.11.2";
+    src = fetchFromGitHub {
+      owner = "microsoft";
+      repo = "Azure-DCAP-Client";
+      rev = version;
+      hash = "sha256-EYj3jnzTyJRl6N7avNf9VrB8r9U6zIE6wBNeVsMtWCA=";
+    };
+    nativeBuildInputs = [makeWrapper];
+    buildInputs = [
+      (curl.override {openssl = openssl_1_1;})
+      nlohmann_json
+    ];
 
-  configurePhase = ''
-    cd src/Linux
-    cat Makefile.in | sed "s|##CURLINC##|${curl.dev}/include/curl|g" > Makefile
-    ${lib.flip (lib.concatMapStringsSep "\n") files (f: "cp ${f} ${f.name}")}
-  '';
-  makeFlags = [ "prefix=$(out)" ];
-}
+    configurePhase = ''
+      cd src/Linux
+      cat Makefile.in | sed "s|##CURLINC##|${curl.dev}/include/curl|g" > Makefile
+      ${lib.flip (lib.concatMapStringsSep "\n") files (f: "cp ${f} ${f.name}")}
+    '';
+    makeFlags = ["prefix=$(out)"];
+  }

@@ -1,11 +1,12 @@
-{ fetchFromGitHub
-, stdenv
-, cmake
-, openenclave
-, ninja
-, protobuf
-, ccf
-, nix-filter
+{
+  fetchFromGitHub,
+  stdenv,
+  cmake,
+  openenclave,
+  ninja,
+  protobuf,
+  ccf,
+  nix-filter,
 }:
 stdenv.mkDerivation rec {
   pname = "lskv";
