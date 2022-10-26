@@ -13,9 +13,10 @@
   sgx-psw,
   makeWrapper,
   protobuf,
+  enclave ? "virtual",
 }:
 stdenv.mkDerivation rec {
-  pname = "ccf";
+  pname = "ccf-${enclave}";
   version = "3.0.0-dev6";
   src = fetchFromGitHub {
     owner = "microsoft";
@@ -38,11 +39,11 @@ stdenv.mkDerivation rec {
     "-DBUILD_TESTS=OFF"
     "-DBUILD_UNIT_TESTS=OFF"
     "-DLVI_MITIGATIONS=OFF"
-    "-DCOMPILE_TARGETS=virtual"
+    "-DCOMPILE_TARGETS=${enclave}"
   ];
 
   NIX_CFLAGS_COMPILE = "-Wno-unused-command-line-argument";
-  # NIX_NO_SELF_RPATH = "1";
+  NIX_NO_SELF_RPATH = "1";
 
   postInstall = ''
     wrapProgram $out/bin/cchost \
