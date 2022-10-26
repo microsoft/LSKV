@@ -62,7 +62,8 @@ add_ccf_app(
   etcd.virtual
   lskvserver.virtual
   status.virtual
-  protobuf.virtual)
+  protobuf.virtual
+  INSTALL_LIBS ON)
 
 if(PUBLIC_MAPS)
   message(STATUS "Using public maps")
@@ -87,7 +88,4 @@ add_custom_target(app_signing_key ALL
                   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/signing_key.pem)
 
 sign_app_library(lskv.enclave ${CMAKE_CURRENT_SOURCE_DIR}/oe_sign.conf
-                 ${CMAKE_CURRENT_BINARY_DIR}/signing_key.pem)
-
-
-install(TARGETS lskv.virtual DESTINATION lib EXPORT lskv)
+                 ${CMAKE_CURRENT_BINARY_DIR}/signing_key.pem INSTALL_LIBS ON)
