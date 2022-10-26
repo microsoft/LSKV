@@ -1,4 +1,7 @@
-{ buildPythonPackage, fetchFromGitHub }:
+{
+  buildPythonPackage,
+  fetchFromGitHub,
+}:
 buildPythonPackage rec {
   pname = "pyright";
   version = "1.1.267";

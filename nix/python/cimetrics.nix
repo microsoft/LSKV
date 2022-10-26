@@ -1,14 +1,15 @@
-{ buildPythonPackage
-, fetchFromGitHub
-, matplotlib
-, GitPython
-, requests
-, pythonRelaxDepsHook
-, adtk
-, pyparsing
-, pyyaml
-, pymongo
-, azure-storage-blob
+{
+  buildPythonPackage,
+  fetchFromGitHub,
+  matplotlib,
+  GitPython,
+  requests,
+  pythonRelaxDepsHook,
+  adtk,
+  pyparsing,
+  pyyaml,
+  pymongo,
+  azure-storage-blob,
 }:
 buildPythonPackage {
   pname = "cimetrics";
@@ -31,8 +32,8 @@ buildPythonPackage {
     azure-storage-blob
   ];
 
-  nativeBuildInputs = [ pythonRelaxDepsHook ];
-  pythonRelaxDeps = [ "pyparsing" ];
+  nativeBuildInputs = [pythonRelaxDepsHook];
+  pythonRelaxDeps = ["pyparsing"];
 
   doCheck = false;
 }

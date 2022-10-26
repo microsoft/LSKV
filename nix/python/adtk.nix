@@ -1,10 +1,11 @@
-{ buildPythonPackage
-, fetchPypi
-, matplotlib
-, scikit-learn
-, pandas
-, statsmodels
-, tabulate
+{
+  buildPythonPackage,
+  fetchPypi,
+  matplotlib,
+  scikit-learn,
+  pandas,
+  statsmodels,
+  tabulate,
 }:
 buildPythonPackage rec {
   pname = "adtk";

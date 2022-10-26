@@ -1,18 +1,19 @@
-{ buildPythonPackage
-, fetchFromGitHub
-, string-color
-, loguru
-, cryptography
-, ccf
-, pythonRelaxDepsHook
+{
+  buildPythonPackage,
+  fetchFromGitHub,
+  string-color,
+  loguru,
+  cryptography,
+  ccf,
+  pythonRelaxDepsHook,
 }:
 buildPythonPackage {
   inherit (ccf) version src;
   pname = "ccf";
 
   # ccf wants cryptography 37, but we only have 36.
-  nativeBuildInputs = [ pythonRelaxDepsHook ];
-  pythonRelaxDeps = [ "cryptography" ];
+  nativeBuildInputs = [pythonRelaxDepsHook];
+  pythonRelaxDeps = ["cryptography"];
 
   preConfigure = ''
     cd python
