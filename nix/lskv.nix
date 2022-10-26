@@ -7,14 +7,16 @@
   protobuf,
   ccf,
   nix-filter,
+  enclave ? "virtual",
 }:
 stdenv.mkDerivation rec {
-  pname = "lskv";
+  pname = "lskv-${enclave}";
   version = "0.1.0";
   src = nix-filter {
     root = ./..;
     include = [
       "CMakeLists.txt"
+      "oe_sign.conf"
       "src"
       "proto"
     ];
@@ -23,15 +25,16 @@ stdenv.mkDerivation rec {
   nativeBuildInputs = [
     cmake
     ninja
-    ccf
+    (ccf.override {inherit enclave;})
     openenclave
     protobuf
   ];
 
   cmakeFlags = [
     "-DLVI_MITIGATIONS=OFF"
-    "-DCOMPILE_TARGETS=virtual"
+    "-DCOMPILE_TARGETS=${enclave}"
   ];
 
   NIX_CFLAGS_COMPILE = "-Wno-unused-command-line-argument";
+  NIX_NO_SELF_RPATH = "1";
 }
