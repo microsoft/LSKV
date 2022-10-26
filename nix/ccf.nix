@@ -54,7 +54,4 @@ stdenv.mkDerivation rec {
   '';
 
   # dontFixup = true;
-
-  # PROTOC = "${protobuf}/bin/protoc";
-  # PROTOC_INCLUDE = "${protobuf}/include";
 }
