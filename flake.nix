@@ -38,6 +38,10 @@
         inherit ci-checks-all ci-checks-all-fix;
       };
 
+    overlays.${system}.default = final: prev: {
+      ccf = self.packages.${system}.ccf;
+    };
+
     checks.${system} =
       pkgs.lib.attrsets.filterAttrs
       (name: value: name != "override" && name != "overrideDerivation")
@@ -63,7 +67,6 @@
     devShells.${system}.default = pkgs.mkShell {
       packages = with pkgs; [
         rnix-lsp
-        nixpkgs-fmt
       ];
     };
   };
