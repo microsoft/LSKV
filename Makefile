@@ -122,6 +122,7 @@ certs: $(BIN_DIR)/cfssl $(BIN_DIR)/cfssljson
 	mkdir -p certs
 	cd certs && ../$(BIN_DIR)/cfssl gencert -initca ../certs-config/ca-csr.json | ../$(BIN_DIR)/cfssljson -bare ca -
 	cd certs && ../$(BIN_DIR)/cfssl gencert -ca ../certs/ca.pem -ca-key ../certs/ca-key.pem -config ../certs-config/ca-config.json -profile server ../certs-config/server.json | ../$(BIN_DIR)/cfssljson -bare server -
+	cd certs && ../$(BIN_DIR)/cfssl gencert -ca ../certs/ca.pem -ca-key ../certs/ca-key.pem -config ../certs-config/ca-config.json -profile server ../certs-config/peer.json | ../$(BIN_DIR)/cfssljson -bare peer -
 	cd certs && ../$(BIN_DIR)/cfssl gencert -ca ../certs/ca.pem -ca-key ../certs/ca-key.pem -config ../certs-config/ca-config.json -profile client ../certs-config/client.json | ../$(BIN_DIR)/cfssljson -bare client -
 
 .PHONY: cpplint
