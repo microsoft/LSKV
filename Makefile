@@ -14,10 +14,10 @@ H_FILES=$(wildcard src/**/*.h)
 BIN_DIR=bin
 
 CCF_VER=ccf-3.0.0-rc0
-CCF_VER_LOWER=ccf_3.0.0_rc0
+CCF_VER_LOWER=ccf_3.0.0-virtual_rc0
 
-.PHONY: install-ccf
-install-ccf:
+.PHONY: install-ccf-virtual
+install-ccf-virtual:
 	wget -c https://github.com/microsoft/CCF/releases/download/$(CCF_VER)/$(CCF_VER_LOWER)_amd64.deb # download deb
 	sudo dpkg -i $(CCF_VER_LOWER)_amd64.deb # Installs CCF under /opt/ccf
 	/opt/ccf/getting_started/setup_vm/run.sh /opt/ccf/getting_started/setup_vm/app-dev.yml  # Install dependencies
