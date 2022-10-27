@@ -426,7 +426,6 @@ def main(
     else:
         logger.add(sys.stdout, level="INFO")
 
-
     bench_dir = os.path.join(BENCH_DIR, benchmark)
 
     # make the bench directory
