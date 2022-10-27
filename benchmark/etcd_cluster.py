@@ -2,20 +2,26 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
-import signal
-import tempfile
+"""
+Setup and run a local etcd cluster.
+"""
+
 import argparse
 import shutil
-from loguru import logger
+import signal
 import subprocess
+import tempfile
+
+from loguru import logger
 
 BASE_PORT = 8000
 
 
+# pylint: disable=too-many-arguments
 def spawn_node(
     address: str,
     port: int,
-    data_dir:str,
+    data_dir: str,
     initial_cluster: str,
     cacert: str,
     cert: str,
@@ -24,10 +30,12 @@ def spawn_node(
     peer_cert: str,
     peer_key: str,
 ) -> subprocess.Popen:
+    """
+    Spawn a new etcd node.
+    """
     client_port = BASE_PORT + 3 * port
     peer_port = client_port + 1
     metrics_port = client_port + 2
-
 
     cmd = [
         "bin/etcd",
@@ -70,7 +78,10 @@ def spawn_node(
     return subprocess.Popen(cmd)
 
 
-if __name__ == "__main__":
+def main():
+    """
+    Main entry point for spawning the cluster.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--nodes", type=int, default=1)
     parser.add_argument("--port", type=int, default=8000)
@@ -117,17 +128,22 @@ if __name__ == "__main__":
         logger.info("waiting for a signal")
         sig = signal.sigwait([signal.SIGINT, signal.SIGTERM])
         logger.info("received a signal: {}", signal.Signals(sig).name)
-    except Exception as e:
-        logger.exception("exception while spawning nodes: {}", e)
+    # pylint: disable=broad-except
+    except Exception as exception:
+        logger.exception("exception while spawning nodes: {}", exception)
     finally:
-        for i, p in enumerate(processes):
+        for i, process in enumerate(processes):
             logger.info("killing process {}", i)
-            p.kill()
+            process.kill()
             logger.info("waiting for process {}", i)
-            p.wait()
+            process.wait()
 
-        for i, d in enumerate(data_dirs):
-            logger.info("removing data dir {}: {}", i, d)
-            shutil.rmtree(d)
+        for i, data_dir in enumerate(data_dirs):
+            logger.info("removing data dir {}: {}", i, data_dir)
+            shutil.rmtree(data_dir)
 
         logger.info("all processes finished")
+
+
+if __name__ == "__main__":
+    main()
