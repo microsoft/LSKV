@@ -1,5 +1,6 @@
 BUILD=build
 CCF_PREFIX=/opt/ccf
+CCF_UNSAFE_PREFIX=/opt/ccf_unsafe
 
 CC=/opt/oe_lvi/clang-10
 CXX=/opt/oe_lvi/clang++-10
@@ -25,7 +26,14 @@ install-ccf:
 build-virtual:
 	mkdir -p $(BUILD)
 	cd $(BUILD)
-	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja ..
+	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCCF_UNSAFE=OFF -GNinja ..
+	cd $(BUILD) && ninja
+
+.PHONY: build-virtual-unsafe
+build-virtual-unsafe:
+	mkdir -p $(BUILD)
+	cd $(BUILD)
+	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCCF_UNSAFE=ON -GNinja ..
 	cd $(BUILD) && ninja
 
 .PHONY: build-sgx
@@ -54,6 +62,18 @@ debug-dockerignore:
 .PHONY: run-virtual
 run-virtual: build-virtual
 	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2
+
+.PHONY: run-virtual-unsafe
+run-virtual-unsafe: build-virtual-unsafe
+	$(CCF_UNSAFE_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2
+
+.PHONY: run-virtual-http1
+run-virtual-http1: build-virtual
+	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so
+
+.PHONY: run-virtual-unsafe-http1
+run-virtual-unsafe-http1: build-virtual-unsafe
+	$(CCF_UNSAFE_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so 
 
 .PHONY: run-sgx
 run-sgx: build-sgx
