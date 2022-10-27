@@ -5,8 +5,17 @@ cmake_minimum_required(VERSION 3.16)
 
 project(lskv LANGUAGES C CXX)
 
-if(NOT TARGET ccf)
-  find_package(ccf REQUIRED)
+
+option(CCF_UNSAFE "build with unsafe options" OFF)
+if(CCF_UNSAFE)
+  message(WARNING "Building with unsafe options")
+  if(NOT TARGET ccf_unsafe)
+    find_package(ccf_unsafe REQUIRED)
+  endif()
+else()
+  if(NOT TARGET ccf)
+    find_package(ccf REQUIRED)
+  endif()
 endif()
 
 add_subdirectory(proto)
