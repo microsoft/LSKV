@@ -13,12 +13,20 @@ function wait_ready() {
 
 function run_and_load() {
     echo "running $2"
+    rm -rf workspace
     make $1 &
     process_id=$!
+    echo "launched sandbox, waiting for it to be ready"
     wait_ready
-    k6 run benchmark/k6.js 2>&1 > $2.out
+    echo "waiting to let it relax"
     sleep 1
+    echo "running k6"
+    k6 run benchmark/k6.js 2>&1 > $2.out
+    echo "killing process"
     kill $process_id
+    pkill cchost
+    echo "waiting for process to stop"
+    sleep 1
 }
 
 run_and_load "run-virtual" "http2_safe"
