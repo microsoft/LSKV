@@ -23,7 +23,7 @@ def common_configurations(args: argparse.Namespace):
     args.virtual = True
     # args.sgx = True
     args.http2 = True
-    args.nodes = [3]
+    args.nodes = [1]
 
 
 def etcd_configurations(args: argparse.Namespace) -> List[etcd.EtcdConfig]:
