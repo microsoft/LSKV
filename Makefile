@@ -14,9 +14,9 @@ H_FILES=$(wildcard src/**/*.h)
 BIN_DIR=bin
 
 CCF_VER=ccf-3.0.0-rc0
-CCF_VER_LOWER=ccf_3.0.0-virtual_rc0
-CCF_SGX_VER_LOWER=ccf_3.0.0-sgx_rc0
-CCF_SGX_UNSAFE_VER_LOWER=ccf_unsafe_3.0.0-sgx_rc0
+CCF_VER_LOWER=ccf_virtual_3.0.0_rc0
+CCF_SGX_VER_LOWER=ccf_sgx_3.0.0_rc0
+CCF_SGX_UNSAFE_VER_LOWER=ccf_sgx_unsafe_3.0.0_rc0
 
 .PHONY: install-ccf-virtual
 install-ccf-virtual:
