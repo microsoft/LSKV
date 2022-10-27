@@ -13,8 +13,8 @@ H_FILES=$(wildcard src/**/*.h)
 
 BIN_DIR=bin
 
-CCF_VER=ccf-3.0.0-dev6
-CCF_VER_LOWER=ccf_3.0.0_dev6
+CCF_VER=ccf-3.0.0-rc0
+CCF_VER_LOWER=ccf_3.0.0_rc0
 
 .PHONY: install-ccf
 install-ccf:
