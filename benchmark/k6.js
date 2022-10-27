@@ -28,7 +28,6 @@ export default function () {
   let response = http.post("https://127.0.0.1:8000/v3/kv/put", payload, params);
 
   check(response, {
-    "http1 is used": (r) => r.proto === "HTTP/1.1",
     "status is 200": (r) => r.status === 200,
   });
 }
