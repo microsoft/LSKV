@@ -5,7 +5,7 @@ COPY CMakeLists.txt oe_sign.conf /src/
 COPY src /src/src/
 COPY proto /src/proto/
 WORKDIR /build
-RUN CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja -DCOMPILE_TARGETS=sgx /src && ninja
+RUN CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja -DCOMPILE_TARGET=sgx /src && ninja
 
 # Run
 FROM mcr.microsoft.com/ccf/app/run:3.0.0-rc0-sgx
