@@ -19,6 +19,7 @@ BASE_PORT = 8000
 
 # pylint: disable=too-many-arguments
 def spawn_node(
+    scheme: str,
     address: str,
     port: int,
     data_dir: str,
@@ -42,36 +43,39 @@ def spawn_node(
         "--data-dir",
         data_dir,
         "--listen-client-urls",
-        f"{address}:{client_port}",
+        f"{scheme}://{address}:{client_port}",
         "--advertise-client-urls",
-        f"{address}:{client_port}",
+        f"{scheme}://{address}:{client_port}",
         "--listen-peer-urls",
-        f"{address}:{peer_port}",
+        f"{scheme}://{address}:{peer_port}",
         "--initial-advertise-peer-urls",
-        f"{address}:{peer_port}",
+        f"{scheme}://{address}:{peer_port}",
+        "--listen-metrics-urls",
+        f"{scheme}://{address}:{metrics_port}",
         "--initial-cluster",
         initial_cluster,
         "--initial-cluster-state",
         "new",
         "--name",
         f"node{port}",
-        "--listen-metrics-urls",
-        f"{address}:{metrics_port}",
-        "--trusted-ca-file",
-        cacert,
-        "--cert-file",
-        cert,
-        "--key-file",
-        key,
-        "--client-cert-auth",
-        "--peer-trusted-ca-file",
-        peer_cacert,
-        "--peer-cert-file",
-        peer_cert,
-        "--peer-key-file",
-        peer_key,
-        "--peer-client-cert-auth",
     ]
+    if scheme == "https":
+        cmd += [
+            "--trusted-ca-file",
+            cacert,
+            "--cert-file",
+            cert,
+            "--key-file",
+            key,
+            "--client-cert-auth",
+            "--peer-trusted-ca-file",
+            peer_cacert,
+            "--peer-cert-file",
+            peer_cert,
+            "--peer-key-file",
+            peer_key,
+            "--peer-client-cert-auth",
+        ]
 
     logger.info("running etcd node: {}", " ".join(cmd))
 
@@ -84,8 +88,9 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--nodes", type=int, default=1)
+    parser.add_argument("--scheme", type=str, default="https")
+    parser.add_argument("--address", type=str, default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
-    parser.add_argument("--address", type=str, default="https://127.0.0.1")
     parser.add_argument("--cacert", type=str, default="certs/ca.pem")
     parser.add_argument("--cert", type=str, default="certs/server.pem")
     parser.add_argument("--key", type=str, default="certs/server-key.pem")
@@ -96,7 +101,10 @@ def main():
     logger.info("using config {}", args)
 
     initial_cluster = ",".join(
-        [f"node{i}={args.address}:{BASE_PORT + 3 * i + 1}" for i in range(args.nodes)]
+        [
+            f"node{i}={args.scheme}://{args.address}:{BASE_PORT + 3 * i + 1}"
+            for i in range(args.nodes)
+        ]
     )
 
     processes = []
@@ -111,6 +119,7 @@ def main():
             peer_key = f"{args.peer_cert_base}{i}-key.pem"
             processes.append(
                 spawn_node(
+                    args.scheme,
                     args.address,
                     i,
                     data_dir,

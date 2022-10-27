@@ -20,8 +20,6 @@ class EtcdStore(Store):
     """
 
     def spawn(self) -> Popen:
-        logger.debug("spawning etcd")
-        client_urls = f"{self.config.scheme()}://127.0.0.1:{self.config.port}"
         with open(
             os.path.join(self.config.output_dir(), "node.out"), "w", encoding="utf-8"
         ) as out:
@@ -31,21 +29,13 @@ class EtcdStore(Store):
                 encoding="utf-8",
             ) as err:
                 etcd_cmd = [
-                    "bin/etcd",
-                    "--listen-client-urls",
-                    client_urls,
-                    "--advertise-client-urls",
-                    client_urls,
+                    "benchmark/etcd_cluster.py",
+                    "--scheme",
+                    self.config.scheme(),
+                    "--nodes",
+                    str(self.config.nodes),
                 ]
-                if self.config.tls:
-                    etcd_cmd += [
-                        "--cert-file",
-                        "certs/server.pem",
-                        "--key-file",
-                        "certs/server-key.pem",
-                        "--trusted-ca-file",
-                        "certs/ca.pem",
-                    ]
+                logger.info("spawning etcd: {}", etcd_cmd)
                 return Popen(etcd_cmd, stdout=out, stderr=err)
 
     def cacert(self) -> str:
@@ -89,6 +79,9 @@ class LSKVStore(Store):
                     libargs = ["build/liblskv.enclave.so.signed", "-e", "release"]
                 env = os.environ.copy()
                 env["VENV_DIR"] = os.path.join(os.getcwd(), ".venv")
+                nodes = []
+                for i in range(self.config.nodes):
+                    nodes += ["--node", f"local://127.0.0.1:{self.config.port+i}"]
                 kvs_cmd = (
                     ["/opt/ccf/bin/sandbox.sh", "-p"]
                     + libargs
@@ -97,14 +90,13 @@ class LSKVStore(Store):
                         str(self.config.worker_threads),
                         "--workspace",
                         self.workspace(),
-                        "--node",
-                        f"local://127.0.0.1:{self.config.port}",
                         "--verbose",
                     ]
+                    + nodes
                 )
                 if self.config.http_version == 2:
                     kvs_cmd += ["--http2"]
-                logger.info("spawning lskv {}", kvs_cmd)
+                logger.info("spawning lskv: {}", kvs_cmd)
                 return Popen(kvs_cmd, stdout=out, stderr=err, env=env)
 
     def workspace(self):

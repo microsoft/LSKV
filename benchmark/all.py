@@ -19,6 +19,7 @@ def all_common_configurations(args: argparse.Namespace):
     """
     Fill in the args for all common configurations.
     """
+    args.nodes = [1, 3, 5]
     args.worker_threads = [1, 2, 4]
     args.virtual = True
     args.sgx = True
