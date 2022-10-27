@@ -11,7 +11,7 @@ bin/
 .vscode/
 
 /bench/
-default.etcd/
+/*.etcd/
 
 /.venv/
 /certs/
