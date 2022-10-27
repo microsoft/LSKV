@@ -491,6 +491,20 @@ namespace app
         prev_kv->set_lease(value.lease);
       }
 
+      CCF_APP_DEBUG("building custom claims");
+      etcdserverpb::ReceiptClaims claims;
+      auto* put_claim = claims.mutable_request_put();
+      put_claim->set_key(payload.key());
+      put_claim->set_value(payload.value());
+      put_claim->set_lease(payload.lease());
+      put_claim->set_prev_kv(payload.prev_kv());
+      put_claim->set_ignore_value(payload.ignore_value());
+      put_claim->set_ignore_lease(payload.ignore_lease());
+      CCF_APP_DEBUG("serializing custom claims");
+      auto claims_data = claims.SerializeAsString();
+      CCF_APP_DEBUG("registering custom claims");
+      ctx.rpc_ctx->set_claims_digest(ccf::ClaimsDigest::Digest(claims_data));
+
       return ccf::grpc::make_success(put_response);
     }
 
@@ -592,6 +606,18 @@ namespace app
 
         delete_range_response.set_deleted(deleted);
       }
+
+      CCF_APP_DEBUG("building custom claims");
+      etcdserverpb::ReceiptClaims claims;
+      auto* delete_range_claim = claims.mutable_request_delete_range();
+      delete_range_claim->set_key(payload.key());
+      delete_range_claim->set_range_end(payload.range_end());
+      delete_range_claim->set_prev_kv(payload.prev_kv());
+      CCF_APP_DEBUG("serializing custom claims");
+      auto claims_data = claims.SerializeAsString();
+      CCF_APP_DEBUG("registering custom claims");
+      ctx.rpc_ctx->set_claims_digest(ccf::ClaimsDigest::Digest(claims_data));
+
 
       return ccf::grpc::make_success(delete_range_response);
     }

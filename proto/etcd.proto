@@ -386,3 +386,11 @@ message MemberListResponse {
   // members is a list of all members associated with the cluster.
   repeated Member members = 2;
 }
+
+message ReceiptClaims {
+  oneof operation {
+    PutRequest request_put = 1;
+    DeleteRangeRequest request_delete_range = 2;
+    // TxnRequest request_txn = 3;
+  }
+}
