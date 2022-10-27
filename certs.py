@@ -2,14 +2,19 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
+"""
+Generate certificates for use with etcd clusters.
+"""
+
+import argparse
+import json
+import os
+import shutil
 import subprocess
 import sys
-import argparse
+from typing import Dict, Any
+
 from loguru import logger
-import json
-from typing import Dict
-import shutil
-import os
 
 CA_CONFIG = {
     "signing": {
@@ -40,14 +45,14 @@ CA_CSR = {
 
 SERVER_CSR = {
     "CN": "etcd",
-    "hosts": [ "127.0.0.1"],
+    "hosts": ["127.0.0.1"],
     "key": {"algo": "ecdsa", "size": 384},
     "names": [{"C": "UK", "L": "London", "ST": "London"}],
 }
 
 PEER_CSR = {
     "CN": "node0",
-    "hosts": [ "127.0.0.1"],
+    "hosts": ["127.0.0.1"],
     "key": {"algo": "ecdsa", "size": 384},
     "names": [{"C": "UK", "L": "London", "ST": "London"}],
 }
@@ -65,12 +70,14 @@ def make_ca(certs: str, cfssl: str, cfssljson: str):
     Make a CA certificate with cfssl.
     """
     logger.info("Making CA certificate")
-    with open(os.path.join(certs, "ca-config.json"), "w", encoding="utf-8") as f:
-        logger.info("Writing CA config to {}", f.name)
-        f.write(json.dumps(CA_CONFIG))
-    with open(os.path.join(certs, "ca-csr.json"), "w", encoding="utf-8") as f:
-        logger.info("Writing CA csr to {}", f.name)
-        f.write(json.dumps(CA_CSR))
+    with open(
+        os.path.join(certs, "ca-config.json"), "w", encoding="utf-8"
+    ) as config_file:
+        logger.info("Writing CA config to {}", config_file.name)
+        config_file.write(json.dumps(CA_CONFIG))
+    with open(os.path.join(certs, "ca-csr.json"), "w", encoding="utf-8") as csr_file:
+        logger.info("Writing CA csr to {}", csr_file.name)
+        csr_file.write(json.dumps(CA_CSR))
     logger.info("Running cfssl gencert")
     subprocess.run(
         f"{cfssl} gencert -initca ca-csr.json | {cfssljson} -bare ca -",
@@ -81,24 +88,28 @@ def make_ca(certs: str, cfssl: str, cfssljson: str):
     )
 
 
+# pylint: disable=too-many-arguments
 def make_certs(
     certs: str,
     cfssl: str,
     cfssljson: str,
     profile: str,
     name: str,
-    data: Dict[str, any],
+    data: Dict[str, Any],
 ):
     """
     Make certs with cfssl
     """
     logger.info("Making certificates for {}", name)
-    with open(os.path.join(certs, f"{name}.json"), "w", encoding="utf-8") as f:
-        logger.info("Writing csr to {}", f.name)
-        f.write(json.dumps(data))
+    with open(
+        os.path.join(certs, f"{name}.json"), "w", encoding="utf-8"
+    ) as config_file:
+        logger.info("Writing csr to {}", config_file.name)
+        config_file.write(json.dumps(data))
     logger.info("Running cfssl gencert")
     subprocess.run(
-        f"{cfssl} gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile={profile} {name}.json | {cfssljson} -bare {name} -",
+        f"{cfssl} gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json "
+        f"-profile={profile} {name}.json | {cfssljson} -bare {name} -",
         input=json.dumps(CA_CSR).encode("utf-8"),
         cwd=certs,
         shell=True,
@@ -107,6 +118,9 @@ def make_certs(
 
 
 def main():
+    """
+    Main entry point for generating certificates.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--nodes", type=int, default=3, help="Number of nodes to generate certs for"
