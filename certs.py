@@ -11,11 +11,11 @@ import os
 
 CA_CONFIG = {
     "signing": {
-        "default": {"expiry": "168h"},
+        "default": {"expiry": "8760h"},
         "profiles": {
             "server": {
                 "expiry": "8760h",
-                "usages": ["signing", "key encipherment", "server auth"],
+                "usages": ["signing", "key encipherment", "server auth", "client auth"],
             },
             "client": {
                 "expiry": "8760h",
@@ -30,30 +30,30 @@ CA_CONFIG = {
 }
 
 CA_CSR = {
-    "CN": "localhost",
-    "hosts": ["localhost", "127.0.0.1"],
-    "key": {"algo": "ecdsa", "size": 256},
+    "CN": "auto-ca",
+    "hosts": ["127.0.0.1"],
+    "key": {"algo": "ecdsa", "size": 384},
     "names": [{"C": "UK", "L": "London", "ST": "London"}],
 }
 
 SERVER_CSR = {
-    "CN": "localhost",
-    "hosts": ["localhost", "127.0.0.1"],
-    "key": {"algo": "ecdsa", "size": 256},
+    "CN": "etcd",
+    "hosts": [ "127.0.0.1"],
+    "key": {"algo": "ecdsa", "size": 384},
     "names": [{"C": "UK", "L": "London", "ST": "London"}],
 }
 
 PEER_CSR = {
     "CN": "node0",
-    "hosts": ["localhost", "127.0.0.1"],
-    "key": {"algo": "ecdsa", "size": 256},
+    "hosts": [ "127.0.0.1"],
+    "key": {"algo": "ecdsa", "size": 384},
     "names": [{"C": "UK", "L": "London", "ST": "London"}],
 }
 
 CLIENT_CSR = {
     "CN": "client",
     "hosts": [""],
-    "key": {"algo": "ecdsa", "size": 256},
+    "key": {"algo": "ecdsa", "size": 384},
     "names": [{"C": "UK", "L": "London", "ST": "London"}],
 }
 
@@ -152,6 +152,7 @@ def main():
         peer_csr = PEER_CSR
         name = f"node{i}"
         peer_csr["CN"] = name
+        peer_csr["hosts"].append(name)
         make_certs(certs_dir, cfssl, cfssljson, "peer", name, peer_csr)
     make_certs(certs_dir, cfssl, cfssljson, "client", "client", CLIENT_CSR)
 
