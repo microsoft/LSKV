@@ -117,8 +117,8 @@ $(BIN_DIR)/cfssl:
 $(BIN_DIR)/cfssljson: $(BIN_DIR)/cfssl
 
 .PHONY: certs
-certs: $(BIN_DIR)/cfssl $(BIN_DIR)/cfssljson
-	./certs.py
+certs: $(BIN_DIR)/cfssl $(BIN_DIR)/cfssljson .venv
+	. .venv/bin/activate && ./certs.py
 
 .PHONY: cpplint
 cpplint: $(CPP_FILES) $(H_FILES)

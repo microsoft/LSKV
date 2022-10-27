@@ -286,12 +286,14 @@ def wait_with_timeout(
     return
 
 
+# pylint: disable=too-many-branches
 def make_common_configurations(args: argparse.Namespace) -> List[Config]:
     """
     Make the common configurations to run benchmarks against.
     """
     port = 8000
     configs = []
+    # pylint: disable=too-many-nested-blocks
     for nodes in args.nodes:
         logger.debug("adding nodes: {}", nodes)
         if args.insecure:
@@ -425,7 +427,6 @@ def main(
         logger.add(sys.stdout, level="DEBUG")
     else:
         logger.add(sys.stdout, level="INFO")
-
 
     bench_dir = os.path.join(BENCH_DIR, benchmark)
 
