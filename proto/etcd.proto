@@ -400,12 +400,17 @@ message SignatureReceipt {
   bytes node_id = 2;
   bytes signature = 4;
   bytes cert = 5;
-
 }
 
 message Proof {
   bytes left = 1;
   bytes right = 2;
+}
+
+message LeafComponents {
+  bytes claims_digest = 1;
+  bytes commit_evidence = 2;
+  bytes write_set_digest = 3;
 }
 
 message TxReceipt {
