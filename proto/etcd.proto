@@ -397,9 +397,6 @@ message ReceiptClaims {
 
 message SignatureReceipt {
   bytes leaf = 1;
-  bytes node_id = 2;
-  bytes signature = 4;
-  bytes cert = 5;
 }
 
 message Proof {
@@ -414,17 +411,17 @@ message LeafComponents {
 }
 
 message TxReceipt {
-  bytes cert = 1;
-  LeafComponents leaf_components = 2;
-  bytes node_id = 3;
-  repeated Proof proof = 4;
-  bytes signature = 5;
+  LeafComponents leaf_components = 1;
+  repeated Proof proof = 2;
 }
 
 message Receipt {
-  oneof receipt {
-    TxReceipt tx_receipt = 1;
-    SignatureReceipt signature_receipt = 2;
+  bytes cert = 1;
+  bytes signature = 2;
+  bytes node_id = 3;
+  oneof receipt_extras {
+    TxReceipt tx_receipt = 4;
+    SignatureReceipt signature_receipt = 5;
   }
 }
 
