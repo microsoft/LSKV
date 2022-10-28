@@ -178,11 +178,14 @@ namespace app::json_grpc
   ccf::historical::HandleReadOnlyHistoricalQuery historical_json_grpc_adapter(
     const app::grpc::HistoricalGrpcReadOnlyEndpoint<In, Out>& f)
   {
-    return [f](ccf::endpoints::ReadOnlyEndpointContext& ctx, ccf::historical::StatePtr historical_state) {
+    return [f](
+             ccf::endpoints::ReadOnlyEndpointContext& ctx,
+             ccf::historical::StatePtr historical_state) {
       try
       {
         set_json_grpc_response<Out>(
-          f(ctx, historical_state, get_json_grpc_payload<In>(ctx.rpc_ctx)), ctx.rpc_ctx);
+          f(ctx, historical_state, get_json_grpc_payload<In>(ctx.rpc_ctx)),
+          ctx.rpc_ctx);
       }
       catch (app::exceptions::BadRequest& e)
       {

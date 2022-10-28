@@ -221,8 +221,11 @@ namespace app
           auto* tx_receipt = receipt->mutable_tx_receipt();
 
           auto* leaf_components = tx_receipt->mutable_leaf_components();
-          // set the claims digest on the receipt so that the client can always just validate the receipt itself, without checking it against the original claims.
-          // clients that want to verify the claims themselves can do so by checking the claims digest against the claims they have and then verifying the receipt in full.
+          // set the claims digest on the receipt so that the client can always
+          // just validate the receipt itself, without checking it against the
+          // original claims. clients that want to verify the claims themselves
+          // can do so by checking the claims digest against the claims they
+          // have and then verifying the receipt in full.
           leaf_components->set_claims_digest(
             tr->leaf_components.claims_digest.value().hex_str());
           leaf_components->set_commit_evidence(
