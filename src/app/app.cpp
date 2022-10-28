@@ -5,8 +5,8 @@
 #include "ccf/common_auth_policies.h"
 #include "ccf/crypto/sha256.h"
 #include "ccf/crypto/verifier.h"
-#include "ccf/historical_queries_adapter.h"
 #include "ccf/ds/hex.h"
+#include "ccf/historical_queries_adapter.h"
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
 #include "ccf/service/tables/nodes.h"
@@ -196,20 +196,26 @@ namespace app
 
       auto get_receipt = [this](
                            ccf::endpoints::ReadOnlyEndpointContext& ctx,
-                           ccf::historical::StatePtr historical_state, etcdserverpb::GetReceiptRequest&& payload)
-                           {
+                           ccf::historical::StatePtr historical_state,
+                           etcdserverpb::GetReceiptRequest&& payload) {
         // assert(historical_state->receipt);
         etcdserverpb::GetReceiptResponse response;
-      //   auto* receipt = response.mutable_receipt();
-      //  auto r = ccf::describe_receipt_v1(*historical_state->receipt);
-      //  receipt->set_claims_digest(r["claims_digest"]);
+        //   auto* receipt = response.mutable_receipt();
+        //  auto r = ccf::describe_receipt_v1(*historical_state->receipt);
+        //  receipt->set_claims_digest(r["claims_digest"]);
 
         return ccf::grpc::make_success(response);
       };
 
       install_historical_endpoint_with_header_ro<
         etcdserverpb::GetReceiptRequest,
-        etcdserverpb::GetReceiptResponse>(etcdserverpb, receipt, "GetReceipt", "/v3/receipt/get_receipt", get_receipt, context);
+        etcdserverpb::GetReceiptResponse>(
+        etcdserverpb,
+        receipt,
+        "GetReceipt",
+        "/v3/receipt/get_receipt",
+        get_receipt,
+        context);
     }
 
     template <typename Out>
@@ -302,6 +308,12 @@ namespace app
         .install();
     }
 
+    static ccf::TxID txid_from_body(etcdserverpb::GetReceiptRequest&& payload)
+    {
+      auto revision = static_cast<uint64_t>(payload.revision());
+      return ccf::TxID{payload.raft_term(), revision};
+    }
+
     template <typename In, typename Out>
     void install_historical_endpoint_with_header_ro(
       const std::string& package,
@@ -312,7 +324,8 @@ namespace app
       ccfapp::AbstractNodeContext& context)
     {
       auto grpc_path = fmt::format("/{}.{}/{}", package, service, rpc);
-        auto is_tx_committed = [this](ccf::View view, ccf::SeqNo seqno, std::string& error_reason) {
+      auto is_tx_committed =
+        [this](ccf::View view, ccf::SeqNo seqno, std::string& error_reason) {
           return ccf::historical::is_tx_committed_v2(
             consensus, view, seqno, error_reason);
         };
@@ -320,7 +333,12 @@ namespace app
         grpc_path,
         HTTP_POST,
         ccf::historical::read_only_adapter_v3(
-          app::grpc::historical_grpc_read_only_adapter<In>(f), context, is_tx_committed, /* TODO: extract txid from request body */ ccf::historical::txid_from_header),
+          app::grpc::historical_grpc_read_only_adapter<In>(f),
+          context,
+          is_tx_committed,
+          [](ccf::endpoints::ReadOnlyEndpointContext& ctx) {
+            return txid_from_body(ccf::grpc::get_grpc_payload<In>(ctx.rpc_ctx));
+          }),
         ccf::no_auth_required)
         .set_forwarding_required(ccf::endpoints::ForwardingRequired::Never)
         .install();
@@ -328,7 +346,13 @@ namespace app
         json_path,
         HTTP_POST,
         ccf::historical::read_only_adapter_v3(
-          app::json_grpc::historical_json_grpc_adapter<In>(f), context, is_tx_committed, /* TODO: extract txid from request body */ ccf::historical::txid_from_header),
+          app::json_grpc::historical_json_grpc_adapter<In>(f),
+          context,
+          is_tx_committed,
+          [](ccf::endpoints::ReadOnlyEndpointContext& ctx) {
+            return txid_from_body(
+              app::json_grpc::get_json_grpc_payload<In>(ctx.rpc_ctx));
+          }),
         ccf::no_auth_required)
         .set_forwarding_required(ccf::endpoints::ForwardingRequired::Never)
         .install();
