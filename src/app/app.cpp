@@ -243,6 +243,15 @@ namespace app
           }
         }
 
+        populate_cluster_id(ctx.tx);
+
+        auto* header = response.mutable_header();
+        ccf::View view;
+        ccf::SeqNo seqno;
+        get_last_committed_txid_v1(view, seqno);
+        ccf::TxID tx_id{view, seqno};
+        fill_header(*header, tx_id);
+
         return ccf::grpc::make_success(response);
       };
 
