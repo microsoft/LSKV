@@ -2,8 +2,11 @@ BUILD=build
 CCF_PREFIX=/opt/ccf
 CCF_UNSAFE_PREFIX=/opt/ccf_unsafe
 
-CC=/opt/oe_lvi/clang-10
-CXX=/opt/oe_lvi/clang++-10
+CC!=which clang-10
+CXX!=which clang++-10
+
+OE_CC=/opt/oe_lvi/clang-10
+OE_CXX=/opt/oe_lvi/clang++-10
 
 ETCD_VER=v3.5.4
 ETCD_DOWNLOAD_URL=https://github.com/etcd-io/etcd/releases/download
@@ -51,7 +54,7 @@ build-virtual-unsafe:
 .PHONY: build-sgx
 build-sgx:
 	mkdir -p $(BUILD)
-	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=sgx -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja ..
+	cd $(BUILD) && CC=$(OE_CC) CXX=$(OE_CXX) cmake -DCOMPILE_TARGET=sgx -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCCF_UNSAFE=OFF -GNinja ..
 	cd $(BUILD) && ninja
 
 .PHONY: build-docker-virtual
