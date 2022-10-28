@@ -394,3 +394,17 @@ message ReceiptClaims {
     // TxnRequest request_txn = 3;
   }
 }
+
+message Receipt {
+  bytes claims_digest = 1;
+}
+
+message GetReceiptRequest {
+    int64 revision = 1;
+    uint64 raft_term = 2;
+}
+
+message GetReceiptResponse {
+  ResponseHeader header = 1;
+  Receipt receipt = 2;
+}
