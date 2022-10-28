@@ -100,7 +100,14 @@ class Store(abc.ABC):
         self, ex_type, ex_value, ex_traceback
     ) -> typing_extensions.Literal[False]:
         if self.proc:
+            logger.info("terminating store process")
             self.proc.terminate()
+            # give it a second to shutdown
+            time.sleep(1)
+            if not self.proc.poll():
+                # process is still running, kill it
+                logger.info("killing store process")
+                self.proc.kill()
             self.proc.wait()
             logger.info("stopped {}", self.config.to_str())
 
