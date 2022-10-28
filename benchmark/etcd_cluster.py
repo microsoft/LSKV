@@ -137,7 +137,7 @@ def main():
         # wait for a signal and print it out
         signals = {signal.SIGINT, signal.SIGTERM}
         # have to set the thread mask: https://bugs.python.org/issue38284
-        signal.pthread_sigmask(signal.SIG_BLOCK,signals )
+        signal.pthread_sigmask(signal.SIG_BLOCK, signals)
         logger.info("waiting for a signal")
         sig = signal.sigwait(signals)
         logger.info("received a signal: {}", signal.Signals(sig).name)
