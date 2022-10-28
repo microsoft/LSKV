@@ -171,3 +171,9 @@ curl -X POST https://127.0.0.1:8000/v3/kv/delete_range --cacert workspace/sandbo
 ## Benchmarking
 
 See [BENCHMARKING.md](./BENCHMARKING.md) for instructions to run the benchmarks and analysis.
+
+## Receipts
+
+The receipts are available through the `etcdserverpb.Receipt/GetReceipt` endpoint (`/v3/receipt/get_receipt` for json).
+The receipt is a gRPC form of the [output available from CCF](https://microsoft.github.io/CCF/main/use_apps/verify_tx.html#write-receipts), see [`etcd.proto`](./proto/etcd.proto) for the definition of the message types.
+The custom claims that are registered for the receipt take the form of the `ReceiptClaims` message in that `etcd.proto` file.
