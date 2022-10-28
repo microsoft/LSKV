@@ -5,6 +5,7 @@
 #include "ccf/common_auth_policies.h"
 #include "ccf/crypto/sha256.h"
 #include "ccf/crypto/verifier.h"
+#include "ccf/historical_queries_adapter.h"
 #include "ccf/ds/hex.h"
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
@@ -47,6 +48,7 @@ namespace app
       const auto kv = "KV";
       const auto lease = "Lease";
       const auto cluster = "Cluster";
+      const auto receipt = "Receipt";
 
       auto range = [this](
                      ccf::endpoints::ReadOnlyEndpointContext& ctx,
@@ -191,6 +193,23 @@ namespace app
         "MemberList",
         "/v3/cluster/member/list",
         member_list);
+
+      auto get_receipt = [this](
+                           ccf::endpoints::ReadOnlyEndpointContext& ctx,
+                           ccf::historical::StatePtr historical_state, etcdserverpb::GetReceiptRequest&& payload)
+                           {
+        // assert(historical_state->receipt);
+        etcdserverpb::GetReceiptResponse response;
+      //   auto* receipt = response.mutable_receipt();
+      //  auto r = ccf::describe_receipt_v1(*historical_state->receipt);
+      //  receipt->set_claims_digest(r["claims_digest"]);
+
+        return ccf::grpc::make_success(response);
+      };
+
+      install_historical_endpoint_with_header_ro<
+        etcdserverpb::GetReceiptRequest,
+        etcdserverpb::GetReceiptResponse>(etcdserverpb, receipt, "GetReceipt", "/v3/receipt/get_receipt", get_receipt, context);
     }
 
     template <typename Out>
@@ -280,6 +299,38 @@ namespace app
           app::json_grpc::set_json_grpc_response(res, ctx.rpc_ctx);
         },
         ccf::no_auth_required)
+        .install();
+    }
+
+    template <typename In, typename Out>
+    void install_historical_endpoint_with_header_ro(
+      const std::string& package,
+      const std::string& service,
+      const std::string& rpc,
+      const std::string& json_path,
+      const app::grpc::HistoricalGrpcReadOnlyEndpoint<In, Out>& f,
+      ccfapp::AbstractNodeContext& context)
+    {
+      auto grpc_path = fmt::format("/{}.{}/{}", package, service, rpc);
+        auto is_tx_committed = [this](ccf::View view, ccf::SeqNo seqno, std::string& error_reason) {
+          return ccf::historical::is_tx_committed_v2(
+            consensus, view, seqno, error_reason);
+        };
+      make_read_only_endpoint(
+        grpc_path,
+        HTTP_POST,
+        ccf::historical::read_only_adapter_v3(
+          app::grpc::historical_grpc_read_only_adapter<In>(f), context, is_tx_committed, /* TODO: extract txid from request body */ ccf::historical::txid_from_header),
+        ccf::no_auth_required)
+        .set_forwarding_required(ccf::endpoints::ForwardingRequired::Never)
+        .install();
+      make_read_only_endpoint(
+        json_path,
+        HTTP_POST,
+        ccf::historical::read_only_adapter_v3(
+          app::json_grpc::historical_json_grpc_adapter<In>(f), context, is_tx_committed, /* TODO: extract txid from request body */ ccf::historical::txid_from_header),
+        ccf::no_auth_required)
+        .set_forwarding_required(ccf::endpoints::ForwardingRequired::Never)
         .install();
     }
 
@@ -617,7 +668,6 @@ namespace app
       auto claims_data = claims.SerializeAsString();
       CCF_APP_DEBUG("registering custom claims");
       ctx.rpc_ctx->set_claims_digest(ccf::ClaimsDigest::Digest(claims_data));
-
 
       return ccf::grpc::make_success(delete_range_response);
     }
