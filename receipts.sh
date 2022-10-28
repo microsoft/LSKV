@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
 
 header=$(./etcdctl.sh put a b -w json | jq '.header')
 rev=$(echo "$header" | jq '.revision')
