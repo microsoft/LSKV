@@ -221,8 +221,9 @@ namespace app
           auto* tx_receipt = receipt->mutable_tx_receipt();
 
           auto* leaf_components = tx_receipt->mutable_leaf_components();
-          leaf_components->set_claims_digest(
-            tr->leaf_components.claims_digest.value().hex_str());
+          // TODO: should we set this or not?
+          // leaf_components->set_claims_digest(
+          //   tr->leaf_components.claims_digest.value().hex_str());
           leaf_components->set_commit_evidence(
             tr->leaf_components.commit_evidence);
           leaf_components->set_write_set_digest(
