@@ -395,8 +395,32 @@ message ReceiptClaims {
   }
 }
 
+message SignatureReceipt {
+  bytes leaf = 1;
+  bytes node_id = 2;
+  bytes signature = 4;
+  bytes cert = 5;
+
+}
+
+message Proof {
+  bytes left = 1;
+  bytes right = 2;
+}
+
+message TxReceipt {
+  bytes cert = 1;
+  LeafComponents leaf_components = 2;
+  bytes node_id = 3;
+  repeated Proof proof = 4;
+  bytes signature = 5;
+}
+
 message Receipt {
-  bytes claims_digest = 1;
+  oneof receipt {
+    TxReceipt tx_receipt = 1;
+    SignatureReceipt signature_receipt = 2;
+  }
 }
 
 message GetReceiptRequest {
