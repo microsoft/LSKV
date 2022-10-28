@@ -198,11 +198,49 @@ namespace app
                            ccf::endpoints::ReadOnlyEndpointContext& ctx,
                            ccf::historical::StatePtr historical_state,
                            etcdserverpb::GetReceiptRequest&& payload) {
-        // assert(historical_state->receipt);
+        assert(historical_state->receipt);
         etcdserverpb::GetReceiptResponse response;
-        //   auto* receipt = response.mutable_receipt();
-        //  auto r = ccf::describe_receipt_v1(*historical_state->receipt);
-        //  receipt->set_claims_digest(r["claims_digest"]);
+        auto* receipt = response.mutable_receipt();
+        ccf::ReceiptPtr receipt_ptr =
+          ccf::describe_receipt_v2(*historical_state->receipt);
+        receipt->set_cert(receipt_ptr->cert.str());
+        receipt->set_signature(std::string(
+          receipt_ptr->signature.begin(), receipt_ptr->signature.end()));
+        receipt->set_node_id(receipt_ptr->node_id);
+        if (receipt_ptr->is_signature_transaction())
+        {
+          auto sr =
+            std::dynamic_pointer_cast<ccf::SignatureReceipt>(receipt_ptr);
+          auto* sig_receipt = receipt->mutable_signature_receipt();
+
+          sig_receipt->set_leaf(sr->signed_root.hex_str());
+        }
+        else
+        {
+          auto tr = std::dynamic_pointer_cast<ccf::ProofReceipt>(receipt_ptr);
+          auto* tx_receipt = receipt->mutable_tx_receipt();
+
+          auto* leaf_components = tx_receipt->mutable_leaf_components();
+          leaf_components->set_claims_digest(
+            tr->leaf_components.claims_digest.value().hex_str());
+          leaf_components->set_commit_evidence(
+            tr->leaf_components.commit_evidence);
+          leaf_components->set_write_set_digest(
+            tr->leaf_components.write_set_digest.hex_str());
+
+          for (const auto& proof : tr->proof)
+          {
+            auto* proof_entry = tx_receipt->add_proof();
+            if (proof.direction == ccf::ProofReceipt::ProofStep::Left)
+            {
+              proof_entry->set_left(proof.hash.hex_str());
+            }
+            else
+            {
+              proof_entry->set_right(proof.hash.hex_str());
+            }
+          }
+        }
 
         return ccf::grpc::make_success(response);
       };
