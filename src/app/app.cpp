@@ -13,6 +13,7 @@
 #include "ccf/service/tables/service.h"
 #include "endpoints/grpc.h" // TODO(#22): private header
 #include "etcd.pb.h"
+#include "lskvserver.pb.h"
 #include "grpc.h"
 #include "index.h"
 #include "json_grpc.h"
@@ -45,6 +46,7 @@ namespace app
       context.get_indexing_strategies().install_strategy(kvindex);
 
       const auto etcdserverpb = "etcdserverpb";
+      const auto lskvserverpb = "lskvserverpb";
       const auto kv = "KV";
       const auto lease = "Lease";
       const auto cluster = "Cluster";
@@ -197,9 +199,9 @@ namespace app
       auto get_receipt = [this](
                            ccf::endpoints::ReadOnlyEndpointContext& ctx,
                            ccf::historical::StatePtr historical_state,
-                           etcdserverpb::GetReceiptRequest&& payload) {
+                           lskvserverpb::GetReceiptRequest&& payload) {
         assert(historical_state->receipt);
-        etcdserverpb::GetReceiptResponse response;
+        lskvserverpb::GetReceiptResponse response;
         auto* receipt = response.mutable_receipt();
         ccf::ReceiptPtr receipt_ptr =
           ccf::describe_receipt_v2(*historical_state->receipt);
@@ -260,8 +262,8 @@ namespace app
       };
 
       install_historical_endpoint_with_header_ro<
-        etcdserverpb::GetReceiptRequest,
-        etcdserverpb::GetReceiptResponse>(
+        lskvserverpb::GetReceiptRequest,
+        lskvserverpb::GetReceiptResponse>(
         etcdserverpb,
         receipt,
         "GetReceipt",
@@ -360,7 +362,7 @@ namespace app
         .install();
     }
 
-    static ccf::TxID txid_from_body(etcdserverpb::GetReceiptRequest&& payload)
+    static ccf::TxID txid_from_body(lskvserverpb::GetReceiptRequest&& payload)
     {
       auto revision = static_cast<uint64_t>(payload.revision());
       return ccf::TxID{payload.raft_term(), revision};
@@ -619,7 +621,7 @@ namespace app
       }
 
       CCF_APP_DEBUG("building custom claims");
-      etcdserverpb::ReceiptClaims claims;
+      lskvserverpb::ReceiptClaims claims;
       auto* put_claim = claims.mutable_request_put();
       put_claim->set_key(payload.key());
       put_claim->set_value(payload.value());
@@ -735,7 +737,7 @@ namespace app
       }
 
       CCF_APP_DEBUG("building custom claims");
-      etcdserverpb::ReceiptClaims claims;
+      lskvserverpb::ReceiptClaims claims;
       auto* delete_range_claim = claims.mutable_request_delete_range();
       delete_range_claim->set_key(payload.key());
       delete_range_claim->set_range_end(payload.range_end());

@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+import "etcd.proto";
+
+package lskvserverpb;
+
+message ReceiptClaims {
+  oneof request {
+    etcdserverpb.PutRequest request_put = 1;
+    etcdserverpb.DeleteRangeRequest request_delete_range = 2;
+    // TxnRequest request_txn = 3;
+  }
+}
+
+message SignatureReceipt {
+  bytes leaf = 1;
+}
+
+message Proof {
+  bytes left = 1;
+  bytes right = 2;
+}
+
+message LeafComponents {
+  bytes claims_digest = 1;
+  bytes commit_evidence = 2;
+  bytes write_set_digest = 3;
+}
+
+message TxReceipt {
+  LeafComponents leaf_components = 1;
+  repeated Proof proof = 2;
+}
+
+message Receipt {
+  bytes cert = 1;
+  bytes signature = 2;
+  bytes node_id = 3;
+  oneof receipt_extras {
+    TxReceipt tx_receipt = 4;
+    SignatureReceipt signature_receipt = 5;
+  }
+}
+
+message GetReceiptRequest {
+    int64 revision = 1;
+    uint64 raft_term = 2;
+}
+
+message GetReceiptResponse {
+  etcdserverpb.ResponseHeader header = 1;
+  Receipt receipt = 2;
+}
