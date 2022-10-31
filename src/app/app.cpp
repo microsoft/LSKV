@@ -13,12 +13,12 @@
 #include "ccf/service/tables/service.h"
 #include "endpoints/grpc.h" // TODO(#22): private header
 #include "etcd.pb.h"
-#include "lskvserver.pb.h"
 #include "grpc.h"
 #include "index.h"
 #include "json_grpc.h"
 #include "kvstore.h"
 #include "leases.h"
+#include "lskvserver.pb.h"
 #include "node_data.h"
 
 #define FMT_HEADER_ONLY
