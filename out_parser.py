@@ -6,7 +6,7 @@ Parse ccf sandbox workspace out files for time gaps over a threshold
 
 from datetime import datetime, timedelta
 
-from dateutil.parser import ParserError, parse
+from dateutil.parser import ParserError, parse  # type: ignore
 
 
 def main():
