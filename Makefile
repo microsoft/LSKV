@@ -35,6 +35,22 @@ build-sgx:
 	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=sgx -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja ..
 	cd $(BUILD) && ninja
 
+.PHONY: build-docker-virtual
+build-docker-virtual:
+	docker build -t lskv-virtual -f Dockerfile.virtual .
+
+.PHONY: build-docker-sgx
+build-docker-sgx:
+	docker build -t lskv-sgx -f Dockerfile.sgx .
+
+.PHONY: build-docker
+build-docker: build-docker-virtual build-docker-sgx
+
+.PHONY: debug-dockerignore
+debug-dockerignore:
+	docker build --no-cache -t build-context -f Dockerfile.ignore .
+	docker run --rm build-context
+
 .PHONY: run-virtual
 run-virtual: build-virtual
 	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2
