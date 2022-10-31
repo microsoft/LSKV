@@ -179,6 +179,9 @@ See [BENCHMARKING.md](./BENCHMARKING.md) for instructions to run the benchmarks 
 
 ## Receipts
 
-The receipts are available through the `etcdserverpb.Receipt/GetReceipt` endpoint (`/v3/receipt/get_receipt` for json).
-The receipt is a protobuf form of the [output available from CCF](https://microsoft.github.io/CCF/main/use_apps/verify_tx.html#write-receipts), see [`etcd.proto`](./proto/etcd.proto) for the definition of the message types.
-The custom claims that are registered for the receipt take the form of the `ReceiptClaims` message in that `etcd.proto` file.
+Receipts enable clients to verify that what their transaction has been included in the ledger.
+The receipt includes claims for this purpose, for LSKV these are outlined below.
+
+The receipts are available through the `lskvserverpb.Receipt/GetReceipt` endpoint (`/v3/receipt/get_receipt` for json).
+The receipt is a protobuf form of the [output available from CCF](https://microsoft.github.io/CCF/main/use_apps/verify_tx.html#write-receipts), see [`lskvserver.proto`](./proto/lskvserver.proto) for the definition of the message types.
+The custom claims that are registered for the receipt take the form of the `ReceiptClaims` message in that `lskvserver.proto` file.
