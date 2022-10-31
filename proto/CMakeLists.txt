@@ -12,7 +12,10 @@ endif()
 
 set(PROTOBUF_INCLUDE_DIR ${CCF_DIR}/include/3rdparty/protobuf/src/)
 
-file(GLOB PROTO_FILES ${CMAKE_CURRENT_SOURCE_DIR}/*.proto)
+set(PROTO_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/etcd.proto
+    ${CMAKE_CURRENT_SOURCE_DIR}/lskvserver.proto
+    ${CMAKE_CURRENT_SOURCE_DIR}/status.proto)
 
 foreach(proto_file ${PROTO_FILES})
   get_filename_component(PROTO_NAME ${proto_file} NAME)
@@ -27,9 +30,13 @@ foreach(proto_file ${PROTO_FILES})
     COMMENT "Generate C++ source files from protobuf file ${PROTO_NAME}"
     DEPENDS ${proto_file})
 
+  if(${PROTO_NAME_WE} STREQUAL "lskvserver")
+    set(EXTRA_INCLUDES ${CMAKE_CURRENT_BINARY_DIR}/etcd.pb.h)
+  endif()
+
   add_enclave_library(
     ${PROTO_NAME_WE}.enclave ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.cc
-    ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.h)
+    ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.h ${EXTRA_INCLUDES})
   target_include_directories(
     ${PROTO_NAME_WE}.enclave PUBLIC ${PROTOBUF_INCLUDE_DIR}
                                     ${CMAKE_CURRENT_BINARY_DIR})
@@ -38,7 +45,7 @@ foreach(proto_file ${PROTO_FILES})
     add_host_library(
       ${PROTO_NAME_WE}.virtual
       ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.cc
-      ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.h)
+      ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.h ${EXTRA_INCLUDES})
     target_include_directories(
       ${PROTO_NAME_WE}.virtual PUBLIC ${PROTOBUF_INCLUDE_DIR}
                                       ${CMAKE_CURRENT_BINARY_DIR})
