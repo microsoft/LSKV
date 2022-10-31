@@ -16,8 +16,6 @@ BIN_DIR=bin
 CCF_VER=ccf-3.0.0-dev6
 CCF_VER_LOWER=ccf_3.0.0_dev6
 
-K6_VER=0.40.0
-
 .PHONY: install-ccf
 install-ccf:
 	wget -c https://github.com/microsoft/CCF/releases/download/$(CCF_VER)/$(CCF_VER_LOWER)_amd64.deb # download deb
@@ -90,7 +88,14 @@ patched-etcd:
 	rm -rf $(BUILD)/3rdparty/etcd
 	mkdir -p $(BUILD)/3rdparty
 	cp -r 3rdparty/etcd $(BUILD)/3rdparty/.
-	git apply --directory=$(BUILD)/3rdparty/etcd patches/*
+	git apply --directory=$(BUILD)/3rdparty/etcd patches/0001-etcd-patches.patch
+
+.PHONY: patched-k6
+patched-k6:
+	rm -rf $(BUILD)/3rdparty/k6
+	mkdir -p $(BUILD)/3rdparty
+	cp -r 3rdparty/k6 $(BUILD)/3rdparty/.
+	git apply --directory=$(BUILD)/3rdparty/k6 patches/k6-micro.diff
 
 $(BIN_DIR)/benchmark: patched-etcd
 	cd $(BUILD)/3rdparty/etcd && go build -buildvcs=false ./tools/benchmark
@@ -113,17 +118,14 @@ $(BIN_DIR)/etcdctl: $(BIN_DIR)/etcd
 $(BIN_DIR)/go-ycsb:
 	cd 3rdparty/go-ycsb && make && mv bin/go-ycsb ../../bin/.
 
-.PHONY: $(BIN_DIR)/k6
-$(BIN_DIR)/k6:
-	wget -c -O k6.tar.gz https://github.com/grafana/k6/releases/download/v$(K6_VER)/k6-v$(K6_VER)-linux-amd64.tar.gz
-	tar xzvf k6.tar.gz
-	mv k6-v$(K6_VER)-linux-amd64/k6 $(BIN_DIR)/k6
-	rm -rf k6.tar.gz
+$(BIN_DIR)/k6: patched-k6
+	cd $(BUILD)/3rdparty/k6 && go build -buildvcs=false
+	mkdir -p $(BIN_DIR)
+	mv $(BUILD)/3rdparty/k6/k6 $(BIN_DIR)/k6
 
 .PHONY: benchmark-virtual
 benchmark-virtual: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual .venv certs
 	. .venv/bin/activate && python3 benchmark/etcd.py --virtual
-
 
 .PHONY: benchmark-sgx
 benchmark-sgx: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual build-sgx .venv certs
