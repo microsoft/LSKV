@@ -57,6 +57,7 @@ class K6Benchmark(common.Benchmark):
         return bench
 
 
+# pylint: disable=duplicate-code
 def run_benchmark(config: K6Config, store: Store, benchmark: K6Benchmark) -> str:
     """
     Run the benchmark for the given store with the given bench command.
@@ -74,6 +75,7 @@ def run_benchmark(config: K6Config, store: Store, benchmark: K6Benchmark) -> str
     return timings_file
 
 
+# pylint: disable=duplicate-code
 # pylint: disable=too-many-locals
 def run_metrics(_name: str, _cmd: str, file: str):
     """
