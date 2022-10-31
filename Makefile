@@ -35,6 +35,22 @@ build-sgx:
 	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=sgx -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja ..
 	cd $(BUILD) && ninja
 
+.PHONY: build-docker-virtual
+build-docker-virtual:
+	docker build -t lskv-virtual -f Dockerfile.virtual .
+
+.PHONY: build-docker-sgx
+build-docker-sgx:
+	docker build -t lskv-sgx -f Dockerfile.sgx .
+
+.PHONY: build-docker
+build-docker: build-docker-virtual build-docker-sgx
+
+.PHONY: debug-dockerignore
+debug-dockerignore:
+	docker build --no-cache -t build-context -f Dockerfile.ignore .
+	docker run --rm build-context
+
 .PHONY: run-virtual
 run-virtual: build-virtual
 	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2
@@ -117,12 +133,8 @@ $(BIN_DIR)/cfssl:
 $(BIN_DIR)/cfssljson: $(BIN_DIR)/cfssl
 
 .PHONY: certs
-certs: $(BIN_DIR)/cfssl $(BIN_DIR)/cfssljson
-	rm -rf certs
-	mkdir -p certs
-	cd certs && ../$(BIN_DIR)/cfssl gencert -initca ../certs-config/ca-csr.json | ../$(BIN_DIR)/cfssljson -bare ca -
-	cd certs && ../$(BIN_DIR)/cfssl gencert -ca ../certs/ca.pem -ca-key ../certs/ca-key.pem -config ../certs-config/ca-config.json -profile server ../certs-config/server.json | ../$(BIN_DIR)/cfssljson -bare server -
-	cd certs && ../$(BIN_DIR)/cfssl gencert -ca ../certs/ca.pem -ca-key ../certs/ca-key.pem -config ../certs-config/ca-config.json -profile client ../certs-config/client.json | ../$(BIN_DIR)/cfssljson -bare client -
+certs: $(BIN_DIR)/cfssl $(BIN_DIR)/cfssljson .venv
+	. .venv/bin/activate && ./certs.py
 
 .PHONY: cpplint
 cpplint: $(CPP_FILES) $(H_FILES)

@@ -10,6 +10,10 @@ RUN CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja -DCOMPI
 # Run
 FROM mcr.microsoft.com/ccf/app/run:3.0.0-dev6-sgx
 
+LABEL org.opencontainers.image.source=https://github.com/microsoft/lskv
+LABEL org.opencontainers.image.description="LSKV SGX node"
+LABEL org.opencontainers.image.licenses=MIT
+
 COPY --from=builder /build/liblskv.enclave.so.signed /app/
 COPY --from=builder /opt/ccf/bin/keygenerator.sh /app/
 COPY ./config/cchost_config.sgx.json /app/
