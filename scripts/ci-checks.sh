@@ -66,15 +66,15 @@ fi
 # shellcheck source=/dev/null
 source ${VENV_DIR}/bin/activate
 pip install -U pip
-pip install -U wheel black pylint mypy cpplint 1>/dev/null
+pip install -U wheel black[jupyter] pylint mypy cpplint 1>/dev/null
 pip install -r requirements.txt
 
 echo "$CHECK_DELIMITER"
 echo "-- Python format"
 if [ $FIX -ne 0 ]; then
-  git ls-files | grep -e '\.py$' | xargs black
+  git ls-files | grep -e '\.py$' -e '\.ipynb$' | xargs black
 else
-  git ls-files | grep -e '\.py$' | xargs black --check
+  git ls-files | grep -e '\.py$' -e '\.ipynb$' | xargs black --check
 fi
 
 echo "$CHECK_DELIMITER"
