@@ -13,7 +13,7 @@ import common
 import etcd
 import perf_system
 import ycsb
-import perf_system
+import k6
 
 
 def all_common_configurations(args: argparse.Namespace):
@@ -25,6 +25,7 @@ def all_common_configurations(args: argparse.Namespace):
     args.virtual = True
     args.sgx = True
     args.http2 = True
+    args.etcd=True
 
     args.sig_tx_intervals = [5000, 10000, 20000]
     args.sig_ms_intervals = [100, 1000, 10000]
@@ -72,14 +73,16 @@ def all_perf_configurations(args: argparse.Namespace) -> List[perf_system.PerfCo
     return perf_system.make_configurations(args)
 
 
-def all_perf_configurations(args: argparse.Namespace) -> List[perf_system.PerfConfig]:
+def all_k6_configurations(args: argparse.Namespace) -> List[k6.K6Config]:
     """
-    Set args for all perf configurations.
+    Set args for all k6 configurations.
     """
     args.http1 = True
+    args.http2 = True
+    args.etcd=False
 
     all_common_configurations(args)
-    return perf_system.make_configurations(args)
+    return k6.make_configurations(args)
 
 
 if __name__ == "__main__":
@@ -92,9 +95,4 @@ if __name__ == "__main__":
     common.main(
         "perf", perf_system.get_arguments, all_perf_configurations, perf_system.execute_config
     )
-    common.main(
-        "perf",
-        perf_system.get_arguments,
-        all_perf_configurations,
-        perf_system.execute_config,
-    )
+    common.main( "k6", k6.get_arguments, all_k6_configurations, k6.execute_config,)
