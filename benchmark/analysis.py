@@ -67,7 +67,7 @@ class Analyser:
             data.drop(["start_us"], axis=1, inplace=True)
             return data, 0
         if self.benchmark == "k6":
-            starts=data["timestamp"]
+            starts = data["timestamp"]
             start = starts.min()
             starts -= start
             data["start_ms"] = starts / 1000
@@ -111,7 +111,7 @@ class Analyser:
             data.drop(["latency_us"], axis=1, inplace=True)
             return data
         if self.benchmark == "k6":
-            data["latency_ms"] = data["metric_value"] 
+            data["latency_ms"] = data["metric_value"]
             return data
         return data
 

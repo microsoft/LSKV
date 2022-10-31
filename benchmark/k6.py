@@ -13,7 +13,7 @@ from typing import List
 
 import common
 from common import Store
-from stores import  LSKVStore
+from stores import LSKVStore
 from loguru import logger
 
 BENCH_DIR = os.path.join(common.BENCH_DIR, "k6")

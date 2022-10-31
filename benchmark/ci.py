@@ -64,6 +64,7 @@ def perf_configurations(args: argparse.Namespace) -> List[perf.PerfConfig]:
 
     return perf.make_configurations(args)
 
+
 def k6_configurations(args: argparse.Namespace) -> List[k6.K6Config]:
     """
     Set args for all k6 configurations.

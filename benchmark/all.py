@@ -25,7 +25,7 @@ def all_common_configurations(args: argparse.Namespace):
     args.virtual = True
     args.sgx = True
     args.http2 = True
-    args.etcd=True
+    args.etcd = True
 
     args.sig_tx_intervals = [5000, 10000, 20000]
     args.sig_ms_intervals = [100, 1000, 10000]
@@ -62,12 +62,13 @@ def all_ycsb_configurations(args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     all_common_configurations(args)
     return ycsb.make_configurations(args)
 
+
 def all_perf_configurations(args: argparse.Namespace) -> List[perf_system.PerfConfig]:
     """
     Set args for all perf configurations.
     """
-    args.http1=True
-    args.http2=True
+    args.http1 = True
+    args.http2 = True
 
     all_common_configurations(args)
     return perf_system.make_configurations(args)
@@ -79,7 +80,7 @@ def all_k6_configurations(args: argparse.Namespace) -> List[k6.K6Config]:
     """
     args.http1 = True
     args.http2 = True
-    args.etcd=False
+    args.etcd = False
 
     all_common_configurations(args)
     return k6.make_configurations(args)
@@ -93,6 +94,14 @@ if __name__ == "__main__":
         "ycsb", ycsb.get_arguments, all_ycsb_configurations, ycsb.execute_config
     )
     common.main(
-        "perf", perf_system.get_arguments, all_perf_configurations, perf_system.execute_config
+        "perf",
+        perf_system.get_arguments,
+        all_perf_configurations,
+        perf_system.execute_config,
     )
-    common.main( "k6", k6.get_arguments, all_k6_configurations, k6.execute_config,)
+    common.main(
+        "k6",
+        k6.get_arguments,
+        all_k6_configurations,
+        k6.execute_config,
+    )
