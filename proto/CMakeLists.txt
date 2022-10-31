@@ -33,7 +33,7 @@ foreach(proto_file ${PROTO_FILES})
         ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.h
     )
     target_include_directories(
-        ${PROTO_NAME_WE}.enclave PUBLIC ${PROTOBUF_INCLUDE_DIR}
+        ${PROTO_NAME_WE}.enclave PUBLIC ${PROTOBUF_INCLUDE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
     )
 
     add_host_library(
@@ -41,6 +41,6 @@ foreach(proto_file ${PROTO_FILES})
         ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.h
     )
     target_include_directories(
-        ${PROTO_NAME_WE}.virtual PUBLIC ${PROTOBUF_INCLUDE_DIR}
+        ${PROTO_NAME_WE}.virtual PUBLIC ${PROTOBUF_INCLUDE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
     )
 endforeach()
