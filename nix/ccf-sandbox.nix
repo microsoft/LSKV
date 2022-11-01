@@ -3,10 +3,9 @@
   openenclave,
   python3,
   stdenv,
-  enclave ? "virtual",
-}: let
+}: {enclave}: let
   infra = python3.pkgs.toPythonApplication (python3.pkgs.python-ccf-infra);
-  c = ccf.override {inherit enclave;};
+  c = ccf {inherit enclave;};
 in
   stdenv.mkDerivation {
     pname = "ccf-sandbox-${enclave}";

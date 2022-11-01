@@ -7,8 +7,7 @@
   protobuf,
   ccf,
   nix-filter,
-  enclave ? "virtual",
-}:
+}: {enclave}:
 stdenv.mkDerivation rec {
   pname = "lskv-${enclave}";
   version = "0.1.0";
@@ -25,7 +24,7 @@ stdenv.mkDerivation rec {
   nativeBuildInputs = [
     cmake
     ninja
-    (ccf.override {inherit enclave;})
+    (ccf {inherit enclave;})
     openenclave
     protobuf
   ];
