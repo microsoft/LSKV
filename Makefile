@@ -75,18 +75,6 @@ run-virtual-http1: build-virtual
 run-virtual-unsafe-http1: build-virtual-unsafe
 	VENV_DIR=.venv $(CCF_UNSAFE_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so 
 
-.PHONY: run-virtual-unsafe
-run-virtual-unsafe: build-virtual-unsafe
-	VENV_DIR=.venv $(CCF_UNSAFE_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2
-
-.PHONY: run-virtual-http1
-run-virtual-http1: build-virtual
-	VENV_DIR=.venv $(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so
-
-.PHONY: run-virtual-unsafe-http1
-run-virtual-unsafe-http1: build-virtual-unsafe
-	VENV_DIR=.venv $(CCF_UNSAFE_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so 
-
 .PHONY: run-sgx
 run-sgx: build-sgx
 	VENV_DIR=.venv $(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.enclave.so.signed -e release --http2
