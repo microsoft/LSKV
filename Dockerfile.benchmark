@@ -1,22 +1,71 @@
-FROM mcr.microsoft.com/ccf/app/dev:3.0.0-dev6-sgx
+FROM mcr.microsoft.com/ccf/app/dev:3.0.0-dev6-sgx AS base
 
-WORKDIR /src
+FROM base AS gh
 
-COPY Makefile .
-ADD 3rdparty 3rdparty
-
-RUN curl -L -o go1.19.1.linux-amd64.tar.gz https://go.dev/dl/go1.19.1.linux-amd64.tar.gz && \
-    tar -C /usr/local -xzf go1.19.1.linux-amd64.tar.gz && \
-    rm go1.19.1.linux-amd64.tar.gz && \
-    echo "export PATH=$PATH:/usr/local/go/bin" >> ~/.bashrc && \
-    type -p curl >/dev/null || sudo apt install curl -y && \
+RUN type -p curl >/dev/null || sudo apt install curl -y && \
     curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
     sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
     sudo apt update && \
-    sudo apt install gh -y && \
-    make bin/etcd && \
-    make bin/benchmark && \
-    make bin/go-ycsb && \
-    make bin/k6 && \
-    make .venv 
+    sudo apt install gh -y
+
+FROM base AS go
+
+RUN curl -L -o go1.19.1.linux-amd64.tar.gz https://go.dev/dl/go1.19.1.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.19.1.linux-amd64.tar.gz && \
+    rm go1.19.1.linux-amd64.tar.gz && \
+    mv /usr/local/go/bin/go /usr/local/bin/go
+
+FROM base AS etcd
+
+WORKDIR /build
+COPY 3rdparty 3rdparty
+COPY Makefile .
+
+RUN make bin/etcd
+
+FROM go AS benchmark
+
+WORKDIR /build
+COPY 3rdparty 3rdparty
+COPY patches patches
+COPY Makefile .
+
+RUN make bin/benchmark
+
+FROM go AS go-ycsb
+
+WORKDIR /build
+COPY Makefile .
+COPY 3rdparty 3rdparty
+
+RUN make bin/go-ycsb
+
+FROM go AS k6
+
+WORKDIR /build
+COPY 3rdparty 3rdparty
+COPY patches patches
+COPY Makefile .
+
+RUN make bin/k6
+
+FROM base AS venv
+
+WORKDIR /build
+COPY Makefile .
+COPY requirements.txt .
+
+RUN make .venv
+
+FROM base
+
+WORKDIR /src
+
+COPY --from=gh /usr/bin/gh /usr/bin/gh
+COPY --from=go /usr/local/bin/go /usr/local/bin/go
+COPY --from=etcd /build/bin/etcd bin/etcd
+COPY --from=benchmark /build/bin/benchmark bin/benchmark
+COPY --from=go-ycsb /build/bin/go-ycsb bin/go-ycsb
+COPY --from=k6 /build/bin/k6 bin/k6
+COPY --from=venv /build/.venv .venv

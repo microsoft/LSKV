@@ -73,7 +73,7 @@ run-virtual-http1: build-virtual
 
 .PHONY: run-virtual-unsafe-http1
 run-virtual-unsafe-http1: build-virtual-unsafe
-	VENV_DIR=.venv $(CCF_UNSAFE_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so 
+	VENV_DIR=.venv $(CCF_UNSAFE_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so
 
 .PHONY: run-sgx
 run-sgx: build-sgx
@@ -116,6 +116,7 @@ $(BIN_DIR)/etcdctl: $(BIN_DIR)/etcd
 
 .PHONY: $(BIN_DIR)/go-ycsb
 $(BIN_DIR)/go-ycsb:
+	mkdir -p bin
 	cd 3rdparty/go-ycsb && make && mv bin/go-ycsb ../../bin/.
 
 $(BIN_DIR)/k6: patched-k6
