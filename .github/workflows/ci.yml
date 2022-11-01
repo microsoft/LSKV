@@ -83,3 +83,110 @@ jobs:
         run: ./scripts/check-issues.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  benchmark:
+    runs-on: ubuntu-20.04
+    container: mcr.microsoft.com/ccf/app/dev:3.0.0-dev6-sgx
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Install Go
+        run: curl -L -o go1.19.1.linux-amd64.tar.gz https://go.dev/dl/go1.19.1.linux-amd64.tar.gz && tar -C /usr/local -xzf go1.19.1.linux-amd64.tar.gz
+
+      - name: Get etcd
+        run: make bin/etcd
+
+      - name: Install gh cli
+        run: |
+          type -p curl >/dev/null || sudo apt install curl -y
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh -y
+
+      - name: Build benchmark
+        run: export PATH=$PATH:/usr/local/go/bin && make bin/benchmark
+
+      - name: Build go-ycsb
+        run: export PATH=$PATH:/usr/local/go/bin && make bin/go-ycsb
+
+      - name: Build k6
+        run: export PATH=$PATH:/usr/local/go/bin && make bin/k6
+
+      - name: Build app (Virtual)
+        run: make build-virtual
+
+      - name: Build app (SGX)
+        run: make build-sgx
+
+      - name: Make .venv
+        run: make .venv
+
+      - name: Make certs
+        run: make certs
+
+      - name: Run benchmark
+        run: export PATH=$PATH:/usr/local/go/bin && . .venv/bin/activate && python3 benchmark/ci.py
+
+      - name: Plot results
+        run: make execute-notebook
+
+      - name: Mark safe directories
+        if: ${{ github.event_name == 'pull_request' }}
+        run: git config --global --add safe.directory $(pwd)
+
+      - name: Set up git author
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          git config --global user.email "62645686+ccf-bot@users.noreply.github.com"
+          git config --global user.name "ccf-bot"
+
+      - name: Commit and push plots
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          set -x
+          git checkout -- benchmark
+          git checkout ci-plots 
+          git pull origin ci-plots
+          mkdir ${{ github.sha }} 
+          mv plots/* ${{ github.sha }}/.
+          rm -f ${{ github.sha }}/**/*.svg
+          git add ${{ github.sha }}/**/*.jpg
+          git commit -m "add plots for ${{ github.sha }}"
+          git push origin ci-plots
+
+      - name: Set up comment file
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          repo_url=${{ github.server_url }}/${{ github.repository }}
+          echo "## Plots from benchmarking at ${{ github.sha }}" >> comment.md
+          echo >> comment.md
+          echo "> Available from [here](${repo_url}/tree/ci-plots/${{ github.sha }})" >> comment.md
+          echo >> comment.md
+          for dir in ${{ github.sha }}/*; do
+            for f in $dir/*; do
+              short="${f#*/}"
+              echo "<details>" >> comment.md
+              echo "<summary><b>$short</b></summary>" >> comment.md
+              echo "<a href=\"${repo_url}/blob/ci-plots/$f?raw=true\"><img src=\"${repo_url}/blob/ci-plots/$f?raw=true\"></a>" >> comment.md
+              echo "</details>" >> comment.md
+            done
+          done
+
+      - name: Upload plots to PR
+        if: ${{ github.event_name == 'pull_request' }}
+        run: gh pr comment ${{ github.event.number }} --body-file comment.md
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload plots as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: plots
+          path: ${{ github.sha }}/
