@@ -2,7 +2,8 @@
   pkgs,
   packageOverrides ? (self: super: {}),
 }:
-pkgs.lib.makeScope pkgs.newScope (self:
+pkgs.lib.makeScope pkgs.newScope (
+  self:
     rec {
       az-dcap = self.callPackage ./az-dcap.nix {};
       sgx-dcap = self.callPackage ./sgx-dcap.nix {};
@@ -60,6 +61,9 @@ pkgs.lib.makeScope pkgs.newScope (self:
           }
           // args);
     }
-    // (pkgs.lib.attrsets.mapAttrs'
+    // (
+      pkgs.lib.attrsets.mapAttrs'
       (name: value: pkgs.lib.attrsets.nameValuePair ("ci-checks-" + name) value)
-      (pkgs.callPackage ./ci-checks.nix {})))
+      (pkgs.callPackage ./ci-checks.nix {})
+    )
+)
