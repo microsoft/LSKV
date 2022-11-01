@@ -174,7 +174,7 @@ See [BENCHMARKING.md](./BENCHMARKING.md) for instructions to run the benchmarks 
 
 ## Receipts
 
-Receipts enable clients to verify that what their transaction has been included in the ledger.
+Receipts enable clients to verify that their transaction has been included in the ledger.
 The receipt includes claims for this purpose, for LSKV these are outlined below.
 
 The receipts are available through the `lskvserverpb.Receipt/GetReceipt` endpoint (`/v3/receipt/get_receipt` for json).
