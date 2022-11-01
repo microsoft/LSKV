@@ -5,10 +5,11 @@
 Test a single node
 """
 
+from loguru import logger
+
 # pylint: disable=unused-import
 # pylint: disable=no-name-in-module
-from common import b64decode, http1_client, sandbox
-from loguru import logger
+from test_common import b64decode, http1_client, sandbox
 
 
 # pylint: disable=redefined-outer-name

@@ -9,7 +9,7 @@ import base64
 import os
 import time
 from subprocess import PIPE, Popen
-from typing import List
+from typing import Any, Dict, List
 
 import httpx
 import pytest
@@ -265,7 +265,7 @@ class HttpClient:
         Perform a get operation on lskv.
         """
         logger.info("Get: {} {} {}", key, range_end, rev)
-        j = {"key": b64encode(key)}
+        j: Dict[str, Any] = {"key": b64encode(key)}
         if range_end:
             j["range_end"] = b64encode(range_end)
         if rev:
