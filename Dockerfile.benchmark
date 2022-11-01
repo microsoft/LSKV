@@ -60,7 +60,7 @@ RUN make .venv
 
 FROM base
 
-WORKDIR /src
+WORKDIR /build
 
 COPY --from=gh /usr/bin/gh /usr/bin/gh
 COPY --from=go /usr/local/bin/go /usr/local/bin/go
