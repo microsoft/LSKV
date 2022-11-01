@@ -54,11 +54,11 @@ jobs:
         run: docker build -t $ACR_REGISTRY/public/lskv/lskv:latest-virtual -f Dockerfile.virtual .
 
       - name: Log in to registry
-        if: ${{ github.event_name == "push" && github.ref == "refs/heads/main" }}
+        if: github.event_name == "push" && github.ref == "refs/heads/main" 
         run: docker login -u $ACR_TOKEN_NAME -p ${{ secrets.ACR_LSKV_PUSH_TOKEN_PASSWORD }} $ACR_REGISTRY
 
       - name: Push virtual image
-        if: ${{ github.event_name == "push" && github.ref == "refs/heads/main" }}
+        if: github.event_name == "push" && github.ref == "refs/heads/main"
         run: docker push $ACR_REGISTRY/public/lskv/lskv:latest-virtual
 
   build-docker-sgx:
@@ -72,11 +72,11 @@ jobs:
         run: docker build -t $ACR_REGISTRY/public/lskv/lskv:latest-sgx -f Dockerfile.sgx .
 
       - name: Log in to registry
-        if: ${{ github.event_name == "push" && github.ref == "refs/heads/main" }}
+        if: github.event_name == "push" && github.ref == "refs/heads/main" 
         run: docker login -u $ACR_TOKEN_NAME -p ${{ secrets.ACR_LSKV_PUSH_TOKEN_PASSWORD }} $ACR_REGISTRY
 
       - name: Push sgx image
-        if: ${{ github.event_name == "push" && github.ref == "refs/heads/main" }}
+        if: github.event_name == "push" && github.ref == "refs/heads/main" 
         run: docker push $ACR_REGISTRY/public/lskv/lskv:latest-sgx
 
   checks:
