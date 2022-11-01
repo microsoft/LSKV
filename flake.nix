@@ -38,7 +38,7 @@
         inherit ci-checks-all ci-checks-all-fix;
       };
 
-    overlays.${system}.default = final: prev: {
+    overlays.default = final: prev: {
       ccf = self.packages.${system}.ccf;
     };
 
