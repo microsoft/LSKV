@@ -13,8 +13,7 @@
   sgx-psw,
   makeWrapper,
   protobuf,
-  enclave ? "virtual",
-}:
+}: {enclave}:
 stdenv.mkDerivation rec {
   pname = "ccf-${enclave}";
   version = "3.0.0-dev6";

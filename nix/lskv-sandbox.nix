@@ -2,8 +2,7 @@
   writeShellScriptBin,
   ccf-sandbox,
   lskv,
-  enclave,
-}: let
+}: {enclave}: let
   pkg =
     if enclave == "virtual"
     then "liblskv.virtual.so"
@@ -12,8 +11,8 @@
     if enclave == "virtual"
     then "virtual"
     else "release";
-  l = lskv.override {inherit enclave;};
-  sandbox = ccf-sandbox.override {inherit enclave;};
+  l = lskv {inherit enclave;};
+  sandbox = ccf-sandbox {inherit enclave;};
 in
   writeShellScriptBin "lskv-sandbox.sh" ''
     ${sandbox}/bin/sandbox.sh -p ${l}/lib/${pkg} --enclave-type ${enclave_type} $@
