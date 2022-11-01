@@ -53,13 +53,21 @@
     formatter.${system} = pkgs.alejandra;
 
     apps.${system} = {
-      ccf-sandbox = flake-utils.lib.mkApp {
-        drv = self.packages.${system}.ccf-sandbox;
+      ccf-sandbox-virtual = flake-utils.lib.mkApp {
+        drv = self.packages.${system}.ccf-sandbox-virtual;
+        exePath = "/bin/sandbox.sh";
+      };
+      ccf-sandbox-sgx = flake-utils.lib.mkApp {
+        drv = self.packages.${system}.ccf-sandbox-sgx;
         exePath = "/bin/sandbox.sh";
       };
 
-      lskv-sandbox = flake-utils.lib.mkApp {
-        drv = self.packages.${system}.lskv-sandbox;
+      lskv-sandbox-virtual = flake-utils.lib.mkApp {
+        drv = self.packages.${system}.lskv-sandbox-virtual;
+        exePath = "/bin/lskv-sandbox.sh";
+      };
+      lskv-sandbox-sgx = flake-utils.lib.mkApp {
+        drv = self.packages.${system}.lskv-sandbox-sgx;
         exePath = "/bin/lskv-sandbox.sh";
       };
     };
