@@ -1,0 +1,64 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "containerGroups_ccf_in_sevsnp_name": {
+            "defaultValue": "ccf-in-sevsnp",
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.ContainerInstance/containerGroups",
+            "apiVersion": "2022-04-01-preview",
+            "name": "[parameters('containerGroups_ccf_in_sevsnp_name')]",
+            "location": "westeurope",
+            "properties": {
+                "sku": "Standard",
+                "confidentialComputeProperties": { 
+                    "isolationType": "SevSnp", 
+                    "ccePolicy": "eyJhbGxvd19hbGwiOnRydWUsImNvbnRhaW5lcnMiOnsibGVuZ3RoIjowLCJlbGVtZW50cyI6bnVsbH19" 
+                },
+                "containers": [
+                    {
+                        "name": "[parameters('containerGroups_ccf_in_sevsnp_name')]",
+                        "properties": {
+                            "image": "mcr.microsoft.com/ccf/app/dev:2.0.4-sgx",
+                            "command": [
+                                "/opt/ccf/bin/sandbox.sh",
+                                "-n",
+                                "local://0.0.0.0:8000"
+                            ],
+                            "ports": [
+                                {
+                                    "protocol": "TCP",
+                                    "port": 8000
+                                }
+                            ],
+                            "environmentVariables": [],
+                            "resources": {
+                                "requests": {
+                                    "memoryInGB": 16,
+                                    "cpu": 4
+                                }
+                            }
+                        }
+                    }
+                ],
+                "initContainers": [],
+                "restartPolicy": "Never",
+                "ipAddress": {
+                    "ports": [
+                        {
+                            "protocol": "TCP",
+                            "port": 8000
+                        }
+                    ],
+                    "type": "Public"
+                },
+                "osType": "Linux"
+            }
+        }
+    ]
+}
