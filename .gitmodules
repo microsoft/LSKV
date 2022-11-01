@@ -4,3 +4,6 @@
 [submodule "3rdparty/go-ycsb"]
 	path = 3rdparty/go-ycsb
 	url = https://github.com/pingcap/go-ycsb.git
+[submodule "3rdparty/k6"]
+	path = 3rdparty/k6
+	url = https://github.com/grafana/k6.git

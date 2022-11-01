@@ -37,6 +37,9 @@ jobs:
       - name: Build go-ycsb
         run: export PATH=$PATH:/usr/local/go/bin && make bin/go-ycsb
 
+      - name: Build k6
+        run: export PATH=$PATH:/usr/local/go/bin && make bin/k6
+
       - name: Build app (Virtual)
         run: make build-virtual
 

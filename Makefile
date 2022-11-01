@@ -1,5 +1,6 @@
 BUILD=build
 CCF_PREFIX=/opt/ccf
+CCF_UNSAFE_PREFIX=/opt/ccf_unsafe
 
 CC=/opt/oe_lvi/clang-10
 CXX=/opt/oe_lvi/clang++-10
@@ -25,7 +26,14 @@ install-ccf:
 build-virtual:
 	mkdir -p $(BUILD)
 	cd $(BUILD)
-	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja ..
+	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCCF_UNSAFE=OFF -GNinja ..
+	cd $(BUILD) && ninja
+
+.PHONY: build-virtual-unsafe
+build-virtual-unsafe:
+	mkdir -p $(BUILD)
+	cd $(BUILD)
+	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCCF_UNSAFE=ON -GNinja ..
 	cd $(BUILD) && ninja
 
 .PHONY: build-sgx
@@ -53,11 +61,23 @@ debug-dockerignore:
 
 .PHONY: run-virtual
 run-virtual: build-virtual
-	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2
+	VENV_DIR=.venv $(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2
+
+.PHONY: run-virtual-unsafe
+run-virtual-unsafe: build-virtual-unsafe
+	VENV_DIR=.venv $(CCF_UNSAFE_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2
+
+.PHONY: run-virtual-http1
+run-virtual-http1: build-virtual
+	VENV_DIR=.venv $(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so
+
+.PHONY: run-virtual-unsafe-http1
+run-virtual-unsafe-http1: build-virtual-unsafe
+	VENV_DIR=.venv $(CCF_UNSAFE_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so 
 
 .PHONY: run-sgx
 run-sgx: build-sgx
-	$(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.enclave.so.signed -e release --http2
+	VENV_DIR=.venv $(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.enclave.so.signed -e release --http2
 
 .PHONY: test-virtual
 test-virtual: build-virtual patched-etcd
@@ -68,7 +88,14 @@ patched-etcd:
 	rm -rf $(BUILD)/3rdparty/etcd
 	mkdir -p $(BUILD)/3rdparty
 	cp -r 3rdparty/etcd $(BUILD)/3rdparty/.
-	git apply --directory=$(BUILD)/3rdparty/etcd patches/*
+	git apply --directory=$(BUILD)/3rdparty/etcd patches/0001-etcd-patches.patch
+
+.PHONY: patched-k6
+patched-k6:
+	rm -rf $(BUILD)/3rdparty/k6
+	mkdir -p $(BUILD)/3rdparty
+	cp -r 3rdparty/k6 $(BUILD)/3rdparty/.
+	git apply --directory=$(BUILD)/3rdparty/k6 patches/k6-micro.diff
 
 $(BIN_DIR)/benchmark: patched-etcd
 	cd $(BUILD)/3rdparty/etcd && go build -buildvcs=false ./tools/benchmark
@@ -91,10 +118,14 @@ $(BIN_DIR)/etcdctl: $(BIN_DIR)/etcd
 $(BIN_DIR)/go-ycsb:
 	cd 3rdparty/go-ycsb && make && mv bin/go-ycsb ../../bin/.
 
+$(BIN_DIR)/k6: patched-k6
+	cd $(BUILD)/3rdparty/k6 && go build -buildvcs=false
+	mkdir -p $(BIN_DIR)
+	mv $(BUILD)/3rdparty/k6/k6 $(BIN_DIR)/k6
+
 .PHONY: benchmark-virtual
 benchmark-virtual: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual .venv certs
 	. .venv/bin/activate && python3 benchmark/etcd.py --virtual
-
 
 .PHONY: benchmark-sgx
 benchmark-sgx: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual build-sgx .venv certs
@@ -118,6 +149,7 @@ execute-notebook: .venv
 	. .venv/bin/activate && jupyter nbconvert --execute --to notebook --inplace benchmark/etcd-analysis.ipynb
 	. .venv/bin/activate && jupyter nbconvert --execute --to notebook --inplace benchmark/ycsb-analysis.ipynb
 	. .venv/bin/activate && jupyter nbconvert --execute --to notebook --inplace benchmark/perf-analysis.ipynb
+	. .venv/bin/activate && jupyter nbconvert --execute --to notebook --inplace benchmark/k6-analysis.ipynb
 
 .PHONY: clear-notebook
 clear-notebook: .venv
