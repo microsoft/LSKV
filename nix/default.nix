@@ -17,6 +17,8 @@ pkgs.lib.makeScope pkgs.newScope (self:
       };
 
       ccf-sandbox = self.callPackage ./ccf-sandbox.nix {};
+      ccf-sandbox-virtual = ccf-sandbox {enclave = "virtual";};
+      ccf-sandbox-sgx = ccf-sandbox {enclave = "sgx";};
 
       lskv = self.callPackage ./lskv.nix {
         stdenv = pkgs.llvmPackages_10.libcxxStdenv;
