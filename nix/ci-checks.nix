@@ -6,7 +6,14 @@
   python3Packages,
   cpplint,
   alejandra,
-}: {
+}: let
+  pythonDeps = with python3Packages; [
+    loguru
+    httpx
+    pandas
+    seaborn
+  ];
+in {
   shellcheck =
     runCommand "shellcheck"
     {
@@ -51,7 +58,7 @@
   pylint =
     runCommand "pylint"
     {
-      buildInputs = [python3Packages.pylint python3Packages.pandas python3Packages.seaborn python3Packages.setuptools];
+      buildInputs = [python3Packages.pylint] ++ pythonDeps;
     } ''
       find ${../.} -name '*.py' ! -name "3rdparty" | xargs pylint --ignored-modules "*_pb2"
       mkdir $out
@@ -60,7 +67,7 @@
   mypy =
     runCommand "mypy"
     {
-      buildInputs = [python3Packages.mypy];
+      buildInputs = [python3Packages.mypy] ++ pythonDeps;
     } ''
       find ${../.} -name '*.py' ! -name "3rdparty" | xargs mypy
       mkdir $out
