@@ -100,12 +100,6 @@ if __name__ == "__main__":
         perf_system.execute_config,
     )
     common.main(
-        "perf",
-        perf_system.get_arguments,
-        all_perf_configurations,
-        perf_system.execute_config,
-    )
-    common.main(
         "k6",
         k6.get_arguments,
         all_k6_configurations,
