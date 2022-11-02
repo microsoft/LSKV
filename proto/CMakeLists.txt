@@ -35,6 +35,20 @@ foreach(proto_file ${PROTO_FILES})
         set(EXTRA_INCLUDES ${CMAKE_CURRENT_BINARY_DIR}/etcd.pb.h)
     endif()
 
+    add_custom_command(
+        OUTPUT
+        ${CMAKE_SOURCE_DIR}/tests/${PROTO_NAME_WE}_pb2.py
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build.sh ${proto_file}
+                ${CMAKE_SOURCE_DIR}/tests/
+        COMMENT "Generate Python source file from protobuf file ${PROTO_NAME}"
+        DEPENDS ${proto_file}
+    )
+    add_custom_target(
+        ${PROTO_NAME_WE}_proto_python ALL
+        DEPENDS
+        ${CMAKE_SOURCE_DIR}/tests/${PROTO_NAME_WE}_pb2.py
+    )
+
     add_enclave_library(
         ${PROTO_NAME_WE}.enclave ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.cc
         ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.h
