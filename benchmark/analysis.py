@@ -66,6 +66,13 @@ class Analyser:
             data["start_ms"] = data["start_us"] / 1000
             data.drop(["start_us"], axis=1, inplace=True)
             return data, 0
+        if self.benchmark == "k6":
+            starts = data["timestamp"]
+            start = starts.min()
+            starts -= start
+            data["start_ms"] = starts / 1000
+            data.drop(["timestamp"], axis=1, inplace=True)
+            return data, 0
         return data, 0
 
     def make_end_ms(self, data: pd.DataFrame, start: int) -> pd.DataFrame:
@@ -83,6 +90,9 @@ class Analyser:
         if self.benchmark == "perf":
             data["end_ms"] = data["start_ms"] + (data["latency_us"] / 1000)
             return data
+        if self.benchmark == "k6":
+            data["end_ms"] = data["start_ms"] + data["metric_value"]
+            return data
         return data
 
     def make_latency_ms(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -99,6 +109,9 @@ class Analyser:
         if self.benchmark == "perf":
             data["latency_ms"] = data["latency_us"] / 1000
             data.drop(["latency_us"], axis=1, inplace=True)
+            return data
+        if self.benchmark == "k6":
+            data["latency_ms"] = data["metric_value"]
             return data
         return data
 
@@ -145,8 +158,8 @@ class Analyser:
         data: pd.DataFrame,
         x_column="start_ms",
         y_column="latency_ms",
-        row="",
-        col="",
+        row=None,
+        col=None,
         # pylint: disable=dangerous-default-value
         ignore_vars=[],
         filename="",
@@ -194,8 +207,8 @@ class Analyser:
         self,
         data: pd.DataFrame,
         x_column="latency_ms",
-        row="",
-        col="",
+        row=None,
+        col=None,
         # pylint: disable=dangerous-default-value
         ignore_vars=[],
         filename="",
@@ -242,8 +255,8 @@ class Analyser:
     def plot_throughput_bar(
         self,
         data: pd.DataFrame,
-        row="",
-        col="",
+        row=None,
+        col=None,
         # pylint: disable=dangerous-default-value
         ignore_vars=[],
         filename="",
@@ -260,7 +273,12 @@ class Analyser:
         )
         data[hue] = var
 
-        grouped = data.groupby([hue, row, col])
+        group_cols = [hue]
+        if row:
+            group_cols.append(row)
+        if col:
+            group_cols.append(col)
+        grouped = data.groupby(group_cols)
         throughputs = grouped.first()
 
         durations = (grouped["end_ms"].max() - grouped["start_ms"].min()) / 1000

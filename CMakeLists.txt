@@ -5,7 +5,11 @@ cmake_minimum_required(VERSION 3.16)
 
 project(lskv LANGUAGES C CXX)
 
-if(NOT TARGET ccf)
+option(CCF_UNSAFE "build with unsafe options" OFF)
+if(CCF_UNSAFE)
+  message(WARNING "Building with unsafe options")
+  find_package(ccf_unsafe REQUIRED)
+else()
   find_package(ccf REQUIRED)
 endif()
 

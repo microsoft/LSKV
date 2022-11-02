@@ -18,6 +18,15 @@
           "commitHash": "4d727a7e6c043fdda3e064476709ca7c672913c4"
         }
       }
+    },
+    {
+      "component": {
+        "type": "git",
+        "git": {
+          "repositoryUrl": "https://github.com/grafana/k6",
+          "commitHash": "2fe2dd32b3827eeeeb3959aff63a6b402aab0a5a"
+        }
+      }
     }
   ],
   "Version": 1

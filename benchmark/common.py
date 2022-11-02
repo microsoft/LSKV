@@ -229,6 +229,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("-v", "--verbose", action="store_true", help="verbose output")
     parser.add_argument("--sgx", action="store_true")
     parser.add_argument("--virtual", action="store_true")
+    parser.add_argument("--etcd", action="store_true")
     parser.add_argument("--http1", action="store_true")
     parser.add_argument("--http2", action="store_true")
     parser.add_argument("--insecure", action="store_true")
@@ -303,12 +304,29 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
     # pylint: disable=too-many-nested-blocks
     for nodes in args.nodes:
         logger.debug("adding nodes: {}", nodes)
-        if args.insecure:
-            logger.debug("adding insecure etcd")
+        if args.etcd:
+            if args.insecure:
+                logger.debug("adding insecure etcd")
+                etcd_config = Config(
+                    store="etcd",
+                    port=port,
+                    tls=False,
+                    sgx=False,
+                    nodes=nodes,
+                    http_version=2,
+                    worker_threads=0,
+                    sig_tx_interval=0,
+                    sig_ms_interval=0,
+                    ledger_chunk_bytes="",
+                    snapshot_tx_interval=0,
+                )
+                configs.append(etcd_config)
+
+            logger.debug("adding tls etcd")
             etcd_config = Config(
                 store="etcd",
                 port=port,
-                tls=False,
+                tls=True,
                 sgx=False,
                 nodes=nodes,
                 http_version=2,
@@ -319,22 +337,6 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                 snapshot_tx_interval=0,
             )
             configs.append(etcd_config)
-
-        logger.debug("adding tls etcd")
-        etcd_config = Config(
-            store="etcd",
-            port=port,
-            tls=True,
-            sgx=False,
-            nodes=nodes,
-            http_version=2,
-            worker_threads=0,
-            sig_tx_interval=0,
-            sig_ms_interval=0,
-            ledger_chunk_bytes="",
-            snapshot_tx_interval=0,
-        )
-        configs.append(etcd_config)
 
         # pylint: disable=too-many-nested-blocks
         for worker_threads in args.worker_threads:

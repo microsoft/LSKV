@@ -12,6 +12,7 @@ from typing import List
 import common
 import etcd
 import perf_system as perf
+import k6
 import ycsb
 
 
@@ -21,6 +22,7 @@ def common_configurations(args: argparse.Namespace):
     """
     args.worker_threads = [0]
     args.virtual = True
+    args.etcd = True
     # args.sgx = True
     args.http2 = True
     args.nodes = [1]
@@ -63,7 +65,20 @@ def perf_configurations(args: argparse.Namespace) -> List[perf.PerfConfig]:
     return perf.make_configurations(args)
 
 
+def k6_configurations(args: argparse.Namespace) -> List[k6.K6Config]:
+    """
+    Set args for all k6 configurations.
+    """
+    common_configurations(args)
+    args.http1 = True
+    args.http2 = True
+    args.etcd = False
+
+    return k6.make_configurations(args)
+
+
 if __name__ == "__main__":
     common.main("etcd", etcd.get_arguments, etcd_configurations, etcd.execute_config)
     common.main("ycsb", ycsb.get_arguments, ycsb_configurations, ycsb.execute_config)
     common.main("perf", perf.get_arguments, perf_configurations, perf.execute_config)
+    common.main("k6", k6.get_arguments, k6_configurations, k6.execute_config)
