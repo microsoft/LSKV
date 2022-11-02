@@ -22,3 +22,5 @@ bin/
 *.pyc
 
 /*.out
+
+*_pb2.py
