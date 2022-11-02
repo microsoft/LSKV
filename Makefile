@@ -73,7 +73,7 @@ run-virtual-http1: build-virtual
 
 .PHONY: run-virtual-unsafe-http1
 run-virtual-unsafe-http1: build-virtual-unsafe
-	VENV_DIR=.venv $(CCF_UNSAFE_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so 
+	VENV_DIR=.venv $(CCF_UNSAFE_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so
 
 .PHONY: run-sgx
 run-sgx: build-sgx
@@ -82,6 +82,10 @@ run-sgx: build-sgx
 .PHONY: test-virtual
 test-virtual: build-virtual patched-etcd
 	./integration-tests.sh -v
+
+.PHONY: tests
+tests: build-virtual .venv
+	. .venv/bin/activate && pytest -v
 
 .PHONY: patched-etcd
 patched-etcd:
