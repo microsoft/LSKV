@@ -23,11 +23,11 @@ install-ccf:
 	/opt/ccf/getting_started/setup_vm/run.sh /opt/ccf/getting_started/setup_vm/app-dev.yml  # Install dependencies
 
 .PHONY: build-virtual
-build-virtual:
+build-virtual: .venv
 	mkdir -p $(BUILD)
 	cd $(BUILD)
 	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCCF_UNSAFE=OFF -GNinja ..
-	cd $(BUILD) && ninja
+	. .venv/bin/activate && cd $(BUILD) && ninja
 
 .PHONY: build-virtual-unsafe
 build-virtual-unsafe:

@@ -18,4 +18,5 @@ echo " -- Building ${SOURCE_FILE} into ${GENERATED_DIR}"
 python3 -m grpc_tools.protoc \
         -I "${THIS_DIR}" \
         --python_out "${GENERATED_DIR}" \
+        --mypy_out "${GENERATED_DIR}" \
         "${SOURCE_FILE}"
