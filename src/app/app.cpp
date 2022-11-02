@@ -911,6 +911,15 @@ namespace app
         }
       }
 
+      CCF_APP_DEBUG("building custom claims");
+      lskvserverpb::ReceiptClaims claims;
+      auto payload_ptr = std::make_unique<etcdserverpb::TxnRequest>(payload);
+      claims.set_allocated_request_txn(payload_ptr.release());
+      CCF_APP_DEBUG("serializing custom claims");
+      auto claims_data = claims.SerializeAsString();
+      CCF_APP_DEBUG("registering custom claims");
+      ctx.rpc_ctx->set_claims_digest(ccf::ClaimsDigest::Digest(claims_data));
+
       return ccf::grpc::make_success(txn_response);
     }
 
