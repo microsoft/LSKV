@@ -622,13 +622,8 @@ namespace app
 
       CCF_APP_DEBUG("building custom claims");
       lskvserverpb::ReceiptClaims claims;
-      auto* put_claim = claims.mutable_request_put();
-      put_claim->set_key(payload.key());
-      put_claim->set_value(payload.value());
-      put_claim->set_lease(payload.lease());
-      put_claim->set_prev_kv(payload.prev_kv());
-      put_claim->set_ignore_value(payload.ignore_value());
-      put_claim->set_ignore_lease(payload.ignore_lease());
+      auto payload_ptr = std::make_unique<etcdserverpb::PutRequest>(payload);
+      claims.set_allocated_request_put(payload_ptr.release());
       CCF_APP_DEBUG("serializing custom claims");
       auto claims_data = claims.SerializeAsString();
       CCF_APP_DEBUG("registering custom claims");
@@ -738,10 +733,8 @@ namespace app
 
       CCF_APP_DEBUG("building custom claims");
       lskvserverpb::ReceiptClaims claims;
-      auto* delete_range_claim = claims.mutable_request_delete_range();
-      delete_range_claim->set_key(payload.key());
-      delete_range_claim->set_range_end(payload.range_end());
-      delete_range_claim->set_prev_kv(payload.prev_kv());
+      auto payload_ptr = std::make_unique<etcdserverpb::DeleteRangeRequest>(payload);
+      claims.set_allocated_request_delete_range(payload_ptr.release());
       CCF_APP_DEBUG("serializing custom claims");
       auto claims_data = claims.SerializeAsString();
       CCF_APP_DEBUG("registering custom claims");
