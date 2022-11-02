@@ -175,27 +175,27 @@ class Sandbox:
         ]
 
 
-@pytest.fixture(scope="module")
-def sandbox():
+@pytest.fixture(name="sandbox", scope="module")
+def fixture_sandbox():
     """
     Start the sandbox and wait to be ready.
     """
-    sbox = Sandbox(http2=False)
-    with sbox:
-        ready = sbox.wait_for_ready()
+    sandbox = Sandbox(http2=False)
+    with sandbox:
+        ready = sandbox.wait_for_ready()
         if ready:
-            yield sbox
+            yield sandbox
         else:
             raise Exception("failed to prepare the sandbox")
 
 
-@pytest.fixture(scope="module")
-def http1_client(sbox):
+@pytest.fixture(name="http1_client", scope="module")
+def fixture_http1_client(sandbox):
     """
     Make a http1 client for the sandbox.
     """
-    cacert = sbox.cacert()
-    client_cert = (sbox.cert(), sbox.key())
+    cacert = sandbox.cacert()
+    client_cert = (sandbox.cert(), sandbox.key())
     with httpx.Client(
         http2=False, verify=cacert, cert=client_cert, base_url="https://127.0.0.1:8000"
     ) as client:
