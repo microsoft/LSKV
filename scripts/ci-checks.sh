@@ -79,7 +79,7 @@ fi
 
 echo "$CHECK_DELIMITER"
 echo "-- Python lint"
-git ls-files | grep -e '\.py$' | xargs python -m pylint --ignored-modules "*_pb2"
+git ls-files | grep -e '\.py$' | xargs python -m pylint --ignored-modules "*_pb2" --disable duplicate-code
 
 echo "$CHECK_DELIMITER"
 echo "-- Python types"
