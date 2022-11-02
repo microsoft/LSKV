@@ -30,18 +30,18 @@ build-virtual: .venv
 	. .venv/bin/activate && cd $(BUILD) && ninja
 
 .PHONY: build-virtual-unsafe
-build-virtual-unsafe:
+build-virtual-unsafe: .venv
 	mkdir -p $(BUILD)
 	cd $(BUILD)
 	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCCF_UNSAFE=ON -GNinja ..
-	cd $(BUILD) && ninja
+	. .venv/bin/activate && cd $(BUILD) && ninja
 
 .PHONY: build-sgx
-build-sgx:
+build-sgx: .venv
 	mkdir -p $(BUILD)
 	cd $(BUILD)
 	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=sgx -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja ..
-	cd $(BUILD) && ninja
+	. .venv/bin/activate && cd $(BUILD) && ninja
 
 .PHONY: build-docker-virtual
 build-docker-virtual:
