@@ -733,7 +733,8 @@ namespace app
 
       CCF_APP_DEBUG("building custom claims");
       lskvserverpb::ReceiptClaims claims;
-      auto payload_ptr = std::make_unique<etcdserverpb::DeleteRangeRequest>(payload);
+      auto payload_ptr =
+        std::make_unique<etcdserverpb::DeleteRangeRequest>(payload);
       claims.set_allocated_request_delete_range(payload_ptr.release());
       CCF_APP_DEBUG("serializing custom claims");
       auto claims_data = claims.SerializeAsString();
