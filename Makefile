@@ -25,21 +25,18 @@ install-ccf:
 .PHONY: build-virtual
 build-virtual:
 	mkdir -p $(BUILD)
-	cd $(BUILD)
 	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCCF_UNSAFE=OFF -GNinja ..
 	cd $(BUILD) && ninja
 
 .PHONY: build-virtual-unsafe
 build-virtual-unsafe:
 	mkdir -p $(BUILD)
-	cd $(BUILD)
 	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCCF_UNSAFE=ON -GNinja ..
 	cd $(BUILD) && ninja
 
 .PHONY: build-sgx
 build-sgx:
 	mkdir -p $(BUILD)
-	cd $(BUILD)
 	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=sgx -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja ..
 	cd $(BUILD) && ninja
 
