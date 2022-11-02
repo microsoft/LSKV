@@ -24,6 +24,20 @@
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
 
+#define SET_CUSTOM_CLAIMS(rpc) \
+  { \
+    CCF_APP_DEBUG("building custom claims for " #rpc); \
+    lskvserverpb::ReceiptClaims claims; \
+    auto* request_##rpc = claims.mutable_request_##rpc(); \
+    *request_##rpc = payload; \
+    auto* response_##rpc = claims.mutable_response_##rpc(); \
+    *response_##rpc = rpc##_response; \
+    CCF_APP_DEBUG("serializing custom claims for " #rpc); \
+    auto claims_data = claims.SerializeAsString(); \
+    CCF_APP_DEBUG("registering custom claims for " #rpc); \
+    ctx.rpc_ctx->set_claims_digest(ccf::ClaimsDigest::Digest(claims_data)); \
+  }
+
 namespace app
 {
   class AppHandlers : public ccf::UserEndpointRegistry
@@ -620,14 +634,7 @@ namespace app
         prev_kv->set_lease(value.lease);
       }
 
-      CCF_APP_DEBUG("building custom claims");
-      lskvserverpb::ReceiptClaims claims;
-      auto payload_ptr = std::make_unique<etcdserverpb::PutRequest>(payload);
-      claims.set_allocated_request_put(payload_ptr.release());
-      CCF_APP_DEBUG("serializing custom claims");
-      auto claims_data = claims.SerializeAsString();
-      CCF_APP_DEBUG("registering custom claims");
-      ctx.rpc_ctx->set_claims_digest(ccf::ClaimsDigest::Digest(claims_data));
+      SET_CUSTOM_CLAIMS(put)
 
       return ccf::grpc::make_success(put_response);
     }
@@ -731,15 +738,7 @@ namespace app
         delete_range_response.set_deleted(deleted);
       }
 
-      CCF_APP_DEBUG("building custom claims");
-      lskvserverpb::ReceiptClaims claims;
-      auto payload_ptr =
-        std::make_unique<etcdserverpb::DeleteRangeRequest>(payload);
-      claims.set_allocated_request_delete_range(payload_ptr.release());
-      CCF_APP_DEBUG("serializing custom claims");
-      auto claims_data = claims.SerializeAsString();
-      CCF_APP_DEBUG("registering custom claims");
-      ctx.rpc_ctx->set_claims_digest(ccf::ClaimsDigest::Digest(claims_data));
+      SET_CUSTOM_CLAIMS(delete_range)
 
       return ccf::grpc::make_success(delete_range_response);
     }
@@ -912,14 +911,7 @@ namespace app
         }
       }
 
-      CCF_APP_DEBUG("building custom claims");
-      lskvserverpb::ReceiptClaims claims;
-      auto payload_ptr = std::make_unique<etcdserverpb::TxnRequest>(payload);
-      claims.set_allocated_request_txn(payload_ptr.release());
-      CCF_APP_DEBUG("serializing custom claims");
-      auto claims_data = claims.SerializeAsString();
-      CCF_APP_DEBUG("registering custom claims");
-      ctx.rpc_ctx->set_claims_digest(ccf::ClaimsDigest::Digest(claims_data));
+      SET_CUSTOM_CLAIMS(txn)
 
       return ccf::grpc::make_success(txn_response);
     }
