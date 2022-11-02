@@ -6,15 +6,21 @@ Common utils for testing.
 """
 
 import base64
+import hashlib
+import http
 import os
 import time
 from subprocess import PIPE, Popen
-from typing import Any, Dict, List
+from typing import List
 
 import httpx
 import pytest
 import typing_extensions
+from google.protobuf.json_format import MessageToDict, ParseDict
 from loguru import logger
+
+import etcd_pb2
+import lskvserver_pb2
 
 
 class Sandbox:
@@ -265,34 +271,151 @@ class HttpClient:
         Perform a get operation on lskv.
         """
         logger.info("Get: {} {} {}", key, range_end, rev)
-        j: Dict[str, Any] = {"key": b64encode(key)}
+        req = etcd_pb2.RangeRequest()
+        req.key = key.encode("utf-8")
         if range_end:
-            j["range_end"] = b64encode(range_end)
+            req.range_end = range_end.encode("utf-8")
         if rev:
-            j["revision"] = rev
-        return self.client.post("/v3/kv/range", json=j)
+            req.revision = rev
+        j = MessageToDict(req)
+        res = self.client.post("/v3/kv/range", json=j)
+        check_response(res)
+        return res
 
-    def put(self, key: str, value: str):
+    def put(
+        self, key: str, value: str, wait_for_commit: bool = True, check_receipt=True
+    ):
         """
         Perform a put operation on lskv.
         """
         logger.info("Put: {} {}", key, value)
-        return self.client.post(
-            "/v3/kv/put", json={"key": b64encode(key), "value": b64encode(value)}
-        )
+        req = etcd_pb2.PutRequest()
+        req.key = key.encode("utf-8")
+        req.value = value.encode("utf-8")
+        j = MessageToDict(req)
+        res = self.client.post("/v3/kv/put", json=j)
+        check_response(res)
+        if wait_for_commit:
+            rev, term = extract_rev_term(res)
+            self.wait_for_commit(term, rev)
+        if check_receipt:
+            res_pb = ParseDict(res.json(), etcd_pb2.PutResponse())
+            self.check_receipt("put", req, res_pb)
+        return res
 
-    def delete(self, key: str, range_end: str = ""):
+    def delete(
+        self,
+        key: str,
+        range_end: str = "",
+        wait_for_commit: bool = True,
+        check_receipt=True,
+    ):
         """
         Perform a delete operation on lskv.
         """
         logger.info("Delete: {} {}", key, range_end)
-        j = {"key": b64encode(key)}
+        req = etcd_pb2.DeleteRangeRequest()
+        req.key = key.encode("utf-8")
         if range_end:
-            j["range_end"] = b64encode(range_end)
-        return self.client.post("/v3/kv/delete_range", json=j)
+            req.range_end = range_end.encode("utf-8")
+        j = MessageToDict(req)
+        res = self.client.post("/v3/kv/delete_range", json=j)
+        check_response(res)
+        if wait_for_commit:
+            rev, term = extract_rev_term(res)
+            self.wait_for_commit(term, rev)
+        if check_receipt:
+            res_pb = ParseDict(res.json(), etcd_pb2.DeleteRangeResponse())
+            self.check_receipt("delete_range", req, res_pb)
+        return res
+
+    def get_receipt(self, rev: int, term: int):
+        """
+        Get a receipt for a revision and term.
+        """
+        logger.info("GetReceipt: {} {}", rev, term)
+        req = lskvserver_pb2.GetReceiptRequest()
+        req.revision = rev
+        req.raft_term = term
+        j = MessageToDict(req)
+        res = self.client.post(
+            "/v3/receipt/get_receipt",
+            json=j,
+        )
+        if res.status_code == http.HTTPStatus.ACCEPTED:
+            logger.info("GetReceipt: ACCEPTED")
+            # accepted, retry
+            res = self.client.post(
+                "/v3/receipt/get_receipt",
+                json=j,
+            )
+        return res
 
     def raw(self) -> httpx.Client:
         """
         Get the raw client.
         """
         return self.client
+
+    def check_receipt(self, req_type: str, request, response):
+        """
+        Check a receipt for a request and response.
+        """
+        rev, term = extract_rev_term_pb(response)
+        res = self.get_receipt(rev, term)
+        check_response(res)
+        body = res.json()
+        assert "receipt" in body
+        receipt = body["receipt"]
+        assert "txReceipt" in receipt
+        tx_receipt = receipt["txReceipt"]
+        assert "leafComponents" in tx_receipt
+        leaf_components = tx_receipt["leafComponents"]
+        assert "claimsDigest" in leaf_components
+        claims_digest = leaf_components["claimsDigest"]
+
+        response.ClearField("header")
+
+        claims = lskvserver_pb2.ReceiptClaims()
+        getattr(claims, f"request_{req_type}").CopyFrom(request)
+        getattr(claims, f"response_{req_type}").CopyFrom(response)
+        claims_ser = claims.SerializeToString()
+        claims_digest_calculated = hashlib.sha256(claims_ser).hexdigest()
+        assert claims_digest == claims_digest_calculated
+
+
+def check_response(res):
+    """
+    Check a response to be success.
+    """
+    logger.info("res: {} {}", res.status_code, res.text)
+    assert res.status_code == 200
+    check_header(res.json())
+
+
+def check_header(body):
+    """
+    Check the header is well-formed.
+    """
+    assert "header" in body
+    header = body["header"]
+    assert "clusterId" in header
+    assert "memberId" in header
+    assert "revision" in header
+    assert "raftTerm" in header
+
+
+def extract_rev_term(res):
+    """
+    Extract the revision and term from a response.
+    """
+    header = res.json()["header"]
+    return int(header["revision"]), int(header["raftTerm"])
+
+
+def extract_rev_term_pb(res):
+    """
+    Extract the revision and term from a pb response.
+    """
+    header = res.header
+    return header.revision, header.raft_term
