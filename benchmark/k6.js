@@ -2,8 +2,6 @@ import { check } from "k6";
 import http from "k6/http";
 
 export let options = {
-  vus: 1,
-  duration: "10s",
   tlsAuth: [
     {
       cert: open("../certs/client.pem"),
@@ -11,6 +9,15 @@ export let options = {
     },
   ],
   insecureSkipTLSVerify: true,
+  scenarios: {
+    1000: {
+      executor: "constant-arrival-rate",
+      rate: 1000,
+      timeUnit: "1s",
+      duration: "10s",
+      preAllocatedVUs: 20,
+    },
+  },
 };
 
 export default function () {
