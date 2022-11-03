@@ -940,6 +940,11 @@ namespace app
       auto now_s = get_time_s();
       auto lstore = leasestore::LeaseStore(ctx.tx);
       auto ttl = lstore.keep_alive(id, now_s);
+      if (ttl == 0)
+      {
+        return ccf::grpc::make_error(
+          GRPC_STATUS_NOT_FOUND, "given lease has expired or has been revoked");
+      }
 
       response.set_id(id);
       response.set_ttl(ttl);
