@@ -97,7 +97,7 @@ jobs:
           done
 
       - name: Upload plots to PR
-        run: 
+        run: |
           gh pr comment ${{ github.event.number }} --edit-last --body-file comment.md || \
           gh pr comment ${{ github.event.number }} --body-file comment.md
         env:
