@@ -26,6 +26,9 @@ class K6Config(common.Config):
     Config holds the configuration options for a given benchmark run.
     """
 
+    rate: int
+    vus: int
+
     def bench_name(self) -> str:
         """
         Get the name of the benchmark.
@@ -51,6 +54,8 @@ class K6Benchmark(common.Benchmark):
             "run",
             "--out",
             f"csv={timings_file}",
+            "--rps", str(self.config.rate),
+            "--vus", str(self.config.vus),
             "benchmark/k6.js",
         ]
         logger.debug("run cmd: %s", bench)
@@ -93,7 +98,29 @@ def get_arguments():
     """
     parser = common.get_argument_parser()
 
+    parser.add_argument(
+        "--rate",
+        action="extend",
+        nargs="+",
+        type=int,
+        default=[],
+        help="Maximum requests per second",
+    )
+    parser.add_argument(
+        "--vus",
+        action="extend",
+        nargs="+",
+        type=int,
+        default=[],
+        help="Number of virtual users to use",
+    )
+
     args = parser.parse_args()
+
+    if not args.rate:
+        args.rate = [1000]
+    if not args.vus:
+        args.vus = [20]
 
     return args
 
@@ -128,10 +155,16 @@ def make_configurations(args: argparse.Namespace) -> List[K6Config]:
     configs = []
 
     for common_config in common.make_common_configurations(args):
-        conf = K6Config(
-            **asdict(common_config),
-        )
-        configs.append(conf)
+        for rate in args.rate:
+            logger.debug("adding rate: {}", rate)
+            for vus in args.vus:
+                logger.debug("adding vus: {}", vus)
+                conf = K6Config(
+                    **asdict(common_config),
+                        rate=rate,
+                        vus=vus,
+                )
+                configs.append(conf)
 
     return configs
 

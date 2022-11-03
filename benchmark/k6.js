@@ -9,15 +9,7 @@ export let options = {
     },
   ],
   insecureSkipTLSVerify: true,
-  scenarios: {
-    1000: {
-      executor: "constant-arrival-rate",
-      rate: 1000,
-      timeUnit: "1s",
-      duration: "10s",
-      preAllocatedVUs: 20,
-    },
-  },
+  duration: '10s',
 };
 
 export default function () {
