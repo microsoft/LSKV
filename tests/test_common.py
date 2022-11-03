@@ -291,6 +291,30 @@ class HttpClient:
             j["range_end"] = b64encode(range_end)
         return self.client.post("/v3/kv/delete_range", json=j)
 
+    def lease_grant(self, ttl: int = 60):
+        """
+        Perform a lease grant operation.
+        """
+        logger.info("LeaseGrant: {}", ttl)
+        j = {"TTL": ttl}
+        return self.client.post("/v3/lease/grant", json=j)
+
+    def lease_revoke(self, lease_id: str):
+        """
+        Perform a lease revoke operation.
+        """
+        logger.info("LeaseRevoke: {}", lease_id)
+        j = {"ID": lease_id}
+        return self.client.post("/v3/lease/revoke", json=j)
+
+    def lease_keep_alive(self, lease_id: str):
+        """
+        Perform a lease keep_alive operation.
+        """
+        logger.info("LeaseKeepAlive: {}", lease_id)
+        j = {"ID": lease_id}
+        return self.client.post("/v3/lease/keepalive", json=j)
+
     def raw(self) -> httpx.Client:
         """
         Get the raw client.

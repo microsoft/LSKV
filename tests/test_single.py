@@ -6,7 +6,6 @@ Test a single node
 """
 
 from loguru import logger
-
 # pylint: disable=unused-import
 # pylint: disable=no-name-in-module
 from test_common import b64decode, fixture_http1_client, fixture_sandbox
@@ -75,6 +74,29 @@ def test_kv_historical(http1_client):
         assert b64decode(res.json()["kvs"][0]["key"]) == "fooh"
         assert b64decode(res.json()["kvs"][0]["value"]) == f"bar{i}"
 
+
+# pylint: disable=redefined-outer-name
+def test_lease(http1_client):
+    """
+    Test that the sandbox starts.
+    """
+    res = http1_client.lease_grant()
+    check_response(res)
+    lease_id = res.json()["ID"]
+
+    res = http1_client.lease_keep_alive(lease_id)
+    check_response(res)
+
+    res = http1_client.lease_revoke(lease_id)
+    check_response(res)
+
+    res = http1_client.lease_keep_alive(lease_id)
+    logger.info("res: {} {}", res.status_code, res.text)
+    assert res.status_code == 400
+
+    missing_id = "002"
+    res = http1_client.lease_revoke(missing_id)
+    check_response(res)
 
 def check_response(res):
     """
