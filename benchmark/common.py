@@ -16,6 +16,7 @@ import time
 from dataclasses import asdict, dataclass
 from hashlib import sha256
 from subprocess import Popen
+import subprocess
 from typing import Callable, List, TypeVar
 
 import cimetrics.upload  # type: ignore
@@ -129,7 +130,7 @@ class Store(abc.ABC):
 
     def _wait_for_ready(self, port: int, tries=120) -> bool:
         client = self.client()
-        client += ["get", "missing key"]
+        client += ["get", "missing key", "-w", "json"]
         if self.config.http_version == 1:
             client = [
                 "curl",
@@ -151,12 +152,21 @@ class Store(abc.ABC):
         for i in range(0, tries):
             logger.debug("running ready check with cmd {}", client)
             # pylint: disable=consider-using-with
-            proc = Popen(client)
-            if proc.wait() == 0:
-                logger.info(
-                    "finished waiting for port ({}) to be open, try {}", port, i
-                )
-                return True
+            try:
+                proc = subprocess.run(client, capture_output=True, check=True)
+                if proc.returncode == 0:
+                    result = proc.stdout.decode("utf-8")
+                    logger.info(
+                        "successfully ran wait check and got response {}", result
+                    )
+                    result_j = json.loads(result)
+                    if "header" in result_j:
+                        logger.info(
+                            "finished waiting for port ({}) to be open, try {}", port, i
+                        )
+                        return True
+            except (subprocess.CalledProcessError, json.JSONDecodeError):
+                pass
             logger.debug("waiting for port ({}) to be open, try {}", port, i)
             time.sleep(1)
         logger.error("took too long waiting for port {} ({}s)", port, tries)
