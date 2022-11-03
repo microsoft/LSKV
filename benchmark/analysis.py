@@ -282,7 +282,6 @@ class Analyser:
         grouped = data.groupby(group_cols)
         throughputs = grouped.first()
 
-
         durations = (grouped["end_ms"].max() - grouped["start_ms"].min()) / 1000
         counts = grouped["start_ms"].count()
         achieved_throughput = counts / durations

@@ -54,8 +54,10 @@ class K6Benchmark(common.Benchmark):
             "run",
             "--out",
             f"csv={timings_file}",
-            "--rps", str(self.config.rate),
-            "--vus", str(self.config.vus),
+            "--rps",
+            str(self.config.rate),
+            "--vus",
+            str(self.config.vus),
             "benchmark/k6.js",
         ]
         logger.debug("run cmd: %s", bench)
@@ -161,8 +163,8 @@ def make_configurations(args: argparse.Namespace) -> List[K6Config]:
                 logger.debug("adding vus: {}", vus)
                 conf = K6Config(
                     **asdict(common_config),
-                        rate=rate,
-                        vus=vus,
+                    rate=rate,
+                    vus=vus,
                 )
                 configs.append(conf)
 
