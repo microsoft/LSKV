@@ -314,6 +314,71 @@ class Analyser:
         plot.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
 
         return plot
+    
+
+    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-locals
+    def plot_achieved_throughput_bar(
+        self,
+        data: pd.DataFrame,
+        row=None,
+        col=None,
+        # pylint: disable=dangerous-default-value
+        ignore_vars=[],
+        filename="",
+    ):
+        """
+        Plot a bar graph of achieved throughput.
+        """
+        x_column = "vars"
+        y_column = "achieved_throughput"
+
+        var, invariant_vars = condense_vars(
+            data, [x_column, y_column, row, col ] + ignore_vars
+        )
+        data[x_column] = var
+
+        group_cols = [x_column]
+        if row:
+            group_cols.append(row)
+        if col:
+            group_cols.append(col)
+        grouped = data.groupby(group_cols)
+        throughputs = grouped.first()
+
+        durations = (grouped["end_ms"].max() - grouped["start_ms"].min()) / 1000
+        counts = grouped["start_ms"].count()
+        achieved_throughput = counts / durations
+        throughputs["achieved_throughput"] = achieved_throughput 
+
+        throughputs.reset_index(inplace=True)
+
+        plot = sns.catplot(
+            kind="bar",
+            data=throughputs,
+            x=x_column,
+            y=y_column,
+            row=row,
+            col=col,
+        )
+
+        plot.figure.subplots_adjust(top=0.9)
+        plot.figure.suptitle(",".join(invariant_vars))
+
+        # add tick labels to each x axis
+        for axes in plot.axes.flatten():
+            axes.tick_params(labelbottom=True)
+
+        plot.set_xticklabels(rotation=30, horizontalalignment="right")
+        plot.fig.tight_layout()
+
+        if not filename:
+            filename = f"achieved_throughput_bar-{x_column}-{row}-{col}"
+
+        plot.savefig(os.path.join(self.plot_dir(), f"{filename}.svg"))
+        plot.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
+
+        return plot
 
 
 def condense_vars(all_data, without) -> Tuple[pd.Series, List[str]]:
