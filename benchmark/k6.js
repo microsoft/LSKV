@@ -9,7 +9,7 @@ export let options = {
     },
   ],
   insecureSkipTLSVerify: true,
-  duration: '10s',
+  duration: "10s",
 };
 
 export default function () {
