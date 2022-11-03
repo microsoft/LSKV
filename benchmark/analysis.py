@@ -273,19 +273,22 @@ class Analyser:
         )
         data[hue] = var
 
-        group_cols = [hue]
+        group_cols = ["rate", hue]
         if row:
             group_cols.append(row)
         if col:
             group_cols.append(col)
+        data["rate2"] = data["rate"]
         grouped = data.groupby(group_cols)
         throughputs = grouped.first()
+
 
         durations = (grouped["end_ms"].max() - grouped["start_ms"].min()) / 1000
         counts = grouped["start_ms"].count()
         achieved_throughput = counts / durations
+
         throughputs["achieved_throughput_ratio"] = (
-            achieved_throughput / throughputs["rate"]
+            achieved_throughput / throughputs["rate2"]
         )
 
         throughputs.reset_index(inplace=True)
