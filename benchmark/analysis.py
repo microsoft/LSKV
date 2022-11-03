@@ -314,7 +314,6 @@ class Analyser:
         plot.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
 
         return plot
-    
 
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-locals
@@ -334,7 +333,7 @@ class Analyser:
         y_column = "achieved_throughput"
 
         var, invariant_vars = condense_vars(
-            data, [x_column, y_column, row, col ] + ignore_vars
+            data, [x_column, y_column, row, col] + ignore_vars
         )
         data[x_column] = var
 
@@ -349,7 +348,7 @@ class Analyser:
         durations = (grouped["end_ms"].max() - grouped["start_ms"].min()) / 1000
         counts = grouped["start_ms"].count()
         achieved_throughput = counts / durations
-        throughputs["achieved_throughput"] = achieved_throughput 
+        throughputs["achieved_throughput"] = achieved_throughput
 
         throughputs.reset_index(inplace=True)
 
