@@ -6,6 +6,7 @@ Test a single node
 """
 
 from loguru import logger
+
 # pylint: disable=unused-import
 # pylint: disable=no-name-in-module
 from test_common import b64decode, fixture_http1_client, fixture_sandbox
@@ -97,6 +98,7 @@ def test_lease(http1_client):
     missing_id = "002"
     res = http1_client.lease_revoke(missing_id)
     check_response(res)
+
 
 def check_response(res):
     """
