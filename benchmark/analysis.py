@@ -381,6 +381,46 @@ class Analyser:
 
         return plot
 
+    def plot_target_throughput_latency_line(
+        self,
+        data: pd.DataFrame,
+        row=None,
+        col=None,
+        # pylint: disable=dangerous-default-value
+        ignore_vars=[],
+        filename="",
+    ):
+        """
+        Plot a line plot of target throughput vs latency.
+        """
+        x_column = "rate"
+        y_column = "latency_ms"
+        hue = "vars"
+
+        var, invariant_vars = condense_vars(
+            data, [x_column, y_column, row, col, hue] + ignore_vars
+        )
+        data[hue] = var
+
+        plot = sns.relplot(
+            kind="line", data=data, x=x_column, y=y_column, hue=hue, row=row, col=col
+        )
+
+        plot.figure.subplots_adjust(top=0.9)
+        plot.figure.suptitle(",".join(invariant_vars))
+
+        # add tick labels to each x axis
+        for axes in plot.axes.flatten():
+            axes.tick_params(labelbottom=True)
+
+        if not filename:
+            filename = f"target_throughput_latency_line-{x_column}-{row}-{col}-{hue}"
+
+        plot.figure.savefig(os.path.join(self.plot_dir(), f"{filename}.svg"))
+        plot.figure.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
+
+        return plot
+
 
 def condense_vars(all_data, without) -> Tuple[pd.Series, List[str]]:
     """
