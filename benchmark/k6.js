@@ -1,7 +1,7 @@
 import { check } from "k6";
 import http from "k6/http";
 
-const rate = Number(__ENV.RATE)
+const rate = Number(__ENV.RATE);
 
 export let options = {
   tlsAuth: [
@@ -11,17 +11,16 @@ export let options = {
     },
   ],
   insecureSkipTLSVerify: true,
-  scenarios:{
+  scenarios: {
     default: {
-
-    executor:"constant-arrival-rate",
-    rate:rate,
-    duration: "10s",
-    timeUnit:'1s',
-    preAllocatedVUs: rate,
-    maxVUs: rate * 10,
-    }
-  }
+      executor: "constant-arrival-rate",
+      rate: rate,
+      duration: "10s",
+      timeUnit: "1s",
+      preAllocatedVUs: 100,
+      maxVUs: rate,
+    },
+  },
 };
 
 export default function () {
