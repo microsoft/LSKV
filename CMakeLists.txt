@@ -32,6 +32,8 @@ if(NOT TARGET ${CCF})
   find_package(${CCF} REQUIRED)
 endif()
 
+find_package(${CCF} REQUIRED)
+
 add_subdirectory(proto)
 
 option(
@@ -63,7 +65,8 @@ add_ccf_app(
   lskvserver.virtual
   status.virtual
   protobuf.virtual
-  INSTALL_LIBS ON)
+  INSTALL_LIBS
+  ON)
 
 if(PUBLIC_MAPS)
   message(STATUS "Using public maps")

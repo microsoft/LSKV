@@ -21,6 +21,9 @@
   python-ccf,
   string-color,
   cimetrics,
+  cose,
+  jwcrypto,
+  cbor2,
 }:
 buildPythonPackage {
   inherit (python-ccf) version src;
@@ -45,6 +48,9 @@ buildPythonPackage {
     docutils
     grpcio-tools
     cimetrics
+    cose
+    jwcrypto
+    cbor2
   ];
 
   preConfigure = ''

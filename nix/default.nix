@@ -42,6 +42,7 @@ pkgs.lib.makeScope pkgs.newScope (
           columnar = pself.callPackage ./python/columnar.nix {};
           string-color = pself.callPackage ./python/string-color.nix {};
           adtk = pself.callPackage ./python/adtk.nix {};
+          cose = pself.callPackage ./python/cose.nix {};
           cimetrics = pself.callPackage ./python/cimetrics.nix {};
           better-exceptions = pself.callPackage ./python/better-exceptions.nix {};
 
