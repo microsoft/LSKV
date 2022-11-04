@@ -13,17 +13,17 @@ This repository and its dependencies can be checked out by clicking: [![Open in 
 Alternatively, CCF and its dependencies can be installed manually:
 
 ```bash
-make install-ccf
+make install-ccf-virtual
 ```
 
 Or
 
 ```bash
-$ wget https://github.com/microsoft/CCF/releases/download/ccf-3.0.0-dev6/ccf_3.0.0_dev6_amd64.deb
-$ sudo dpkg -i ccf_3.0.0_dev6_amd64.deb # Installs CCF under /opt/ccf
-$ cat /opt/ccf/share/VERSION_LONG
-ccf-3.0.0-dev6
-$ /opt/ccf/getting_started/setup_vm/run.sh /opt/ccf/getting_started/setup_vm/app-dev.yml  # Install dependencies
+$ wget https://github.com/microsoft/CCF/releases/download/ccf-3.0.0-rc1/ccf_virtual_3.0.0_rc1_amd64.deb
+$ sudo dpkg -i ccf_virtual_3.0.0_rc1_amd64.deb # Installs CCF under /opt/ccf_virtual
+$ cat /opt/ccf_virtual/share/VERSION_LONG
+ccf-3.0.0-rc1
+$ /opt/ccf_virtual/getting_started/setup_vm/run.sh /opt/ccf_virtual/getting_started/setup_vm/app-dev.yml  # Install dependencies
 ```
 
 If your organisation supports it, you can also checkout this repository in a Github codespace: [![Open in Github codespace](https://img.shields.io/static/v1?label=Open+in&message=GitHub+codespace&logo=github&color=2F363D&logoColor=white&labelColor=2C2C32)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=534240617&machine=basicLinux32gb&devcontainer_path=.devcontainer.json&location=WestEurope)
@@ -50,6 +50,9 @@ $ docker build -t lskv-virtual -f Dockerfile.virtual .
 
 ### SGX (attested)
 
+**Note**: This requires the SGX variant of CCF to be installed, try `make install-ccf-sgx`.
+Currently this may require some APT fiddling if you have already installed `ccf-virtual`.
+
 ```bash
 make build-sgx
 ```
@@ -68,6 +71,8 @@ $ docker build -t lskv-sgx -f Dockerfile.sgx .
 
 The cmake build can be configured with the following lskv-specific options:
 
+- `COMPILE_TARGET`: build LSKV for a specific deployment target, one of [virtual;sgx;snp], defaults to virtual
+  - **Note**: this requires the corresponding `ccf_${COMPILE_TARGET}` package to be installed
 - `PUBLIC_MAPS`: store data in public maps (publicly visible in the ledger)
 - `VERBOSE_LOGGING`: enable verbose logging which may output private data to logs
 
@@ -92,7 +97,7 @@ $ make run-virtual
 Or
 
 ```bash
-$ /opt/ccf/bin/sandbox.sh -p build/liblskv.virtual.so --http2
+$ /opt/ccf_virtual/bin/sandbox.sh -p build/liblskv.virtual.so --http2
 ```
 
 Producing:
@@ -110,7 +115,7 @@ Python environment successfully setup
 [12:00:00.000] Press Ctrl+C to shutdown the network
 ```
 
-Or, for an SGX-enabled application: `$ make run-sgx` or `$ /opt/ccf/bin/sandbox.sh -p build/liblskv.enclave.so.signed -e release --http2`.
+Or, for an SGX-enabled application: `$ make run-sgx` or `$ /opt/ccf_sgx/bin/sandbox.sh -p build/liblskv.enclave.so.signed -e release --http2`.
 
 ### With docker in Virtual mode
 
