@@ -19,10 +19,10 @@ make install-ccf
 Or
 
 ```bash
-$ wget https://github.com/microsoft/CCF/releases/download/ccf-3.0.0-rc0/ccf_sgx_3.0.0_rc0_amd64.deb
-$ sudo dpkg -i ccf_sgx_3.0.0_rc0_amd64.deb # Installs CCF under /opt/ccf
+$ wget https://github.com/microsoft/CCF/releases/download/ccf-3.0.0-rc1/ccf_sgx_3.0.0_rc1_amd64.deb
+$ sudo dpkg -i ccf_sgx_3.0.0_rc1_amd64.deb # Installs CCF under /opt/ccf
 $ cat /opt/ccf/share/VERSION_LONG
-ccf-3.0.0-rc0
+ccf-3.0.0-rc1
 $ /opt/ccf/getting_started/setup_vm/run.sh /opt/ccf/getting_started/setup_vm/app-dev.yml  # Install dependencies
 ```
 
@@ -68,6 +68,8 @@ $ docker build -t lskv-sgx -f Dockerfile.sgx .
 
 The cmake build can be configured with the following lskv-specific options:
 
+- `COMPILE_TARGET`: build LSKV for a specific deployment target, one of [virtual;sgx;snp], defaults to virtual
+  - **Note**: this requires the corresponding `ccf_${COMPILE_TARGET}` package to be installed
 - `PUBLIC_MAPS`: store data in public maps (publicly visible in the ledger)
 - `VERBOSE_LOGGING`: enable verbose logging which may output private data to logs
 

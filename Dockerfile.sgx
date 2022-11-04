@@ -1,5 +1,5 @@
 # Build
-FROM mcr.microsoft.com/ccf/app/dev:3.0.0-rc0-sgx as builder
+FROM mcr.microsoft.com/ccf/app/dev:3.0.0-rc1-sgx as builder
 
 COPY CMakeLists.txt oe_sign.conf /src/
 COPY src /src/src/
@@ -8,7 +8,7 @@ WORKDIR /build
 RUN CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja -DCOMPILE_TARGET=sgx /src && ninja
 
 # Run
-FROM mcr.microsoft.com/ccf/app/run:3.0.0-rc0-sgx
+FROM mcr.microsoft.com/ccf/app/run:3.0.0-rc1-sgx
 
 LABEL org.opencontainers.image.source=https://github.com/microsoft/lskv
 LABEL org.opencontainers.image.description="LSKV SGX node"
