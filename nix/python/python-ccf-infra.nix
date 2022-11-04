@@ -1,6 +1,5 @@
 {
   buildPythonPackage,
-  fetchFromGitHub,
   GitPython,
   better-exceptions,
   cryptography,
@@ -19,7 +18,6 @@
   pyopenssl,
   grpcio-tools,
   python-ccf,
-  string-color,
   cimetrics,
   cose,
   jwcrypto,

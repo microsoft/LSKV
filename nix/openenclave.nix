@@ -7,8 +7,6 @@
   ninja,
   perl,
   openssl_1_1,
-  mkStdenvNoLibs,
-  writeShellScriptBin,
 }: let
   sgx-h = fetchurl {
     url = "https://raw.githubusercontent.com/torvalds/linux/v5.13/arch/x86/include/uapi/asm/sgx.h";

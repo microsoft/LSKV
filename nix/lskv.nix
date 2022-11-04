@@ -1,5 +1,4 @@
 {
-  fetchFromGitHub,
   stdenv,
   cmake,
   sgx-dcap,
