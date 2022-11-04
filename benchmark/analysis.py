@@ -444,8 +444,8 @@ def condense_vars(all_data, without) -> Tuple[pd.Series, List[str]]:
     invariant_columns = []
     variant_columns = []
     for column in remaining_columns:
-        data = all_data[column]
-        if len(set(data)) == 1:
+        data = all_data[column].dropna()
+        if len(set(data)) <= 1:
             new_column = make_new_column(column)
             invariant_columns.append(new_column.iat[0])
         else:
