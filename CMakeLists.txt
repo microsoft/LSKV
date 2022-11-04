@@ -32,6 +32,8 @@ if(NOT TARGET ${CCF})
   find_package(${CCF} REQUIRED)
 endif()
 
+find_package(${CCF} REQUIRED)
+
 add_subdirectory(proto)
 
 option(PUBLIC_LEASES
@@ -62,7 +64,8 @@ add_ccf_app(
   lskvserver.virtual
   status.virtual
   protobuf.virtual
-  INSTALL_LIBS ON)
+  INSTALL_LIBS
+  ON)
 
 if(VERBOSE_LOGGING)
   message(STATUS "Using verbose logging")

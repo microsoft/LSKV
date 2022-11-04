@@ -16,29 +16,37 @@
 }: {enclave}:
 stdenv.mkDerivation rec {
   pname = "ccf-${enclave}";
-  version = "3.0.0-dev6";
+  version = "3.0.0-rc1";
   src = fetchFromGitHub {
     owner = "microsoft";
     repo = "CCF";
     name = "ccf-${version}";
     rev = "ccf-${version}";
-    hash = "sha256-T4Vvh0841Bg8g6XE79w++WqZHVNaGi41eI//ebMHHUA=";
+    hash = "sha256-HiYT9z1WI35KFYy04NZ7O5D8ktQRBM8ItyPD4jyjLZ8=";
   };
-  patches = [patches/ccf-no-python.diff patches/ccf-no-python-pb2.diff patches/ccf-protoc-binary.diff];
+  patches = [
+    patches/ccf-no-python.diff
+    patches/ccf-no-python-pb2.diff
+    patches/ccf-protoc-binary.diff
+  ];
 
-  nativeBuildInputs = [cmake ninja];
+  nativeBuildInputs = [
+    cmake
+    ninja
+  ];
   buildInputs = [
     openenclave
     libuv
     protobuf
     makeWrapper
+    sgx-dcap
   ];
 
   cmakeFlags = [
     "-DBUILD_TESTS=OFF"
     "-DBUILD_UNIT_TESTS=OFF"
     "-DLVI_MITIGATIONS=OFF"
-    "-DCOMPILE_TARGETS=${enclave}"
+    "-DCOMPILE_TARGET=${enclave}"
   ];
 
   NIX_CFLAGS_COMPILE = "-Wno-unused-command-line-argument";

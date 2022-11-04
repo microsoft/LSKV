@@ -2,6 +2,7 @@
   fetchFromGitHub,
   stdenv,
   cmake,
+  sgx-dcap,
   openenclave,
   ninja,
   protobuf,
@@ -24,14 +25,18 @@ stdenv.mkDerivation rec {
   nativeBuildInputs = [
     cmake
     ninja
+  ];
+
+  buildInputs = [
     (ccf {inherit enclave;})
     openenclave
     protobuf
+    sgx-dcap
   ];
 
   cmakeFlags = [
     "-DLVI_MITIGATIONS=OFF"
-    "-DCOMPILE_TARGETS=${enclave}"
+    "-DCOMPILE_TARGET=${enclave}"
   ];
 
   NIX_CFLAGS_COMPILE = "-Wno-unused-command-line-argument";
