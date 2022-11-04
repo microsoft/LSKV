@@ -3,6 +3,8 @@ import http from "k6/http";
 
 const rate = Number(__ENV.RATE);
 const workspace = __ENV.WORKSPACE;
+const preAllocatedVUs = __ENV.PRE_ALLOCATED_VUS;
+const maxVUs = __ENV.MAX_VUS;
 
 export let options = {
   tlsAuth: [
@@ -18,8 +20,8 @@ export let options = {
       rate: rate,
       duration: "10s",
       timeUnit: "1s",
-      preAllocatedVUs: 100,
-      maxVUs: 1000,
+      preAllocatedVUs: preAllocatedVUs,
+      maxVUs: maxVUs,
     },
   },
 };
