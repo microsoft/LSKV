@@ -15,7 +15,7 @@
   },
   "command": {
     "type": "Start",
-    "service_certificate_file": "/app/service_cert.pem",
+    "service_certificate_file": "/app/certs/service_cert.pem",
     "start": {
       "constitution_files": [
         "/app/validate.js",
@@ -25,8 +25,8 @@
       ],
       "members": [
         {
-          "certificate_file": "/app/member0_cert.pem",
-          "encryption_public_key_file": "/app/member0_enc_pubk.pem"
+          "certificate_file": "/app/certs/member0_cert.pem",
+          "encryption_public_key_file": "/app/certs/member0_enc_pubk.pem"
         }
       ]
     }
