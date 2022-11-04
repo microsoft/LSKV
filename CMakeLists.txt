@@ -13,9 +13,14 @@ option(
 set(CCF "ccf_${COMPILE_TARGET}")
 
 option(CCF_UNSAFE "build with unsafe options" OFF)
-if(CCF_UNSAFE)
-  message(WARNING "Building with unsafe options")
-  set(CCF "${CCF}_unsafe")
+if(${CCF_UNSAFE})
+  if(${COMPILE_TARGET} STREQUAL "sgx")
+    message(WARNING "Building with unsafe options")
+    set(CCF "${CCF}_unsafe")
+  else()
+    message(
+      FATAL_ERROR "CCF_UNSAFE is not support for target ${COMPILE_TARGET}")
+  endif()
 endif()
 
 if(NOT TARGET ${CCF})
