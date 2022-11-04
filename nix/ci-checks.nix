@@ -13,6 +13,7 @@
     httpx
     pandas
     seaborn
+    pytest
   ];
 in {
   shellcheck =
