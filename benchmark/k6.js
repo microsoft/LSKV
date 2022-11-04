@@ -19,7 +19,7 @@ export let options = {
       duration: "10s",
       timeUnit: "1s",
       preAllocatedVUs: 100,
-      maxVUs: rate,
+      maxVUs: 1000,
     },
   },
 };
