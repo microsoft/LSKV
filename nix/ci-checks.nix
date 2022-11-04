@@ -6,6 +6,7 @@
   python3Packages,
   cpplint,
   alejandra,
+  deadnix,
 }: let
   pythonDeps = with python3Packages; [
     loguru
@@ -95,5 +96,14 @@ in {
     writeShellScriptBin "nixfmt"
     ''
       git ls-files -- . ':!:3rdparty/' | grep -e '\.nix$' | xargs ${alejandra}/bin/alejandra
+    '';
+
+  deadnix =
+    runCommand "deadnix"
+    {
+      buildInputs = [deadnix];
+    } ''
+      deadnix --fail ${./.}
+      mkdir $out
     '';
 }
