@@ -1,6 +1,6 @@
 {
   pkgs,
-  packageOverrides ? (self: super: {}),
+  packageOverrides ? (_self: _super: {}),
 }:
 pkgs.lib.makeScope pkgs.newScope (
   self:
@@ -36,7 +36,7 @@ pkgs.lib.makeScope pkgs.newScope (
       # A python3 derivation that is extended with some CC related
       # packages.
       python3 = pkgs.python3.override {
-        packageOverrides = pself: psuper: {
+        packageOverrides = pself: _psuper: {
           # Some generic python packages that are missing from
           # nixpkgs.
           columnar = pself.callPackage ./python/columnar.nix {};

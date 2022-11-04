@@ -1,6 +1,5 @@
 {
   buildPythonPackage,
-  fetchFromGitHub,
   string-color,
   loguru,
   cryptography,
