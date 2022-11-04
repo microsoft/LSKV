@@ -43,11 +43,13 @@ class K6Benchmark(common.Benchmark):
     def __init__(self, config: K6Config):
         self.config = config
 
-    def run_cmd(self, _store: Store) -> List[str]:
+    def run_cmd(self, store: Store) -> List[str]:
         """
         Return the command to run the benchmark for the given store.
         """
         timings_file = os.path.join(self.config.output_dir(), "timings.csv")
+        workspace = store.cert()
+        workspace = os.path.dirname(workspace)
         bench = [
             "bin/k6",
             "run",
@@ -55,9 +57,11 @@ class K6Benchmark(common.Benchmark):
             f"csv={timings_file}",
             "--env",
             f"RATE={self.config.rate}",
+            "--env",
+            f"WORKSPACE={workspace}",
             "benchmark/k6.js",
         ]
-        logger.debug("run cmd: %s", bench)
+        logger.debug("run cmd: {}", bench)
         return bench
 
 
@@ -86,7 +90,7 @@ def run_metrics(_name: str, _cmd: str, file: str):
     Run metric gathering.
     """
     if not os.path.exists(file):
-        logger.warning("no metrics file found at %s", file)
+        logger.warning("no metrics file found at {}", file)
         return
     logger.warning("no metrics implemented yet")
 

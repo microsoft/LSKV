@@ -2,12 +2,13 @@ import { check } from "k6";
 import http from "k6/http";
 
 const rate = Number(__ENV.RATE);
+const workspace = __ENV.WORKSPACE;
 
 export let options = {
   tlsAuth: [
     {
-      cert: open("../certs/client.pem"),
-      key: open("../certs/client-key.pem"),
+      cert: open(`${workspace}/user0_cert.pem`),
+      key: open(`${workspace}/user0_privk.pem`),
     },
   ],
   insecureSkipTLSVerify: true,
