@@ -54,7 +54,7 @@ class Sandbox:
         """
         return self._wait_for_ready(self.port)
 
-    def _wait_for_ready(self, port: int, tries=30) -> bool:
+    def _wait_for_ready(self, port: int, tries=60) -> bool:
         client = self.etcdctl_client()
         client += ["get", "missing key"]
         if self.http_version == 1:
