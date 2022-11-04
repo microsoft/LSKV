@@ -14,6 +14,7 @@
     pandas
     seaborn
     pytest
+    typing-extensions
   ];
 in {
   shellcheck =
