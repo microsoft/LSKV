@@ -43,9 +43,6 @@ jobs:
       - name: Build app (Virtual)
         run: make build-virtual
 
-      - name: Build app (SGX)
-        run: make build-sgx
-
       - name: Make .venv
         run: make .venv
 
