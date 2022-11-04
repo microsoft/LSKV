@@ -15,7 +15,7 @@ LABEL org.opencontainers.image.description="LSKV virtual node"
 LABEL org.opencontainers.image.licenses=MIT
 
 COPY --from=builder /build/liblskv.virtual.so /app/
-COPY --from=builder /opt/ccf/bin/keygenerator.sh /app/
+COPY --from=builder /opt/ccf_virtual/bin/keygenerator.sh /app/
 COPY ./config/cchost_config.virtual.json /app/
 COPY constitution/*.js /app/
 WORKDIR /app/

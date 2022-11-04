@@ -114,7 +114,7 @@ class Sandbox:
                 for i in range(self.nodes):
                     nodes += ["--node", f"local://127.0.0.1:{self.port+i}"]
                 kvs_cmd = (
-                    ["/opt/ccf/bin/sandbox.sh", "-p"]
+                    ["/opt/ccf_virtual/bin/sandbox.sh", "-p"]
                     + libargs
                     + [
                         "--workspace",

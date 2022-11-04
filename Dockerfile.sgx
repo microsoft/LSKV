@@ -15,7 +15,7 @@ LABEL org.opencontainers.image.description="LSKV SGX node"
 LABEL org.opencontainers.image.licenses=MIT
 
 COPY --from=builder /build/liblskv.enclave.so.signed /app/
-COPY --from=builder /opt/ccf/bin/keygenerator.sh /app/
+COPY --from=builder /opt/ccf_sgx/bin/keygenerator.sh /app/
 COPY ./config/cchost_config.sgx.json /app/
 COPY constitution/*.js /app/
 WORKDIR /app/
