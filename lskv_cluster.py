@@ -95,6 +95,19 @@ class Operator:
     def make_name(self, i: int) -> str:
         return f"{self.name}-{i}"
 
+    def wait_node(self):
+        tries = 60
+        i = 0
+        while i < tries:
+            try:
+                run(["curl", "-k", "https://127.0.0.1:8000/node/network"])
+                break
+            except Exception as e:
+                logger.warning("Node not ready, try {}: {}", i, e)
+            i += 1
+            time.sleep(1)
+
+
     def add_node(self) :
         name = self.make_name(self.nodes)
         cmd = [
@@ -110,6 +123,7 @@ class Operator:
         ]
         run(cmd)
         self.nodes +=1
+        self.wait_node()
 
     def stop_all(self):
         for i in range(self.nodes):
@@ -216,11 +230,8 @@ if __name__ == "__main__":
 
     operator = Operator(workspace, "lskv-virtual")
     operator.add_node()
-    time.sleep(1)
     try:
         operator.copy_certs()
-
-        time.sleep(2)
 
         member0 = Member(workspace,"member0")
 
@@ -232,7 +243,7 @@ if __name__ == "__main__":
 
         # wait for a signal and print it out
         signals = {signal.SIGINT, signal.SIGTERM}
-        logger.info("waiting for a signal")
+        logger.info("Waiting for a signal")
         sig = signal.sigwait(signals)
         logger.info("Received a signal: {}", signal.Signals(sig).name)
 
