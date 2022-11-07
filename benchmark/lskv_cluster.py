@@ -96,6 +96,10 @@ class Node:
     first_ip: str
     ip: str
     worker_threads: int
+    sig_tx_interval: int
+    sig_ms_interval: int
+    ledger_chunk_bytes: str
+    snapshot_tx_interval: int
 
     def __post_init__(self):
         base_client_port = 8000
@@ -149,6 +153,14 @@ class Node:
                 },
             },
             "worker_threads": self.worker_threads,
+            "snapshots": {
+                "tx_count": self.snapshot_tx_interval,
+            },
+            "ledger_signatures": {
+                "tx_count": self.sig_tx_interval,
+                "delay": self.sig_ms_interval,
+            },
+            "ledger": {"chunk_size": self.ledger_chunk_bytes},
         }
 
     def join_config(self) -> Dict[str, Any]:
@@ -182,6 +194,14 @@ class Node:
                 },
             },
             "worker_threads": self.worker_threads,
+            "snapshots": {
+                "tx_count": self.snapshot_tx_interval,
+            },
+            "ledger_signatures": {
+                "tx_count": self.sig_tx_interval,
+                "delay": self.sig_ms_interval,
+            },
+            "ledger": {"chunk_size": self.ledger_chunk_bytes},
         }
 
 
@@ -193,6 +213,10 @@ class Operator:
         enclave: str,
         http_version: int,
         worker_threads: int,
+        sig_tx_interval: int,
+        sig_ms_interval: int,
+        ledger_chunk_bytes: str,
+        snapshot_tx_interval: int,
     ):
         self.workspace = workspace
         self.name = "lskv"
@@ -202,6 +226,10 @@ class Operator:
         self.http_version = http_version
         self.subnet_prefix = "172.20.5"
         self.worker_threads = worker_threads
+        self.sig_tx_interval = sig_tx_interval
+        self.sig_ms_interval = sig_ms_interval
+        self.ledger_chunk_bytes = ledger_chunk_bytes
+        self.snapshot_tx_interval = snapshot_tx_interval
         self.create_network()
 
     def create_network(self):
@@ -270,6 +298,10 @@ class Operator:
             first_ip=first_ip,
             ip=ip,
             worker_threads=self.worker_threads,
+            sig_tx_interval=self.sig_tx_interval,
+            sig_ms_interval=self.sig_ms_interval,
+            ledger_chunk_bytes=self.ledger_chunk_bytes,
+            snapshot_tx_interval=self.snapshot_tx_interval,
         )
 
     def first_ip(self) -> str:
@@ -455,11 +487,25 @@ def main(
     image: str,
     http_version: int,
     worker_threads: int,
+    sig_tx_interval: int,
+    sig_ms_interval: int,
+    ledger_chunk_bytes: str,
+    snapshot_tx_interval: int,
 ):
     run(["rm", "-rf", workspace])
     run(["mkdir", "-p", workspace])
 
-    operator = Operator(workspace, image, enclave, http_version, worker_threads)
+    operator = Operator(
+        workspace,
+        image,
+        enclave,
+        http_version,
+        worker_threads,
+        sig_tx_interval,
+        sig_ms_interval,
+        ledger_chunk_bytes,
+        snapshot_tx_interval,
+    )
     try:
         operator.setup_common()
         operator.add_nodes(nodes)
@@ -497,6 +543,10 @@ if __name__ == "__main__":
     parser.add_argument("--image", type=str, default="lskv-virtual")
     parser.add_argument("--http-version", type=int, default="2")
     parser.add_argument("--worker-threads", type=int, default="0")
+    parser.add_argument("--sig-tx-interval", type=int, default="5000")
+    parser.add_argument("--sig-ms-interval", type=int, default="1000")
+    parser.add_argument("--ledger-chunk-bytes", type=str, default="5MB")
+    parser.add_argument("--snapshot-tx-interval", type=int, default="10000")
 
     args = parser.parse_args()
 
@@ -508,4 +558,8 @@ if __name__ == "__main__":
         args.image,
         args.http_version,
         args.worker_threads,
+        args.sig_tx_interval,
+        args.sig_ms_interval,
+        args.ledger_chunk_bytes,
+        args.snapshot_tx_interval,
     )
