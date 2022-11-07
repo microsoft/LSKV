@@ -297,6 +297,17 @@ class Operator:
         self.nodes.append(node)
         self.wait_node(node)
         logger.info("Added node {}", node)
+        if len(self.nodes) == 1:
+            # just made the first node
+            self.copy_certs()
+        self.list_nodes()
+
+    def list_nodes(self):
+        run(["curl", "https://127.0.0.1:8000/node/network/nodes", "--cacert", f"{self.workspace}/common/service_cert.pem"])
+
+    def add_nodes(self, n: int):
+        for _ in range(n):
+            self.add_node()
 
     def stop_all(self):
         for node in self.nodes:
@@ -418,10 +429,7 @@ if __name__ == "__main__":
     operator = Operator(workspace, "lskv-virtual", "virtual", 1)
     try:
         operator.setup_common()
-        operator.add_node()
-        operator.copy_certs()
-        operator.add_node()
-        operator.add_node()
+        operator.add_nodes(3)
 
         member0 = Member(workspace, "member0")
 
