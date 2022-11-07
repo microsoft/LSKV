@@ -303,8 +303,17 @@ class Operator:
             f"{common_dir_abs}:/app/common:ro",
             "-v",
             f"{constitution_dir_abs}:/app/constitution:ro",
-            self.image,
         ]
+        if self.enclave == "sgx":
+            cmd += [
+                "--device",
+                "/dev/sgx_enclave:/dev/sgx_enclave",
+                "--device",
+                "/dev/sgx_provision:/dev/sgx_provision",
+                "-v",
+                "/dev/sgx:/dev/sgx",
+            ]
+        cmd.append(self.image)
         run(cmd)
         self.nodes.append(node)
         self.wait_node(node)
