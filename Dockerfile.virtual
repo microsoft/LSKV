@@ -18,6 +18,4 @@ COPY --from=builder /build/liblskv.virtual.so /app/
 WORKDIR /app
 RUN mkdir -p /app/certs
 
-EXPOSE 8000/tcp
-
 CMD ["/usr/bin/cchost", "--config", "/app/config.json"]
