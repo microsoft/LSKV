@@ -133,10 +133,10 @@ class Node:
                 "service_certificate_file": "/app/certs/service_cert.pem",
                 "start": {
                     "constitution_files": [
-                        "/app/validate.js",
-                        "/app/apply.js",
-                        "/app/resolve.js",
-                        "/app/actions.js",
+                        "/app/constitution/validate.js",
+                        "/app/constitution/apply.js",
+                        "/app/constitution/resolve.js",
+                        "/app/constitution/actions.js",
                     ],
                     "members": [
                         {
@@ -271,6 +271,7 @@ class Operator:
         config_file = self.make_node_config(node, node_dir)
         config_file_abs = os.path.abspath(config_file)
         common_dir_abs = os.path.abspath(os.path.join(self.workspace, "common"))
+        constitution_dir_abs = os.path.abspath("constitution")
         cmd = [
             "docker",
             "run",
@@ -288,6 +289,8 @@ class Operator:
             f"{config_file_abs}:/app/config.json:ro",
             "-v",
             f"{common_dir_abs}:/app/common:ro",
+            "-v",
+            f"{constitution_dir_abs}:/app/constitution:ro",
             self.image,
         ]
         run(cmd)
