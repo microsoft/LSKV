@@ -85,7 +85,8 @@ class SCurl:
 
 
 class Operator:
-    def __init__(self):
+    def __init__(self, workspace:str):
+        self.workspace = workspace
         self.name = "lskv"
         self.nodes = 0
 
@@ -115,25 +116,26 @@ class Operator:
 
     def copy_certs(self):
         name= self.make_name(0)
-        run(["docker", "cp", f"{name}:/app/certs", "common"], cwd="docker-certs")
+        run(["docker", "cp", f"{name}:/app/certs", "common"], cwd=self.workspace)
 
-        run(["/opt/ccf_virtual/bin/keygenerator.sh", "--name", "user0"], cwd="docker-certs")
+        run(["/opt/ccf_virtual/bin/keygenerator.sh", "--name", "user0"], cwd=self.workspace)
 
 
 class Member:
-    def __init__(self, name: str):
+    def __init__(self, workspace:str,name: str):
+        self.workspace = workspace
         self.name = name
         self.curl = Curl(
             "https://127.0.0.1:8000",
-            "docker-certs/common/service_cert.pem",
-            f"docker-certs/common/{name}_cert.pem",
-            f"docker-certs/common/{name}_privk.pem",
+            f"{self.workspace}/common/service_cert.pem",
+            f"{self.workspace}/common/{name}_cert.pem",
+            f"{self.workspace}/common/{name}_privk.pem",
         )
         self.scurl = SCurl(
             "https://127.0.0.1:8000",
-            "docker-certs/common/service_cert.pem",
-            f"docker-certs/common/{name}_cert.pem",
-            f"docker-certs/common/{name}_privk.pem",
+            f"{self.workspace}/common/service_cert.pem",
+            f"{self.workspace}/common/{name}_cert.pem",
+            f"{self.workspace}/common/{name}_privk.pem",
         )
 
     def activate_member(self):
@@ -180,7 +182,7 @@ class Member:
     def open_network(self):
         logger.info("Opening the network")
         service_cert = "".join(
-            open("docker-certs/common/service_cert.pem", "r").readlines()
+            open(f"{self.workspace}/common/service_cert.pem", "r").readlines()
         )
         transition_service_to_open = {
             "actions": [
@@ -203,22 +205,25 @@ class Member:
 
 
 if __name__ == "__main__":
-    operator = Operator()
+    workspace = "docker-workspace"
+
+    run(["rm", "-rf", workspace])
+    run(["mkdir", "-p", workspace])
+
+    operator = Operator(workspace)
     operator.add_node()
     time.sleep(1)
     try:
-        shutil.rmtree("docker-certs")
-        os.makedirs("docker-certs")
 
         operator.copy_certs()
 
         time.sleep(2)
 
-        member0 = Member("member0")
+        member0 = Member(workspace,"member0")
 
         member0.activate_member()
 
-        member0.set_user("docker-certs/user0_cert.pem")
+        member0.set_user(f"{workspace}/user0_cert.pem")
 
         member0.open_network()
 
