@@ -74,35 +74,33 @@ class LSKVStore(Store):
                 "w",
                 encoding="utf-8",
             ) as err:
-                libargs = ["build/liblskv.virtual.so"]
-                if self.config.sgx:
-                    libargs = ["build/liblskv.enclave.so.signed", "-e", "release"]
-                env = os.environ.copy()
-                env["VENV_DIR"] = os.path.join(os.getcwd(), ".venv")
-                nodes = []
-                for i in range(self.config.nodes):
-                    nodes += ["--node", f"local://127.0.0.1:{self.config.port+i}"]
                 ccf_prefix = "/opt/ccf"
+                image = "lskv-"
                 if self.config.sgx:
                     ccf_prefix += "_sgx"
+                    image += "sgx"
                 else:
                     ccf_prefix += "_virtual"
-                kvs_cmd = (
-                    [f"{ccf_prefix}/bin/sandbox.sh", "-p"]
-                    + libargs
-                    + [
-                        "--worker-threads",
-                        str(self.config.worker_threads),
-                        "--workspace",
-                        self.workspace(),
-                        "--verbose",
-                    ]
-                    + nodes
-                )
-                if self.config.http_version == 2:
-                    kvs_cmd += ["--http2"]
-                logger.info("spawning lskv: {}", kvs_cmd)
-                return Popen(kvs_cmd, stdout=out, stderr=err, env=env)
+                    image += "virtual"
+                lskv_cmd = [
+                    "benchmark/lskv_cluster.py",
+                    "--nodes",
+                    str(self.config.nodes),
+                    "--enclave",
+                    "sgx" if self.config.sgx else "virtual",
+                    "--image",
+                    image,
+                    "--ccf-bin-dir",
+                    f"{ccf_prefix}/bin",
+                    "--worker-threads",
+                    str(self.config.worker_threads),
+                    "--http-version",
+                    str(self.config.http_version),
+                    "--workspace",
+                    self.workspace(),
+                ]
+                logger.info("spawning lskv: {}", lskv_cmd)
+                return Popen(lskv_cmd, stdout=out, stderr=err)
 
     def workspace(self):
         """
@@ -114,16 +112,16 @@ class LSKVStore(Store):
         """
         Return the path to the CA certificate.
         """
-        return f"{self.workspace()}/sandbox_common/service_cert.pem"
+        return f"{self.workspace()}/common/service_cert.pem"
 
     def cert(self) -> str:
         """
         Return the path to the client certificate.
         """
-        return f"{self.workspace()}/sandbox_common/user0_cert.pem"
+        return f"{self.workspace()}/common/user0_cert.pem"
 
     def key(self) -> str:
         """
         Return the path to the key for the client certificate.
         """
-        return f"{self.workspace()}/sandbox_common/user0_privk.pem"
+        return f"{self.workspace()}/common/user0_privk.pem"
