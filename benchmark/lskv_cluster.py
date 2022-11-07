@@ -345,6 +345,9 @@ class Operator:
                 "-v",
                 "/dev/sgx:/dev/sgx",
             ]
+            self.image += "-sgx"
+        else:
+            self.image += "-virtual"
         cmd.append(self.image)
         run(cmd)
         self.nodes.append(node)
@@ -540,7 +543,7 @@ if __name__ == "__main__":
     parser.add_argument("--workspace", type=str, default="docker-workspace")
     parser.add_argument("--nodes", type=int, default=1)
     parser.add_argument("--enclave", type=str, default="virtual")
-    parser.add_argument("--image", type=str, default="lskv-virtual")
+    parser.add_argument("--image", type=str, default="lskv")
     parser.add_argument("--http-version", type=int, default="2")
     parser.add_argument("--worker-threads", type=int, default="0")
     parser.add_argument("--sig-tx-interval", type=int, default="5000")
