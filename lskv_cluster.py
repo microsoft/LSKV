@@ -45,7 +45,7 @@ class Curl:
             "--key",
             self.key,
             "--cert",
-            self.cert
+            self.cert,
         ]
         p = run(cmd)
         out = p.stdout.decode("utf-8")
@@ -75,7 +75,7 @@ class SCurl:
             "--header",
             "content-type: application/json",
             "--data-binary",
-            json_str
+            json_str,
         ]
         p = run(cmd)
         out = p.stdout.decode("utf-8")
@@ -85,11 +85,11 @@ class SCurl:
 
 
 class Operator:
-    def __init__(self, workspace:str, image:str):
+    def __init__(self, workspace: str, image: str):
         self.workspace = workspace
         self.name = "lskv"
         self.nodes = 0
-        self.image =image
+        self.image = image
 
     def make_name(self, i: int) -> str:
         return f"{self.name}-{i}"
@@ -106,9 +106,53 @@ class Operator:
             i += 1
             time.sleep(1)
 
+    def make_node_dir(self, name: str) -> str:
+        d = os.path.join(self.workspace, name)
+        run(["mkdir", "-p", d])
+        return d
 
-    def add_node(self) :
+    def make_node_config(self, node_dir: str) -> str:
+        config_file = os.path.join(node_dir, "config.json")
+        config = {
+            "enclave": {"file": "/app/liblskv.virtual.so", "type": "Virtual"},
+            "network": {
+                "node_to_node_interface": {"bind_address": "127.0.0.1:8001"},
+                "rpc_interfaces": {
+                    "main_interface": {
+                        "bind_address": "0.0.0.0:8000",
+                        "app_protocol": "HTTP2",
+                    }
+                },
+            },
+            "node_certificate": {"subject_alt_names": ["iPAddress:127.0.0.1"]},
+            "command": {
+                "type": "Start",
+                "service_certificate_file": "/app/certs/service_cert.pem",
+                "start": {
+                    "constitution_files": [
+                        "/app/validate.js",
+                        "/app/apply.js",
+                        "/app/resolve.js",
+                        "/app/actions.js",
+                    ],
+                    "members": [
+                        {
+                            "certificate_file": "/app/certs/member0_cert.pem",
+                            "encryption_public_key_file": "/app/certs/member0_enc_pubk.pem",
+                        }
+                    ],
+                },
+            },
+        }
+        with open(config_file, "w") as f:
+            json.dump(config, f)
+        return config_file
+
+    def add_node(self):
         name = self.make_name(self.nodes)
+        node_dir = self.make_node_dir(name)
+        config_file = self.make_node_config(node_dir)
+        config_file_abs = os.path.abspath(config_file)
         cmd = [
             "docker",
             "run",
@@ -118,26 +162,31 @@ class Operator:
             name,
             "-p",
             "8000:8000",
-            self.image
+            "-v",
+            f"{config_file_abs}:/app/config.json",
+            self.image,
         ]
         run(cmd)
-        self.nodes +=1
+        self.nodes += 1
         self.wait_node()
 
     def stop_all(self):
         for i in range(self.nodes):
             name = self.make_name(i)
-            run(["docker","rm","-f",name])
+            run(["docker", "rm", "-f", name])
 
     def copy_certs(self):
-        name= self.make_name(0)
+        name = self.make_name(0)
         run(["docker", "cp", f"{name}:/app/certs", "common"], cwd=self.workspace)
 
-        run(["/opt/ccf_virtual/bin/keygenerator.sh", "--name", "user0"], cwd=self.workspace)
+        run(
+            ["/opt/ccf_virtual/bin/keygenerator.sh", "--name", "user0"],
+            cwd=self.workspace,
+        )
 
 
 class Member:
-    def __init__(self, workspace:str,name: str):
+    def __init__(self, workspace: str, name: str):
         self.workspace = workspace
         self.name = name
         self.curl = Curl(
@@ -176,11 +225,7 @@ class Member:
             "actions": [
                 {
                     "name": "set_user",
-                    "args": {
-                        "cert": "".join(
-                            open(cert, "r").readlines()
-                        )
-                    },
+                    "args": {"cert": "".join(open(cert, "r").readlines())},
                 }
             ]
         }
@@ -232,7 +277,7 @@ if __name__ == "__main__":
     try:
         operator.copy_certs()
 
-        member0 = Member(workspace,"member0")
+        member0 = Member(workspace, "member0")
 
         member0.activate_member()
 
