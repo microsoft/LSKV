@@ -18,8 +18,9 @@ COPY --from=builder /build/liblskv.virtual.so /app/
 COPY --from=builder /opt/ccf_virtual/bin/keygenerator.sh /app/
 COPY ./config/cchost_config.virtual.json /app/
 COPY constitution/*.js /app/
-WORKDIR /app/
+WORKDIR /app/certs
 RUN /app/keygenerator.sh --name member0 --gen-enc-key
+RUN /usr/bin/cchost --check --config /app/cchost_config.virtual.json
 
 EXPOSE 8000/tcp
 
