@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 #!/usr/bin/env python3
 
+import argparse
 import json
 import os
 import signal
@@ -56,16 +57,17 @@ class Curl:
 
 
 class SCurl:
-    def __init__(self, address: str, cacert: str, cert: str, key: str):
+    def __init__(self, address: str, cacert: str, cert: str, key: str, ccf_bin_dir:str):
         self.address = address
         self.cacert = cacert
         self.cert = cert
         self.key = key
+        self.ccf_bin_dir = ccf_bin_dir
 
     def run(self, path: str, json_data: Dict[str, Any]) -> Any:
         json_str = json.dumps(json_data)
         cmd = [
-            "/opt/ccf_virtual/bin/scurl.sh",
+            f"{self.ccf_bin_dir}/scurl.sh",
             f"{self.address}{path}",
             "--cacert",
             self.cacert,
@@ -157,7 +159,6 @@ class Node:
         app_protocol = "HTTP1" if self.http_version == 1 else "HTTP2"
 
         base_client_port = 8000
-        base_peer_port = 8001
         return {
             "enclave": {"file": enclave_file, "type": enclave_type},
             "network": {
@@ -183,7 +184,7 @@ class Node:
 
 
 class Operator:
-    def __init__(self, workspace: str, image: str, enclave: str, http_version: int):
+    def __init__(self, workspace: str, image: str, enclave: str, http_version: int, ccf_bin_dir:str):
         self.workspace = workspace
         self.name = "lskv"
         self.nodes = []
@@ -191,6 +192,7 @@ class Operator:
         self.enclave = enclave
         self.http_version = http_version
         self.subnet_prefix = "172.20.5"
+        self.ccf_bin_dir = ccf_bin_dir
         self.create_network()
 
     def create_network(self):
@@ -319,7 +321,7 @@ class Operator:
         run(["mkdir", "-p", common_dir])
         run(
             [
-                "/opt/ccf_virtual/bin/keygenerator.sh",
+                f"{self.ccf_bin_dir}/keygenerator.sh",
                 "--name",
                 "member0",
                 "--gen-enc-key",
@@ -327,7 +329,7 @@ class Operator:
             cwd=common_dir,
         )
         run(
-            ["/opt/ccf_virtual/bin/keygenerator.sh", "--name", "user0"],
+            [f"{self.ccf_bin_dir}/keygenerator.sh", "--name", "user0"],
             cwd=self.workspace,
         )
 
@@ -340,7 +342,7 @@ class Operator:
 
 
 class Member:
-    def __init__(self, workspace: str, name: str):
+    def __init__(self, workspace: str, name: str, ccf_bin_dir:str):
         self.workspace = workspace
         self.name = name
         self.curl = Curl(
@@ -354,6 +356,7 @@ class Member:
             f"{self.workspace}/common/service_cert.pem",
             f"{self.workspace}/common/{name}_cert.pem",
             f"{self.workspace}/common/{name}_privk.pem",
+            ccf_bin_dir,
         )
 
     def activate_member(self):
@@ -419,19 +422,16 @@ class Member:
 
         logger.info("Network is now open to users!")
 
-
-if __name__ == "__main__":
-    workspace = "docker-workspace"
-
+def main(workspace:str,nodes:int, enclave:str, image:str, ccf_bin_dir:str, http_version:int):
     run(["rm", "-rf", workspace])
     run(["mkdir", "-p", workspace])
 
-    operator = Operator(workspace, "lskv-virtual", "virtual", 1)
+    operator = Operator(workspace,image,enclave, http_version, ccf_bin_dir)
     try:
         operator.setup_common()
-        operator.add_nodes(3)
+        operator.add_nodes(nodes)
 
-        member0 = Member(workspace, "member0")
+        member0 = Member(workspace, "member0", ccf_bin_dir)
 
         member0.activate_member()
 
@@ -449,3 +449,17 @@ if __name__ == "__main__":
         logger.info("Failed: {}", e)
     finally:
         operator.stop_all()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--workspace", type=str, default="docker-workspace")
+    parser.add_argument("--nodes", type=int, default=1)
+    parser.add_argument("--enclave", type=str, default="virtual")
+    parser.add_argument("--image", type=str, default="lskv-virtual")
+    parser.add_argument("--http-version", type=int, default="2")
+    parser.add_argument("--ccf-bin-dir", type=str, default="/opt/ccf_virtual/bin")
+
+    args = parser.parse_args()
+
+    logger.info("Using arguments: {}", args)
+    main(args.workspace,args.nodes, args.enclave, args.image, args.ccf_bin_dir, args.http_version)
