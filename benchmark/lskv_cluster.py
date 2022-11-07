@@ -1,6 +1,6 @@
+#!/usr/bin/env python3
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
-#!/usr/bin/env python3
 
 import argparse
 import json
@@ -96,6 +96,7 @@ class Node:
     # ip address of the first node to connect to
     first_ip: str
     ip: str
+    worker_threads:int
 
     def __post_init__(self):
         base_client_port = 8000
@@ -148,6 +149,7 @@ class Node:
                     ],
                 },
             },
+            "worker_threads": self.worker_threads,
         }
 
     def join_config(self) -> Dict[str, Any]:
@@ -180,11 +182,12 @@ class Node:
                     "target_rpc_address": f"{self.first_ip}:{base_client_port}",
                 },
             },
+            "worker_threads": self.worker_threads,
         }
 
 
 class Operator:
-    def __init__(self, workspace: str, image: str, enclave: str, http_version: int, ccf_bin_dir:str):
+    def __init__(self, workspace: str, image: str, enclave: str, http_version: int, ccf_bin_dir:str, worker_threads:int):
         self.workspace = workspace
         self.name = "lskv"
         self.nodes = []
@@ -193,6 +196,7 @@ class Operator:
         self.http_version = http_version
         self.subnet_prefix = "172.20.5"
         self.ccf_bin_dir = ccf_bin_dir
+        self.worker_threads = worker_threads
         self.create_network()
 
     def create_network(self):
@@ -260,6 +264,7 @@ class Operator:
             http_version=self.http_version,
             first_ip=first_ip,
             ip=ip,
+            worker_threads=self.worker_threads,
         )
 
     def first_ip(self) -> str:
@@ -422,11 +427,11 @@ class Member:
 
         logger.info("Network is now open to users!")
 
-def main(workspace:str,nodes:int, enclave:str, image:str, ccf_bin_dir:str, http_version:int):
+def main(workspace:str,nodes:int, enclave:str, image:str, ccf_bin_dir:str, http_version:int, worker_threads:int):
     run(["rm", "-rf", workspace])
     run(["mkdir", "-p", workspace])
 
-    operator = Operator(workspace,image,enclave, http_version, ccf_bin_dir)
+    operator = Operator(workspace,image,enclave, http_version, ccf_bin_dir, worker_threads)
     try:
         operator.setup_common()
         operator.add_nodes(nodes)
@@ -458,8 +463,9 @@ if __name__ == "__main__":
     parser.add_argument("--image", type=str, default="lskv-virtual")
     parser.add_argument("--http-version", type=int, default="2")
     parser.add_argument("--ccf-bin-dir", type=str, default="/opt/ccf_virtual/bin")
+    parser.add_argument("--worker-threads", type=int, default="0")
 
     args = parser.parse_args()
 
     logger.info("Using arguments: {}", args)
-    main(args.workspace,args.nodes, args.enclave, args.image, args.ccf_bin_dir, args.http_version)
+    main(args.workspace,args.nodes, args.enclave, args.image, args.ccf_bin_dir, args.http_version, args.worker_threads)
