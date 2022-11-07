@@ -158,7 +158,7 @@ class Node:
             },
             "ledger_signatures": {
                 "tx_count": self.sig_tx_interval,
-                "delay": self.sig_ms_interval,
+                "delay": f"{self.sig_ms_interval}ms",
             },
             "ledger": {"chunk_size": self.ledger_chunk_bytes},
         }
@@ -199,7 +199,7 @@ class Node:
             },
             "ledger_signatures": {
                 "tx_count": self.sig_tx_interval,
-                "delay": self.sig_ms_interval,
+                "delay": f"{self.sig_ms_interval}ms",
             },
             "ledger": {"chunk_size": self.ledger_chunk_bytes},
         }
