@@ -43,10 +43,8 @@ jobs:
       - name: Build k6
         run: export PATH=$PATH:/usr/local/go/bin && make bin/k6
 
-      - name: Pull images
-        run: |
-          docker pull $ACR_REGISTRY/public/lskv:latest-virtual
-          docker pull $ACR_REGISTRY/public/lskv:latest-sgx
+      - name: Build images
+        run: make build-docker
 
       - name: Make .venv
         run: make .venv
