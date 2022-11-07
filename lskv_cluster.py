@@ -88,9 +88,12 @@ class SCurl:
 @dataclass
 class Node:
     index: int
-    name:str
-    enclave :str
+    name: str
+    enclave: str
     http_version: int
+    # ip address of the first node to connect to
+    first_ip: str
+    ip: str
 
     def __post_init__(self):
         base_client_port = 8000
@@ -98,8 +101,12 @@ class Node:
         self.client_port = base_client_port + (2 * self.index)
         self.peer_port = base_peer_port + (2 * self.index)
 
+    def config(self):
+        if self.index == 0:
+            return self.start_config()
+        return self.join_config()
 
-    def start_config(self)->Dict[str, Any]:
+    def start_config(self) -> Dict[str, Any]:
         enclave_file = "/app/liblskv.virtual.so"
         enclave_type = "Virtual"
         if self.enclave == "sgx":
@@ -108,13 +115,15 @@ class Node:
         app_protocol = "HTTP1" if self.http_version == 1 else "HTTP2"
 
         return {
-            "enclave": {"file":enclave_file, "type":enclave_type},
+            "enclave": {"file": enclave_file, "type": enclave_type},
             "network": {
-                "node_to_node_interface": {"bind_address": f"127.0.0.1:{self.peer_port}"},
+                "node_to_node_interface": {
+                    "bind_address": f"{self.ip}:{self.peer_port}"
+                },
                 "rpc_interfaces": {
                     "main_interface": {
                         "bind_address": f"0.0.0.0:{self.client_port}",
-                        "app_protocol":app_protocol,
+                        "app_protocol": app_protocol,
                     }
                 },
             },
@@ -131,89 +140,186 @@ class Node:
                     ],
                     "members": [
                         {
-                            "certificate_file": "/app/certs/member0_cert.pem",
-                            "encryption_public_key_file": "/app/certs/member0_enc_pubk.pem",
+                            "certificate_file": "/app/common/member0_cert.pem",
+                            "encryption_public_key_file": "/app/common/member0_enc_pubk.pem",
                         }
                     ],
                 },
             },
         }
 
+    def join_config(self) -> Dict[str, Any]:
+        enclave_file = "/app/liblskv.virtual.so"
+        enclave_type = "Virtual"
+        if self.enclave == "sgx":
+            enclave_file = "/app/liblskv.enclave.so.signed"
+            enclave_type = "Release"
+        app_protocol = "HTTP1" if self.http_version == 1 else "HTTP2"
+
+        base_client_port = 8000
+        base_peer_port = 8001
+        return {
+            "enclave": {"file": enclave_file, "type": enclave_type},
+            "network": {
+                "node_to_node_interface": {
+                    "bind_address": f"{self.ip}:{self.peer_port}"
+                },
+                "rpc_interfaces": {
+                    "main_interface": {
+                        "bind_address": f"0.0.0.0:{self.client_port}",
+                        "app_protocol": app_protocol,
+                    }
+                },
+            },
+            "node_certificate": {"subject_alt_names": ["iPAddress:127.0.0.1"]},
+            "command": {
+                "type": "Join",
+                "service_certificate_file": "/app/common/service_cert.pem",
+                "join": {
+                    "target_rpc_address": f"{self.first_ip}:{base_client_port}",
+                },
+            },
+        }
+
+
 class Operator:
-    def __init__(self, workspace: str, image: str, enclave : str, http_version:int):
+    def __init__(self, workspace: str, image: str, enclave: str, http_version: int):
         self.workspace = workspace
         self.name = "lskv"
         self.nodes = []
         self.image = image
         self.enclave = enclave
         self.http_version = http_version
+        self.subnet_prefix = "172.20.5"
+        self.create_network()
+
+    def create_network(self):
+        run(
+            [
+                "docker",
+                "network",
+                "create",
+                "--subnet",
+                f"{self.subnet_prefix}.0/16",
+                "lskv",
+            ]
+        )
+
+    def remove_network(self):
+        run(["docker", "network", "rm", "lskv"])
 
     def make_name(self, i: int) -> str:
         return f"{self.name}-{i}"
 
-    def wait_node(self, node : Node):
-        tries = 60
+    def wait_node(self, node: Node):
+        tries = 10
         i = 0
         while i < tries:
             try:
-                run(["curl", "--silent", "-k", f"https://127.0.0.1:{node.client_port}/node/network"])
-                break
+                r = run(
+                    [
+                        "curl",
+                        "--silent",
+                        "-k",
+                        f"https://127.0.0.1:{node.client_port}/node/state",
+                    ]
+                )
+                status = json.loads(r.stdout)["state"]
+                if status == "PartOfNetwork":
+                    return
             except Exception as e:
                 logger.warning("Node not ready, try {}: {}", i, e)
             i += 1
             time.sleep(1)
+        raise Exception("Failed to wait for node to be ready")
 
     def make_node_dir(self, name: str) -> str:
         d = os.path.join(self.workspace, name)
         run(["mkdir", "-p", d])
         return d
 
-    def make_node_config(self,node:Node, node_dir: str) -> str:
+    def make_node_config(self, node: Node, node_dir: str) -> str:
         config_file = os.path.join(node_dir, "config.json")
 
-        # TODO: just start nodes for now
-        config = node.start_config()
+        config = node.config()
 
         with open(config_file, "w") as f:
             json.dump(config, f)
         return config_file
 
-    def make_node(self)->Node:
+    def make_node(self) -> Node:
         i = len(self.nodes)
-        return Node(i, name=self.make_name(i), enclave=self.enclave, http_version=self.http_version)
+        first_ip = self.first_ip()
+        ip = f"{self.subnet_prefix}.{i+1}"
+        return Node(
+            i,
+            name=self.make_name(i),
+            enclave=self.enclave,
+            http_version=self.http_version,
+            first_ip=first_ip,
+            ip=ip,
+        )
+
+    def first_ip(self) -> str:
+        if len(self.nodes) > 0:
+            return self.nodes[0].ip
+        return ""
 
     def add_node(self):
         node = self.make_node()
         node_dir = self.make_node_dir(node.name)
         config_file = self.make_node_config(node, node_dir)
         config_file_abs = os.path.abspath(config_file)
+        common_dir_abs = os.path.abspath(os.path.join(self.workspace, "common"))
         cmd = [
             "docker",
             "run",
+            "--network",
+            "lskv",
+            "--ip",
+            node.ip,
             "--rm",
             "-d",
             "--name",
             node.name,
             "-p",
-           f"{node.client_port}:{node.client_port}",
+            f"{node.client_port}:{node.client_port}",
             "-v",
-            f"{config_file_abs}:/app/config.json",
+            f"{config_file_abs}:/app/config.json:ro",
+            "-v",
+            f"{common_dir_abs}:/app/common:ro",
             self.image,
         ]
         run(cmd)
+        self.nodes.append(node)
         self.wait_node(node)
-        self.nodes.append( node)
 
     def stop_all(self):
         for node in self.nodes:
             run(["docker", "rm", "-f", node.name])
+        self.remove_network()
+
+    def setup_common(self):
+        common_dir = os.path.join(self.workspace, "common")
+        run(["mkdir", "-p", common_dir])
+        run(
+            [
+                "/opt/ccf_virtual/bin/keygenerator.sh",
+                "--name",
+                "member0",
+                "--gen-enc-key",
+            ],
+            cwd=common_dir,
+        )
+        run(
+            ["/opt/ccf_virtual/bin/keygenerator.sh", "--name", "user0"],
+            cwd=self.workspace,
+        )
 
     def copy_certs(self):
         name = self.make_name(0)
-        run(["docker", "cp", f"{name}:/app/certs", "common"], cwd=self.workspace)
-
         run(
-            ["/opt/ccf_virtual/bin/keygenerator.sh", "--name", "user0"],
+            ["docker", "cp", f"{name}:/app/certs/service_cert.pem", "common"],
             cwd=self.workspace,
         )
 
@@ -305,10 +411,12 @@ if __name__ == "__main__":
     run(["rm", "-rf", workspace])
     run(["mkdir", "-p", workspace])
 
-    operator = Operator(workspace, "lskv-virtual", "virtual", 2)
-    operator.add_node()
+    operator = Operator(workspace, "lskv-virtual", "virtual", 1)
     try:
+        operator.setup_common()
+        operator.add_node()
         operator.copy_certs()
+        operator.add_node()
 
         member0 = Member(workspace, "member0")
 
