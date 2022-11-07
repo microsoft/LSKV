@@ -335,7 +335,7 @@ class Operator:
         )
         run(
             [f"{self.ccf_bin_dir}/keygenerator.sh", "--name", "user0"],
-            cwd=self.workspace,
+            cwd=common_dir,
         )
 
     def copy_certs(self):
@@ -440,12 +440,14 @@ def main(workspace:str,nodes:int, enclave:str, image:str, ccf_bin_dir:str, http_
 
         member0.activate_member()
 
-        member0.set_user(f"{workspace}/user0_cert.pem")
+        member0.set_user(f"{workspace}/common/user0_cert.pem")
 
         member0.open_network()
 
         # wait for a signal and print it out
         signals = {signal.SIGINT, signal.SIGTERM}
+        # have to set the thread mask: https://bugs.python.org/issue38284
+        signal.pthread_sigmask(signal.SIG_BLOCK, signals)
         logger.info("Waiting for a signal")
         sig = signal.sigwait(signals)
         logger.info("Received a signal: {}", signal.Signals(sig).name)
