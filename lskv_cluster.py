@@ -293,6 +293,7 @@ class Operator:
         run(cmd)
         self.nodes.append(node)
         self.wait_node(node)
+        logger.info("Added node {}", node)
 
     def stop_all(self):
         for node in self.nodes:
@@ -416,6 +417,7 @@ if __name__ == "__main__":
         operator.setup_common()
         operator.add_node()
         operator.copy_certs()
+        operator.add_node()
         operator.add_node()
 
         member0 = Member(workspace, "member0")
