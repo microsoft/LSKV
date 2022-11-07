@@ -4,7 +4,6 @@
 
 import json
 import os
-import shutil
 import signal
 import subprocess
 import time
@@ -100,7 +99,7 @@ class Operator:
         i = 0
         while i < tries:
             try:
-                run(["curl", "-k", "https://127.0.0.1:8000/node/network"])
+                run(["curl", "--silent", "-k", "https://127.0.0.1:8000/node/network"])
                 break
             except Exception as e:
                 logger.warning("Node not ready, try {}: {}", i, e)
