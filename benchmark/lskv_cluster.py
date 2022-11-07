@@ -57,17 +57,16 @@ class Curl:
 
 
 class SCurl:
-    def __init__(self, address: str, cacert: str, cert: str, key: str, ccf_bin_dir:str):
+    def __init__(self, address: str, cacert: str, cert: str, key: str):
         self.address = address
         self.cacert = cacert
         self.cert = cert
         self.key = key
-        self.ccf_bin_dir = ccf_bin_dir
 
     def run(self, path: str, json_data: Dict[str, Any]) -> Any:
         json_str = json.dumps(json_data)
         cmd = [
-            f"{self.ccf_bin_dir}/scurl.sh",
+            f"scurl.sh",
             f"{self.address}{path}",
             "--cacert",
             self.cacert,
@@ -187,7 +186,7 @@ class Node:
 
 
 class Operator:
-    def __init__(self, workspace: str, image: str, enclave: str, http_version: int, ccf_bin_dir:str, worker_threads:int):
+    def __init__(self, workspace: str, image: str, enclave: str, http_version: int, worker_threads:int):
         self.workspace = workspace
         self.name = "lskv"
         self.nodes = []
@@ -195,7 +194,6 @@ class Operator:
         self.enclave = enclave
         self.http_version = http_version
         self.subnet_prefix = "172.20.5"
-        self.ccf_bin_dir = ccf_bin_dir
         self.worker_threads = worker_threads
         self.create_network()
 
@@ -326,7 +324,7 @@ class Operator:
         run(["mkdir", "-p", common_dir])
         run(
             [
-                f"{self.ccf_bin_dir}/keygenerator.sh",
+                f"keygenerator.sh",
                 "--name",
                 "member0",
                 "--gen-enc-key",
@@ -334,7 +332,7 @@ class Operator:
             cwd=common_dir,
         )
         run(
-            [f"{self.ccf_bin_dir}/keygenerator.sh", "--name", "user0"],
+            [f"keygenerator.sh", "--name", "user0"],
             cwd=common_dir,
         )
 
@@ -347,7 +345,7 @@ class Operator:
 
 
 class Member:
-    def __init__(self, workspace: str, name: str, ccf_bin_dir:str):
+    def __init__(self, workspace: str, name: str ):
         self.workspace = workspace
         self.name = name
         self.curl = Curl(
@@ -361,7 +359,6 @@ class Member:
             f"{self.workspace}/common/service_cert.pem",
             f"{self.workspace}/common/{name}_cert.pem",
             f"{self.workspace}/common/{name}_privk.pem",
-            ccf_bin_dir,
         )
 
     def activate_member(self):
@@ -427,16 +424,16 @@ class Member:
 
         logger.info("Network is now open to users!")
 
-def main(workspace:str,nodes:int, enclave:str, image:str, ccf_bin_dir:str, http_version:int, worker_threads:int):
+def main(workspace:str,nodes:int, enclave:str, image:str,  http_version:int, worker_threads:int):
     run(["rm", "-rf", workspace])
     run(["mkdir", "-p", workspace])
 
-    operator = Operator(workspace,image,enclave, http_version, ccf_bin_dir, worker_threads)
+    operator = Operator(workspace,image,enclave, http_version,  worker_threads)
     try:
         operator.setup_common()
         operator.add_nodes(nodes)
 
-        member0 = Member(workspace, "member0", ccf_bin_dir)
+        member0 = Member(workspace, "member0", )
 
         member0.activate_member()
 
@@ -464,10 +461,9 @@ if __name__ == "__main__":
     parser.add_argument("--enclave", type=str, default="virtual")
     parser.add_argument("--image", type=str, default="lskv-virtual")
     parser.add_argument("--http-version", type=int, default="2")
-    parser.add_argument("--ccf-bin-dir", type=str, default="/opt/ccf_virtual/bin")
     parser.add_argument("--worker-threads", type=int, default="0")
 
     args = parser.parse_args()
 
     logger.info("Using arguments: {}", args)
-    main(args.workspace,args.nodes, args.enclave, args.image, args.ccf_bin_dir, args.http_version, args.worker_threads)
+    main(args.workspace,args.nodes, args.enclave, args.image,  args.http_version, args.worker_threads)
