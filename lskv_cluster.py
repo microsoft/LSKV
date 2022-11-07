@@ -90,6 +90,7 @@ class Node:
     index: int
     name:str
     enclave :str
+    http_version: int
 
     def __post_init__(self):
         base_client_port = 8000
@@ -104,6 +105,7 @@ class Node:
         if self.enclave == "sgx":
             enclave_file = "/app/liblskv.enclave.so.signed"
             enclave_type = "Release"
+        app_protocol = "HTTP1" if self.http_version == 1 else "HTTP2"
 
         return {
             "enclave": {"file":enclave_file, "type":enclave_type},
@@ -112,7 +114,7 @@ class Node:
                 "rpc_interfaces": {
                     "main_interface": {
                         "bind_address": f"0.0.0.0:{self.client_port}",
-                        "app_protocol": "HTTP2",
+                        "app_protocol":app_protocol,
                     }
                 },
             },
@@ -138,12 +140,13 @@ class Node:
         }
 
 class Operator:
-    def __init__(self, workspace: str, image: str, enclave : str):
+    def __init__(self, workspace: str, image: str, enclave : str, http_version:int):
         self.workspace = workspace
         self.name = "lskv"
         self.nodes = []
         self.image = image
         self.enclave = enclave
+        self.http_version = http_version
 
     def make_name(self, i: int) -> str:
         return f"{self.name}-{i}"
@@ -177,7 +180,7 @@ class Operator:
 
     def make_node(self)->Node:
         i = len(self.nodes)
-        return Node(i, name=self.make_name(i), enclave=self.enclave)
+        return Node(i, name=self.make_name(i), enclave=self.enclave, http_version=self.http_version)
 
     def add_node(self):
         node = self.make_node()
@@ -302,7 +305,7 @@ if __name__ == "__main__":
     run(["rm", "-rf", workspace])
     run(["mkdir", "-p", workspace])
 
-    operator = Operator(workspace, "lskv-virtual", "virtual")
+    operator = Operator(workspace, "lskv-virtual", "virtual", 2)
     operator.add_node()
     try:
         operator.copy_certs()
