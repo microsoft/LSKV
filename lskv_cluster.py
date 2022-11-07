@@ -151,7 +151,7 @@ class Member:
         logger.info("Signing and returning the state digest")
         self.scurl.run("/gov/ack", state_digest)
 
-        logger.info("listing members")
+        logger.info("Listing members")
         self.curl.run("GET", "/gov/members")
 
     def set_user(self):
@@ -167,11 +167,11 @@ class Member:
                 }
             ]
         }
-        logger.info("creating set_user proposal")
+        logger.info("Creating set_user proposal")
         proposal = self.scurl.run("/gov/proposals", set_user)
         proposal_id = proposal["proposal_id"]
 
-        logger.info("accepting the proposal")
+        logger.info("Accepting the proposal")
         vote_accept = {
             "ballot": "export function vote (proposal, proposerId) { return true }"
         }
@@ -195,7 +195,7 @@ class Member:
         proposal = self.scurl.run("/gov/proposals", transition_service_to_open)
         proposal_id = proposal["proposal_id"]
 
-        logger.info("accepting the proposal")
+        logger.info("Accepting the proposal")
         vote_accept = {
             "ballot": "export function vote (proposal, proposerId) { return true }"
         }
@@ -223,6 +223,6 @@ if __name__ == "__main__":
         member0.open_network()
 
     except Exception as e:
-        logger.info("failed: {}", e)
+        logger.info("Failed: {}", e)
     finally:
         operator.stop_all()
