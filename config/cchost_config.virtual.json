@@ -13,6 +13,9 @@
       }
     }
   },
+  "node_certificate": {
+    "subject_alt_names": ["iPAddress:127.0.0.1"]
+  },
   "command": {
     "type": "Start",
     "service_certificate_file": "/app/certs/service_cert.pem",
