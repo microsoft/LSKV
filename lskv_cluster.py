@@ -85,10 +85,11 @@ class SCurl:
 
 
 class Operator:
-    def __init__(self, workspace:str):
+    def __init__(self, workspace:str, image:str):
         self.workspace = workspace
         self.name = "lskv"
         self.nodes = 0
+        self.image =image
 
     def make_name(self, i: int) -> str:
         return f"{self.name}-{i}"
@@ -104,7 +105,7 @@ class Operator:
             name,
             "-p",
             "8000:8000",
-            "lskv-virtual",
+            self.image
         ]
         run(cmd)
         self.nodes +=1
@@ -210,7 +211,7 @@ if __name__ == "__main__":
     run(["rm", "-rf", workspace])
     run(["mkdir", "-p", workspace])
 
-    operator = Operator(workspace)
+    operator = Operator(workspace, "lskv-virtual")
     operator.add_node()
     time.sleep(1)
     try:
