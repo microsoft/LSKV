@@ -85,11 +85,12 @@ class SCurl:
 
 
 class Operator:
-    def __init__(self, workspace: str, image: str):
+    def __init__(self, workspace: str, image: str, enclave : str):
         self.workspace = workspace
         self.name = "lskv"
         self.nodes = 0
         self.image = image
+        self.enclave = enclave
 
     def make_name(self, i: int) -> str:
         return f"{self.name}-{i}"
@@ -111,15 +112,27 @@ class Operator:
         run(["mkdir", "-p", d])
         return d
 
-    def make_node_config(self, node_dir: str) -> str:
+    def make_node_config(self,i:int, node_dir: str) -> str:
         config_file = os.path.join(node_dir, "config.json")
+
+        enclave_file = "/app/liblskv.virtual.so"
+        enclave_type = "Virtual"
+        if self.enclave == "sgx":
+            enclave_file = "/app/liblskv.enclave.so.signed"
+            enclave_type = "Release"
+
+        base_client_port = 8000
+        base_peer_port = 8001
+        client_port = base_client_port + (2 * i)
+        peer_port = base_peer_port + (2 * i)
+
         config = {
-            "enclave": {"file": "/app/liblskv.virtual.so", "type": "Virtual"},
+            "enclave": {"file":enclave_file, "type":enclave_type},
             "network": {
-                "node_to_node_interface": {"bind_address": "127.0.0.1:8001"},
+                "node_to_node_interface": {"bind_address": f"127.0.0.1:{peer_port}"},
                 "rpc_interfaces": {
                     "main_interface": {
-                        "bind_address": "0.0.0.0:8000",
+                        "bind_address": f"0.0.0.0:{client_port}",
                         "app_protocol": "HTTP2",
                     }
                 },
@@ -151,7 +164,7 @@ class Operator:
     def add_node(self):
         name = self.make_name(self.nodes)
         node_dir = self.make_node_dir(name)
-        config_file = self.make_node_config(node_dir)
+        config_file = self.make_node_config(self.nodes, node_dir)
         config_file_abs = os.path.abspath(config_file)
         cmd = [
             "docker",
@@ -272,7 +285,7 @@ if __name__ == "__main__":
     run(["rm", "-rf", workspace])
     run(["mkdir", "-p", workspace])
 
-    operator = Operator(workspace, "lskv-virtual")
+    operator = Operator(workspace, "lskv-virtual", "virtual")
     operator.add_node()
     try:
         operator.copy_certs()
