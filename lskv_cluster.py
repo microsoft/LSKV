@@ -154,14 +154,14 @@ class Member:
         logger.info("Listing members")
         self.curl.run("GET", "/gov/members")
 
-    def set_user(self):
+    def set_user(self, cert: str):
         set_user = {
             "actions": [
                 {
                     "name": "set_user",
                     "args": {
                         "cert": "".join(
-                            open("docker-certs/user0_cert.pem", "r").readlines()
+                            open(cert, "r").readlines()
                         )
                     },
                 }
@@ -218,7 +218,7 @@ if __name__ == "__main__":
 
         member0.activate_member()
 
-        member0.set_user()
+        member0.set_user("docker-certs/user0_cert.pem")
 
         member0.open_network()
 
