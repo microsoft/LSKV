@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  ACR_REGISTRY: ccfmsrc.azurecr.io
+
 jobs:
   benchmark:
     runs-on: ubuntu-20.04
@@ -40,8 +43,10 @@ jobs:
       - name: Build k6
         run: export PATH=$PATH:/usr/local/go/bin && make bin/k6
 
-      - name: Build app (Virtual)
-        run: make build-virtual
+      - name: Pull images
+        run: |
+          docker pull $ACR_REGISTRY/public/lskv:latest-virtual
+          docker pull $ACR_REGISTRY/public/lskv:latest-sgx
 
       - name: Make .venv
         run: make .venv
