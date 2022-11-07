@@ -7,6 +7,7 @@ import os
 import signal
 import subprocess
 import time
+from dataclasses import dataclass
 from typing import Any, Dict, List
 
 from loguru import logger
@@ -84,55 +85,33 @@ class SCurl:
         return ""
 
 
-class Operator:
-    def __init__(self, workspace: str, image: str, enclave : str):
-        self.workspace = workspace
-        self.name = "lskv"
-        self.nodes = 0
-        self.image = image
-        self.enclave = enclave
+@dataclass
+class Node:
+    index: int
+    name:str
+    enclave :str
 
-    def make_name(self, i: int) -> str:
-        return f"{self.name}-{i}"
+    def __post_init__(self):
+        base_client_port = 8000
+        base_peer_port = 8001
+        self.client_port = base_client_port + (2 * self.index)
+        self.peer_port = base_peer_port + (2 * self.index)
 
-    def wait_node(self):
-        tries = 60
-        i = 0
-        while i < tries:
-            try:
-                run(["curl", "--silent", "-k", "https://127.0.0.1:8000/node/network"])
-                break
-            except Exception as e:
-                logger.warning("Node not ready, try {}: {}", i, e)
-            i += 1
-            time.sleep(1)
 
-    def make_node_dir(self, name: str) -> str:
-        d = os.path.join(self.workspace, name)
-        run(["mkdir", "-p", d])
-        return d
-
-    def make_node_config(self,i:int, node_dir: str) -> str:
-        config_file = os.path.join(node_dir, "config.json")
-
+    def start_config(self)->Dict[str, Any]:
         enclave_file = "/app/liblskv.virtual.so"
         enclave_type = "Virtual"
         if self.enclave == "sgx":
             enclave_file = "/app/liblskv.enclave.so.signed"
             enclave_type = "Release"
 
-        base_client_port = 8000
-        base_peer_port = 8001
-        client_port = base_client_port + (2 * i)
-        peer_port = base_peer_port + (2 * i)
-
-        config = {
+        return {
             "enclave": {"file":enclave_file, "type":enclave_type},
             "network": {
-                "node_to_node_interface": {"bind_address": f"127.0.0.1:{peer_port}"},
+                "node_to_node_interface": {"bind_address": f"127.0.0.1:{self.peer_port}"},
                 "rpc_interfaces": {
                     "main_interface": {
-                        "bind_address": f"0.0.0.0:{client_port}",
+                        "bind_address": f"0.0.0.0:{self.client_port}",
                         "app_protocol": "HTTP2",
                     }
                 },
@@ -157,14 +136,53 @@ class Operator:
                 },
             },
         }
+
+class Operator:
+    def __init__(self, workspace: str, image: str, enclave : str):
+        self.workspace = workspace
+        self.name = "lskv"
+        self.nodes = []
+        self.image = image
+        self.enclave = enclave
+
+    def make_name(self, i: int) -> str:
+        return f"{self.name}-{i}"
+
+    def wait_node(self, node : Node):
+        tries = 60
+        i = 0
+        while i < tries:
+            try:
+                run(["curl", "--silent", "-k", f"https://127.0.0.1:{node.client_port}/node/network"])
+                break
+            except Exception as e:
+                logger.warning("Node not ready, try {}: {}", i, e)
+            i += 1
+            time.sleep(1)
+
+    def make_node_dir(self, name: str) -> str:
+        d = os.path.join(self.workspace, name)
+        run(["mkdir", "-p", d])
+        return d
+
+    def make_node_config(self,node:Node, node_dir: str) -> str:
+        config_file = os.path.join(node_dir, "config.json")
+
+        # TODO: just start nodes for now
+        config = node.start_config()
+
         with open(config_file, "w") as f:
             json.dump(config, f)
         return config_file
 
+    def make_node(self)->Node:
+        i = len(self.nodes)
+        return Node(i, name=self.make_name(i), enclave=self.enclave)
+
     def add_node(self):
-        name = self.make_name(self.nodes)
-        node_dir = self.make_node_dir(name)
-        config_file = self.make_node_config(self.nodes, node_dir)
+        node = self.make_node()
+        node_dir = self.make_node_dir(node.name)
+        config_file = self.make_node_config(node, node_dir)
         config_file_abs = os.path.abspath(config_file)
         cmd = [
             "docker",
@@ -172,21 +190,20 @@ class Operator:
             "--rm",
             "-d",
             "--name",
-            name,
+            node.name,
             "-p",
-            "8000:8000",
+           f"{node.client_port}:{node.client_port}",
             "-v",
             f"{config_file_abs}:/app/config.json",
             self.image,
         ]
         run(cmd)
-        self.nodes += 1
-        self.wait_node()
+        self.wait_node(node)
+        self.nodes.append( node)
 
     def stop_all(self):
-        for i in range(self.nodes):
-            name = self.make_name(i)
-            run(["docker", "rm", "-f", name])
+        for node in self.nodes:
+            run(["docker", "rm", "-f", node.name])
 
     def copy_certs(self):
         name = self.make_name(0)
