@@ -16,6 +16,6 @@ LABEL org.opencontainers.image.licenses=MIT
 
 COPY --from=builder /build/liblskv.virtual.so /app/
 WORKDIR /app
-RUN mkdir -p /app/certs
+RUN mkdir -p /app/certs # somewhere for the cchost to place the service_cert.pem
 
-CMD ["/usr/bin/cchost", "--config", "/app/config.json"]
+CMD ["/usr/bin/cchost", "--config", "/app/config/config.json"]

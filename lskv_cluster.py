@@ -286,7 +286,7 @@ class Operator:
             "-p",
             f"{node.client_port}:{node.client_port}",
             "-v",
-            f"{config_file_abs}:/app/config.json:ro",
+            f"{config_file_abs}:/app/config/config.json:ro",
             "-v",
             f"{common_dir_abs}:/app/common:ro",
             "-v",
