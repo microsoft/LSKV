@@ -74,24 +74,12 @@ class LSKVStore(Store):
                 "w",
                 encoding="utf-8",
             ) as err:
-                ccf_prefix = "/opt/ccf"
-                image = "lskv-"
-                if self.config.sgx:
-                    ccf_prefix += "_sgx"
-                    image += "sgx"
-                else:
-                    ccf_prefix += "_virtual"
-                    image += "virtual"
                 lskv_cmd = [
                     "benchmark/lskv_cluster.py",
                     "--nodes",
                     str(self.config.nodes),
                     "--enclave",
                     "sgx" if self.config.sgx else "virtual",
-                    "--image",
-                    image,
-                    "--ccf-bin-dir",
-                    f"{ccf_prefix}/bin",
                     "--worker-threads",
                     str(self.config.worker_threads),
                     "--http-version",
