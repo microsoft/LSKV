@@ -15,12 +15,7 @@ LABEL org.opencontainers.image.description="LSKV SGX node"
 LABEL org.opencontainers.image.licenses=MIT
 
 COPY --from=builder /build/liblskv.enclave.so.signed /app/
-COPY --from=builder /opt/ccf_sgx/bin/keygenerator.sh /app/
-COPY ./config/cchost_config.sgx.json /app/config.json
-COPY constitution/*.js /app/
-WORKDIR /app/
-RUN /app/keygenerator.sh --name member0 --gen-enc-key
-
-EXPOSE 8000/tcp
+WORKDIR /app
+RUN mkdir -p /app/certs # somewhere for the cchost to place the service_cert.pem
 
 CMD ["/usr/bin/cchost", "--config", "/app/config.json"]
