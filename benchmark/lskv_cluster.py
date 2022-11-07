@@ -95,7 +95,7 @@ class Node:
     # ip address of the first node to connect to
     first_ip: str
     ip: str
-    worker_threads:int
+    worker_threads: int
 
     def __post_init__(self):
         base_client_port = 8000
@@ -186,7 +186,14 @@ class Node:
 
 
 class Operator:
-    def __init__(self, workspace: str, image: str, enclave: str, http_version: int, worker_threads:int):
+    def __init__(
+        self,
+        workspace: str,
+        image: str,
+        enclave: str,
+        http_version: int,
+        worker_threads: int,
+    ):
         self.workspace = workspace
         self.name = "lskv"
         self.nodes = []
@@ -308,7 +315,14 @@ class Operator:
         self.list_nodes()
 
     def list_nodes(self):
-        run(["curl", "https://127.0.0.1:8000/node/network/nodes", "--cacert", f"{self.workspace}/common/service_cert.pem"])
+        run(
+            [
+                "curl",
+                "https://127.0.0.1:8000/node/network/nodes",
+                "--cacert",
+                f"{self.workspace}/common/service_cert.pem",
+            ]
+        )
 
     def add_nodes(self, n: int):
         for _ in range(n):
@@ -345,7 +359,7 @@ class Operator:
 
 
 class Member:
-    def __init__(self, workspace: str, name: str ):
+    def __init__(self, workspace: str, name: str):
         self.workspace = workspace
         self.name = name
         self.curl = Curl(
@@ -424,16 +438,27 @@ class Member:
 
         logger.info("Network is now open to users!")
 
-def main(workspace:str,nodes:int, enclave:str, image:str,  http_version:int, worker_threads:int):
+
+def main(
+    workspace: str,
+    nodes: int,
+    enclave: str,
+    image: str,
+    http_version: int,
+    worker_threads: int,
+):
     run(["rm", "-rf", workspace])
     run(["mkdir", "-p", workspace])
 
-    operator = Operator(workspace,image,enclave, http_version,  worker_threads)
+    operator = Operator(workspace, image, enclave, http_version, worker_threads)
     try:
         operator.setup_common()
         operator.add_nodes(nodes)
 
-        member0 = Member(workspace, "member0", )
+        member0 = Member(
+            workspace,
+            "member0",
+        )
 
         member0.activate_member()
 
@@ -454,6 +479,7 @@ def main(workspace:str,nodes:int, enclave:str, image:str,  http_version:int, wor
     finally:
         operator.stop_all()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--workspace", type=str, default="docker-workspace")
@@ -466,4 +492,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     logger.info("Using arguments: {}", args)
-    main(args.workspace,args.nodes, args.enclave, args.image,  args.http_version, args.worker_threads)
+    main(
+        args.workspace,
+        args.nodes,
+        args.enclave,
+        args.image,
+        args.http_version,
+        args.worker_threads,
+    )
