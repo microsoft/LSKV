@@ -5,6 +5,7 @@
 import json
 import os
 import shutil
+import signal
 import subprocess
 import time
 from typing import Any, Dict, List
@@ -204,6 +205,8 @@ class Member:
         }
         self.scurl.run(f"/gov/proposals/{proposal_id}/ballots", vote_accept)
 
+        logger.info("Network is now open to users!")
+
 
 if __name__ == "__main__":
     workspace = "docker-workspace"
@@ -215,7 +218,6 @@ if __name__ == "__main__":
     operator.add_node()
     time.sleep(1)
     try:
-
         operator.copy_certs()
 
         time.sleep(2)
@@ -227,6 +229,12 @@ if __name__ == "__main__":
         member0.set_user(f"{workspace}/user0_cert.pem")
 
         member0.open_network()
+
+        # wait for a signal and print it out
+        signals = {signal.SIGINT, signal.SIGTERM}
+        logger.info("waiting for a signal")
+        sig = signal.sigwait(signals)
+        logger.info("Received a signal: {}", signal.Signals(sig).name)
 
     except Exception as e:
         logger.info("Failed: {}", e)
