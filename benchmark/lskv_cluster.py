@@ -2,6 +2,10 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
+"""
+Run a cluster of lskv nodes.
+"""
+
 import argparse
 import json
 import os
@@ -15,20 +19,29 @@ from loguru import logger
 
 
 def run(cmd: List[str], **kwargs) -> subprocess.CompletedProcess:
+    """
+    Run a command.
+    """
     cmd_str = subprocess.list2cmdline(cmd)
     logger.debug("Running command: {}", cmd_str)
-    p = subprocess.run(cmd, capture_output=True, **kwargs)
-    if p.returncode != 0:
-        logger.warning("Command failed, returned {}", p.returncode)
-    if p.stdout:
-        logger.debug("stdout: {}", p.stdout)
-    if p.stderr:
-        logger.debug("stderr: {}", p.stderr)
-    p.check_returncode()
-    return p
+    # pylint: disable=subprocess-run-check
+    proc = subprocess.run(cmd, capture_output=True, **kwargs)
+    if proc.returncode != 0:
+        logger.warning("Command failed, returned {}", proc.returncode)
+    if proc.stdout:
+        logger.debug("stdout: {}", proc.stdout)
+    if proc.stderr:
+        logger.debug("stderr: {}", proc.stderr)
+    proc.check_returncode()
+    return proc
 
 
+# pylint: disable=too-few-public-methods
 class Curl:
+    """
+    Run curl commands.
+    """
+
     def __init__(self, address: str, cacert: str, cert: str, key: str):
         self.address = address
         self.cacert = cacert
@@ -36,6 +49,9 @@ class Curl:
         self.key = key
 
     def run(self, method: str, path: str) -> Any:
+        """
+        Run a curl invocation.
+        """
         cmd = [
             "curl",
             "--silent",
@@ -49,14 +65,19 @@ class Curl:
             "--cert",
             self.cert,
         ]
-        p = run(cmd)
-        out = p.stdout.decode("utf-8")
+        proc = run(cmd)
+        out = proc.stdout.decode("utf-8")
         if out:
             return json.loads(out)
         return ""
 
 
+# pylint: disable=too-few-public-methods
 class SCurl:
+    """
+    Run SCurl commands.
+    """
+
     def __init__(self, address: str, cacert: str, cert: str, key: str):
         self.address = address
         self.cacert = cacert
@@ -64,9 +85,12 @@ class SCurl:
         self.key = key
 
     def run(self, path: str, json_data: Dict[str, Any]) -> Any:
+        """
+        Run an scurl invocation.
+        """
         json_str = json.dumps(json_data)
         cmd = [
-            f"scurl.sh",
+            "scurl.sh",
             f"{self.address}{path}",
             "--cacert",
             self.cacert,
@@ -79,22 +103,27 @@ class SCurl:
             "--data-binary",
             json_str,
         ]
-        p = run(cmd)
-        out = p.stdout.decode("utf-8")
+        proc = run(cmd)
+        out = proc.stdout.decode("utf-8")
         if out:
             return json.loads(out)
         return ""
 
 
+# pylint: disable=too-many-instance-attributes
 @dataclass
 class Node:
+    """
+    Config for a node.
+    """
+
     index: int
     name: str
     enclave: str
     http_version: int
     # ip address of the first node to connect to
     first_ip: str
-    ip: str
+    ip_address: str
     worker_threads: int
     sig_tx_interval: int
     sig_ms_interval: int
@@ -108,11 +137,17 @@ class Node:
         self.peer_port = base_peer_port + (2 * self.index)
 
     def config(self):
+        """
+        Make the config of this node.
+        """
         if self.index == 0:
             return self.start_config()
         return self.join_config()
 
     def start_config(self) -> Dict[str, Any]:
+        """
+        Make the config of the first node.
+        """
         enclave_file = "/app/liblskv.virtual.so"
         enclave_type = "Virtual"
         if self.enclave == "sgx":
@@ -124,7 +159,7 @@ class Node:
             "enclave": {"file": enclave_file, "type": enclave_type},
             "network": {
                 "node_to_node_interface": {
-                    "bind_address": f"{self.ip}:{self.peer_port}"
+                    "bind_address": f"{self.ip_address}:{self.peer_port}"
                 },
                 "rpc_interfaces": {
                     "main_interface": {
@@ -164,6 +199,9 @@ class Node:
         }
 
     def join_config(self) -> Dict[str, Any]:
+        """
+        Make the config of a joining node.
+        """
         enclave_file = "/app/liblskv.virtual.so"
         enclave_type = "Virtual"
         if self.enclave == "sgx":
@@ -176,7 +214,7 @@ class Node:
             "enclave": {"file": enclave_file, "type": enclave_type},
             "network": {
                 "node_to_node_interface": {
-                    "bind_address": f"{self.ip}:{self.peer_port}"
+                    "bind_address": f"{self.ip_address}:{self.peer_port}"
                 },
                 "rpc_interfaces": {
                     "main_interface": {
@@ -205,7 +243,13 @@ class Node:
         }
 
 
+# pylint: disable=too-many-instance-attributes
 class Operator:
+    """
+    Operator for a network of nodes.
+    """
+
+    # pylint: disable=too-many-arguments
     def __init__(
         self,
         workspace: str,
@@ -220,7 +264,7 @@ class Operator:
     ):
         self.workspace = workspace
         self.name = "lskv"
-        self.nodes = []
+        self.nodes: List[Node] = []
         self.image = image
         self.enclave = enclave
         self.http_version = http_version
@@ -233,6 +277,9 @@ class Operator:
         self.create_network()
 
     def create_network(self):
+        """
+        Create a Docker network for the nodes.
+        """
         run(
             [
                 "docker",
@@ -245,17 +292,26 @@ class Operator:
         )
 
     def remove_network(self):
+        """
+        Remove the Docker network for the nodes.
+        """
         run(["docker", "network", "rm", "lskv"])
 
     def make_name(self, i: int) -> str:
+        """
+        Make a name for a node.
+        """
         return f"{self.name}-{i}"
 
     def wait_node(self, node: Node):
+        """
+        Wait for a node to be ready.
+        """
         tries = 10
         i = 0
         while i < tries:
             try:
-                r = run(
+                proc = run(
                     [
                         "curl",
                         "--silent",
@@ -263,40 +319,50 @@ class Operator:
                         f"https://127.0.0.1:{node.client_port}/node/state",
                     ]
                 )
-                status = json.loads(r.stdout)["state"]
+                status = json.loads(proc.stdout)["state"]
                 if status == "PartOfNetwork":
                     return
-            except Exception as e:
-                logger.warning("Node not ready, try {}: {}", i, e)
+            # pylint: disable=broad-except
+            except Exception as exception:
+                logger.warning("Node not ready, try {}: {}", i, exception)
             i += 1
             time.sleep(1)
         raise Exception("Failed to wait for node to be ready")
 
     def make_node_dir(self, name: str) -> str:
-        d = os.path.join(self.workspace, name)
-        run(["mkdir", "-p", d])
-        return d
+        """
+        Make a directory for a node's config.
+        """
+        node_dir = os.path.join(self.workspace, name)
+        run(["mkdir", "-p", node_dir])
+        return node_dir
 
     def make_node_config(self, node: Node, node_dir: str) -> str:
+        """
+        Make the node config file.
+        """
         config_file = os.path.join(node_dir, "config.json")
 
         config = node.config()
 
-        with open(config_file, "w") as f:
-            json.dump(config, f)
+        with open(config_file, "w", encoding="utf-8") as config_f:
+            json.dump(config, config_f)
         return config_file
 
     def make_node(self) -> Node:
+        """
+        Make a node.
+        """
         i = len(self.nodes)
         first_ip = self.first_ip()
-        ip = f"{self.subnet_prefix}.{i+1}"
+        ip_address = f"{self.subnet_prefix}.{i+1}"
         return Node(
             i,
             name=self.make_name(i),
             enclave=self.enclave,
             http_version=self.http_version,
             first_ip=first_ip,
-            ip=ip,
+            ip_address=ip_address,
             worker_threads=self.worker_threads,
             sig_tx_interval=self.sig_tx_interval,
             sig_ms_interval=self.sig_ms_interval,
@@ -305,11 +371,17 @@ class Operator:
         )
 
     def first_ip(self) -> str:
+        """
+        Get the IP address of the first node.
+        """
         if len(self.nodes) > 0:
-            return self.nodes[0].ip
+            return self.nodes[0].ip_address
         return ""
 
     def add_node(self):
+        """
+        Add a node to the network.
+        """
         node = self.make_node()
         node_dir = self.make_node_dir(node.name)
         config_file = self.make_node_config(node, node_dir)
@@ -322,7 +394,7 @@ class Operator:
             "--network",
             "lskv",
             "--ip",
-            node.ip,
+            node.ip_address,
             "--rm",
             "-d",
             "--name",
@@ -359,6 +431,9 @@ class Operator:
         self.list_nodes()
 
     def list_nodes(self):
+        """
+        List the nodes in the network.
+        """
         run(
             [
                 "curl",
@@ -368,21 +443,30 @@ class Operator:
             ]
         )
 
-    def add_nodes(self, n: int):
-        for _ in range(n):
+    def add_nodes(self, num: int):
+        """
+        Add multiple nodes to the network.
+        """
+        for _ in range(num):
             self.add_node()
 
     def stop_all(self):
+        """
+        Stop all nodes in the network and remove the network.
+        """
         for node in self.nodes:
             run(["docker", "rm", "-f", node.name])
         self.remove_network()
 
     def setup_common(self):
+        """
+        Set up the common directory for shared information.
+        """
         common_dir = os.path.join(self.workspace, "common")
         run(["mkdir", "-p", common_dir])
         run(
             [
-                f"keygenerator.sh",
+                "keygenerator.sh",
                 "--name",
                 "member0",
                 "--gen-enc-key",
@@ -390,11 +474,14 @@ class Operator:
             cwd=common_dir,
         )
         run(
-            [f"keygenerator.sh", "--name", "user0"],
+            ["keygenerator.sh", "--name", "user0"],
             cwd=common_dir,
         )
 
     def copy_certs(self):
+        """
+        Copy certificates from the first node to the common directory.
+        """
         name = self.make_name(0)
         run(
             ["docker", "cp", f"{name}:/app/certs/service_cert.pem", "common"],
@@ -403,6 +490,10 @@ class Operator:
 
 
 class Member:
+    """
+    A governance member.
+    """
+
     def __init__(self, workspace: str, name: str):
         self.workspace = workspace
         self.name = name
@@ -438,11 +529,16 @@ class Member:
         self.curl.run("GET", "/gov/members")
 
     def set_user(self, cert: str):
+        """
+        Set a new user in the network through governance.
+        """
+        # pylint: disable=consider-using-with
+        cert = "".join(open(cert, "r", encoding="utf-8").readlines())
         set_user = {
             "actions": [
                 {
                     "name": "set_user",
-                    "args": {"cert": "".join(open(cert, "r").readlines())},
+                    "args": {"cert": cert},
                 }
             ]
         }
@@ -457,9 +553,15 @@ class Member:
         self.scurl.run(f"/gov/proposals/{proposal_id}/ballots", vote_accept)
 
     def open_network(self):
+        """
+        Open the network for users
+        """
         logger.info("Opening the network")
+        # pylint: disable=consider-using-with
         service_cert = "".join(
-            open(f"{self.workspace}/common/service_cert.pem", "r").readlines()
+            open(
+                f"{self.workspace}/common/service_cert.pem", "r", encoding="utf-8"
+            ).readlines()
         )
         transition_service_to_open = {
             "actions": [
@@ -483,6 +585,7 @@ class Member:
         logger.info("Network is now open to users!")
 
 
+# pylint: disable=too-many-arguments
 def main(
     workspace: str,
     nodes: int,
@@ -495,6 +598,9 @@ def main(
     ledger_chunk_bytes: str,
     snapshot_tx_interval: int,
 ):
+    """
+    Main entry point.
+    """
     run(["rm", "-rf", workspace])
     run(["mkdir", "-p", workspace])
 
@@ -532,8 +638,9 @@ def main(
         sig = signal.sigwait(signals)
         logger.info("Received a signal: {}", signal.Signals(sig).name)
 
-    except Exception as e:
-        logger.info("Failed: {}", e)
+    # pylint: disable=broad-except
+    except Exception as exception:
+        logger.info("Failed: {}", exception)
     finally:
         operator.stop_all()
 
