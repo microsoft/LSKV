@@ -7,15 +7,15 @@ import os
 import shutil
 import subprocess
 import time
-from subprocess import Popen
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from loguru import logger
 
 
-def run(cmd: str, **kwargs) -> subprocess.CompletedProcess:
-    logger.debug("Running command: {}", cmd)
-    p = subprocess.run(cmd, shell=True, capture_output=True, **kwargs)
+def run(cmd: List[str], **kwargs) -> subprocess.CompletedProcess:
+    cmd_str = subprocess.list2cmdline(cmd)
+    logger.debug("Running command: {}", cmd_str)
+    p = subprocess.run(cmd, capture_output=True, **kwargs)
     if p.returncode != 0:
         logger.warning("Command failed, returned {}", p.returncode)
     if p.stdout:
@@ -34,7 +34,19 @@ class Curl:
         self.key = key
 
     def run(self, method: str, path: str) -> Any:
-        cmd = f"curl --silent -X {method} {self.address}{path} --cacert {self.cacert} --key {self.key} --cert {self.cert}"
+        cmd = [
+            "curl",
+            "--silent",
+            "-X",
+            method,
+            f"{self.address}{path}",
+            "--cacert",
+            self.cacert,
+            "--key",
+            self.key,
+            "--cert",
+            self.cert
+        ]
         p = run(cmd)
         out = p.stdout.decode("utf-8")
         if out:
@@ -51,17 +63,20 @@ class SCurl:
 
     def run(self, path: str, json_data: Dict[str, Any]) -> Any:
         json_str = json.dumps(json_data)
-        certs = [
+        cmd = [
+            "/opt/ccf_virtual/bin/scurl.sh",
+            f"{self.address}{path}",
+            "--cacert",
+            self.cacert,
             "--signing-key",
             self.key,
             "--signing-cert",
             self.cert,
+            "--header",
+            "content-type: application/json",
+            "--data-binary",
+            json_str
         ]
-        cmd = (
-            f"/opt/ccf_virtual/bin/scurl.sh {self.address}{path} --cacert {self.cacert} "
-            + " ".join(certs)
-            + f" --header 'content-type: application/json' --data-binary '{json_str}'"
-        )
         p = run(cmd)
         out = p.stdout.decode("utf-8")
         if out:
@@ -72,13 +87,13 @@ class SCurl:
 class Operator:
     def __init__(self):
         self.name = "lskv"
-        self.nodes = []
+        self.nodes = 0
 
     def make_name(self, i: int) -> str:
         return f"{self.name}-{i}"
 
-    def spawn(self) -> Popen:
-        name = self.make_name(len(self.nodes))
+    def add_node(self) :
+        name = self.make_name(self.nodes)
         cmd = [
             "docker",
             "run",
@@ -90,18 +105,19 @@ class Operator:
             "8000:8000",
             "lskv-virtual",
         ]
-        return Popen(cmd)
+        run(cmd)
+        self.nodes +=1
 
-    def stop(self):
-        for i, _node in enumerate(self.nodes):
+    def stop_all(self):
+        for i in range(self.nodes):
             name = self.make_name(i)
-            run(f"docker rm -f {name}")
+            run(["docker","rm","-f",name])
 
     def copy_certs(self):
         name= self.make_name(0)
-        run(f"docker cp {name}:/app/certs/ common", cwd="docker-certs")
+        run(["docker", "cp", f"{name}:/app/certs", "common"], cwd="docker-certs")
 
-        run("/opt/ccf_virtual/bin/keygenerator.sh --name user0", cwd="docker-certs")
+        run(["/opt/ccf_virtual/bin/keygenerator.sh", "--name", "user0"], cwd="docker-certs")
 
 
 class Member:
@@ -188,7 +204,7 @@ class Member:
 
 if __name__ == "__main__":
     operator = Operator()
-    node = operator.spawn()
+    operator.add_node()
     time.sleep(1)
     try:
         shutil.rmtree("docker-certs")
@@ -209,4 +225,4 @@ if __name__ == "__main__":
     except Exception as e:
         logger.info("failed: {}", e)
     finally:
-        operator.stop()
+        operator.stop_all()
