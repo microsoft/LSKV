@@ -1,26 +1,21 @@
 # Build
-FROM mcr.microsoft.com/ccf/app/dev:3.0.0-dev6-sgx as builder
+FROM mcr.microsoft.com/ccf/app/dev:3.0.0-rc1-virtual as builder
 
 COPY CMakeLists.txt /src/
 COPY src /src/src/
 COPY proto /src/proto/
 WORKDIR /build
-RUN CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja -DCOMPILE_TARGETS=virtual /src && ninja
+RUN CC=$(command -v clang-10) CXX=$(command -v clang++-10) cmake -GNinja -DCOMPILE_TARGET=virtual /src && ninja
 
 # Run
-FROM mcr.microsoft.com/ccf/app/run:3.0.0-dev6-sgx
+FROM mcr.microsoft.com/ccf/app/run:3.0.0-rc1-virtual
 
 LABEL org.opencontainers.image.source=https://github.com/microsoft/lskv
 LABEL org.opencontainers.image.description="LSKV virtual node"
 LABEL org.opencontainers.image.licenses=MIT
 
 COPY --from=builder /build/liblskv.virtual.so /app/
-COPY --from=builder /opt/ccf/bin/keygenerator.sh /app/
-COPY ./config/cchost_config.virtual.json /app/
-COPY constitution/*.js /app/
-WORKDIR /app/
-RUN /app/keygenerator.sh --name member0 --gen-enc-key
+WORKDIR /app
+RUN mkdir -p /app/certs # somewhere for the cchost to place the service_cert.pem
 
-EXPOSE 8000/tcp
-
-CMD ["/usr/bin/cchost", "--config", "/app/cchost_config.virtual.json"]
+CMD ["/usr/bin/cchost", "--config", "/app/config/config.json"]

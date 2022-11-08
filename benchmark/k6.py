@@ -26,6 +26,9 @@ class K6Config(common.Config):
     Config holds the configuration options for a given benchmark run.
     """
 
+    rate: int
+    vus: int
+
     def bench_name(self) -> str:
         """
         Get the name of the benchmark.
@@ -41,19 +44,29 @@ class K6Benchmark(common.Benchmark):
     def __init__(self, config: K6Config):
         self.config = config
 
-    def run_cmd(self, _store: Store) -> List[str]:
+    def run_cmd(self, store: Store) -> List[str]:
         """
         Return the command to run the benchmark for the given store.
         """
         timings_file = os.path.join(self.config.output_dir(), "timings.csv")
+        workspace = store.cert()
+        workspace = os.path.dirname(workspace)
         bench = [
             "bin/k6",
             "run",
             "--out",
             f"csv={timings_file}",
+            "--env",
+            f"RATE={self.config.rate}",
+            "--env",
+            f"WORKSPACE={workspace}",
+            "--env",
+            f"PRE_ALLOCATED_VUS={self.config.vus}",
+            "--env",
+            f"MAX_VUS={self.config.vus}",
             "benchmark/k6.js",
         ]
-        logger.debug("run cmd: %s", bench)
+        logger.debug("run cmd: {}", bench)
         return bench
 
 
@@ -82,7 +95,7 @@ def run_metrics(_name: str, _cmd: str, file: str):
     Run metric gathering.
     """
     if not os.path.exists(file):
-        logger.warning("no metrics file found at %s", file)
+        logger.warning("no metrics file found at {}", file)
         return
     logger.warning("no metrics implemented yet")
 
@@ -93,7 +106,29 @@ def get_arguments():
     """
     parser = common.get_argument_parser()
 
+    parser.add_argument(
+        "--rate",
+        action="extend",
+        nargs="+",
+        type=int,
+        default=[],
+        help="Maximum requests per second",
+    )
+    parser.add_argument(
+        "--vus",
+        action="extend",
+        nargs="+",
+        type=int,
+        default=[],
+        help="VUs to use",
+    )
+
     args = parser.parse_args()
+
+    if not args.rate:
+        args.rate = [1000]
+    if not args.vus:
+        args.vus = [100]
 
     return args
 
@@ -128,10 +163,16 @@ def make_configurations(args: argparse.Namespace) -> List[K6Config]:
     configs = []
 
     for common_config in common.make_common_configurations(args):
-        conf = K6Config(
-            **asdict(common_config),
-        )
-        configs.append(conf)
+        for rate in args.rate:
+            logger.debug("adding rate: {}", rate)
+            for vus in args.vus:
+                logger.debug("adding vus: {}", vus)
+                conf = K6Config(
+                    **asdict(common_config),
+                    rate=rate,
+                    vus=vus,
+                )
+                configs.append(conf)
 
     return configs
 

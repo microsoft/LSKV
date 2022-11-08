@@ -492,7 +492,7 @@ index 000000000..cea0962eb
 +}
 +
 +func NewCcfCluster(t testing.TB, ctx context.Context) *CcfCluster {
-+	sandbox := "/opt/ccf/bin/sandbox.sh"
++	sandbox := "/opt/ccf_virtual/bin/sandbox.sh"
 +	if _, err := os.Stat(sandbox); err != nil {
 +		t.Fatalf("failed to find sandbox: %v", err)
 +	}

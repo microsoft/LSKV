@@ -60,7 +60,7 @@ class Sandbox:
         """
         return self._wait_for_ready(self.port)
 
-    def _wait_for_ready(self, port: int, tries=30) -> bool:
+    def _wait_for_ready(self, port: int, tries=60) -> bool:
         client = self.etcdctl_client()
         client += ["get", "missing key"]
         if self.http_version == 1:
@@ -120,7 +120,7 @@ class Sandbox:
                 for i in range(self.nodes):
                     nodes += ["--node", f"local://127.0.0.1:{self.port+i}"]
                 kvs_cmd = (
-                    ["/opt/ccf/bin/sandbox.sh", "-p"]
+                    ["/opt/ccf_virtual/bin/sandbox.sh", "-p"]
                     + libargs
                     + [
                         "--workspace",
