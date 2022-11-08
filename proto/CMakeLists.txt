@@ -55,7 +55,7 @@ foreach(proto_file ${PROTO_FILES})
     add_enclave_library(
       ${PROTO_NAME_WE}.enclave
       ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.cc
-      ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.h)
+      ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.h ${EXTRA_INCLUDES})
     target_include_directories(
       ${PROTO_NAME_WE}.enclave PUBLIC ${PROTOBUF_INCLUDE_DIR}
                                       ${CMAKE_CURRENT_BINARY_DIR})
