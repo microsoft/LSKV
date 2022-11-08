@@ -11,8 +11,8 @@ from typing import List
 
 import common
 import etcd
-import perf_system as perf
 import k6
+import perf_system as perf
 import ycsb
 
 
@@ -73,6 +73,7 @@ def k6_configurations(args: argparse.Namespace) -> List[k6.K6Config]:
     args.http1 = True
     args.http2 = True
     args.etcd = False
+    args.func = ["put_single", "put_single_wait", "get_single", "delete_single", "mixed_single"]
 
     return k6.make_configurations(args)
 

@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
-import { check } from "k6";
+import { check, randomSeed } from "k6";
 import http from "k6/http";
 
 const rate = Number(__ENV.RATE);
@@ -30,7 +30,13 @@ export let options = {
   },
 };
 
-// perform a single get request at a preset key
+export function setup() {
+    // write a key to the store for get clients
+    put_single_wait()
+    randomSeed(123);
+}
+
+// perform a single put request at a preset key
 export function put_single() {
   let payload = JSON.stringify({
     key: "a2V5Cg==",
@@ -81,4 +87,84 @@ export function put_single_wait() {
   check(s, {
     "committed within limit": (s) => s === "Committed",
   });
+}
+
+// perform a single get request at a preset key
+export function get_single() {
+  let payload = JSON.stringify({
+    key: "a2V5Cg==",
+  });
+
+  let params = {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  };
+
+  let response = http.post("https://127.0.0.1:8000/v3/kv/range", payload, params);
+
+  check(response, {
+    "http1 is used": (r) => r.proto === "HTTP/1.1",
+    "status is 200": (r) => r.status === 200,
+  });
+}
+
+// perform a single delete request at a preset key
+export function delete_single() {
+  let payload = JSON.stringify({
+    key: "a2V5Cg==",
+  });
+
+  let params = {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  };
+
+  let response = http.post("https://127.0.0.1:8000/v3/kv/delete_range", payload, params);
+
+  check(response, {
+    "http1 is used": (r) => r.proto === "HTTP/1.1",
+    "status is 200": (r) => r.status === 200,
+  });
+}
+
+// perform a single delete request but poll until it is committed
+export function delete_single_wait() {
+  const txid = delete_single();
+
+  var s = ""
+  const tries = 1000;
+  for (let i = 0; i < tries; i++) {
+    s = get_tx_status(txid);
+    if (s == "Committed" || s == "Invalid") {
+      console.log(`${s} in ${i}`);
+      break;
+    }
+  }
+
+  check(s, {
+    "committed within limit": (s) => s === "Committed",
+  });
+}
+
+// Randomly select a request type to run
+export function mixed_single() {
+    const rnd = Math.random();
+    if (rnd >= 0 && rnd < 0.6) {
+        // 60% reads
+        get_single()
+    }else if (rnd >= 0.5 && rnd < 0.85) {
+        // 35% writes
+        put_single()
+    } else if (rnd >= 0.85 && rnd < 0.9) {
+        // 5% writes
+        put_single_wait()
+    } else if (rnd >= 0.9 && rnd < 0.98) {
+        // 8% deletes
+        delete_single()
+    } else {
+        // 2% deletes
+        delete_single_wait()
+    }
 }
