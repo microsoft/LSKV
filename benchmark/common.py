@@ -258,11 +258,11 @@ def set_default_args(args: argparse.Namespace):
     if not args.sig_tx_intervals:
         args.sig_tx_intervals = [5000]
     if not args.sig_ms_intervals:
-        args.sig_ms_intervals = [100]
+        args.sig_ms_intervals = [1000]
     if not args.ledger_chunk_bytes:
-        args.ledger_chunk_bytes = ["20KB"]
+        args.ledger_chunk_bytes = ["5MB"]
     if not args.snapshot_tx_intervals:
-        args.snapshot_tx_intervals = [10]
+        args.snapshot_tx_intervals = [10000]
 
 
 def wait_with_timeout(
