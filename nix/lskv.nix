@@ -24,17 +24,16 @@ stdenv.mkDerivation rec {
   nativeBuildInputs = [
     cmake
     ninja
+    protobuf
+    sgx-dcap
   ];
 
   buildInputs = [
     (ccf {inherit enclave;})
     openenclave
-    protobuf
-    sgx-dcap
   ];
 
   cmakeFlags = [
-    "-DLVI_MITIGATIONS=OFF"
     "-DCOMPILE_TARGET=${enclave}"
   ];
 

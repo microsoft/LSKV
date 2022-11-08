@@ -30,13 +30,13 @@ stdenv.mkDerivation rec {
   nativeBuildInputs = [
     cmake
     ninja
+    libuv
+    protobuf
+    sgx-dcap
   ];
   buildInputs = [
     openenclave
-    libuv
-    protobuf
     makeWrapper
-    sgx-dcap
   ];
 
   cmakeFlags = [
