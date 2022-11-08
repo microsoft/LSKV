@@ -59,11 +59,11 @@ build-sgx:
 
 .PHONY: build-docker-virtual
 build-docker-virtual:
-	docker build -t lskv-virtual -f Dockerfile.virtual .
+	docker build -t ccfmsrc.azurecr.io/public/lskv:latest-virtual -f Dockerfile.virtual .
 
 .PHONY: build-docker-sgx
 build-docker-sgx:
-	docker build -t lskv-sgx -f Dockerfile.sgx .
+	docker build -t ccfmsrc.azurecr.io/public/lskv:latest-sgx -f Dockerfile.sgx .
 
 .PHONY: build-docker
 build-docker: build-docker-virtual build-docker-sgx
