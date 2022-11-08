@@ -42,10 +42,10 @@ in
       rev = version;
       hash = "sha256-EYj3jnzTyJRl6N7avNf9VrB8r9U6zIE6wBNeVsMtWCA=";
     };
-    nativeBuildInputs = [makeWrapper];
-    buildInputs = [
-      (curl.override {openssl = openssl_1_1;})
+    nativeBuildInputs = [
+      makeWrapper
       nlohmann_json
+      (curl.override {openssl = openssl_1_1;})
     ];
 
     configurePhase = ''

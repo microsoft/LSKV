@@ -33,8 +33,6 @@ stdenv.mkDerivation rec {
     libuv
     protobuf
     sgx-dcap
-  ];
-  buildInputs = [
     openenclave
     makeWrapper
   ];
