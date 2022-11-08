@@ -82,8 +82,13 @@ class LSKVStore(Store):
                 nodes = []
                 for i in range(self.config.nodes):
                     nodes += ["--node", f"local://127.0.0.1:{self.config.port+i}"]
+                ccf_prefix = "/opt/ccf"
+                if self.config.sgx:
+                    ccf_prefix += "_sgx"
+                else:
+                    ccf_prefix += "_virtual"
                 kvs_cmd = (
-                    ["/opt/ccf/bin/sandbox.sh", "-p"]
+                    [f"{ccf_prefix}/bin/sandbox.sh", "-p"]
                     + libargs
                     + [
                         "--worker-threads",

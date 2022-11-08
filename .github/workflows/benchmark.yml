@@ -7,7 +7,7 @@ on:
 jobs:
   benchmark:
     runs-on: ubuntu-20.04
-    container: mcr.microsoft.com/ccf/app/dev:3.0.0-dev6-sgx
+    container: mcr.microsoft.com/ccf/app/dev:3.0.0-rc1-virtual
 
     steps:
       - name: Checkout repository
@@ -42,9 +42,6 @@ jobs:
 
       - name: Build app (Virtual)
         run: make build-virtual
-
-      - name: Build app (SGX)
-        run: make build-sgx
 
       - name: Make .venv
         run: make .venv
