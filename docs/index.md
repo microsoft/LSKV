@@ -55,3 +55,30 @@ sequenceDiagram
     end
     App->>User: send response
 ```
+
+### Receipts
+
+See [Receipts](./receipts.md) for how to verify the receipt.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User
+    participant Proxy
+    participant App
+
+    note over User: Make mutating request so <br>have request and response
+
+    User->>Proxy: /etcdserverpb.Receipt/GetReceipt
+    Proxy->>App: /etcdserverpb.Receipt/GetReceipt
+    App->>Proxy: 202 Accepted, retry-after: 3s
+    Proxy->>User: 202 Accepted, retry-after: 3s
+    note over Proxy: A smart proxy may instead <br>handle the retry internally
+    note over User: Retry request
+    User->>Proxy: /etcdserverpb.Receipt/GetReceipt
+    Proxy->>App: /etcdserverpb.Receipt/GetReceipt
+    App-->>App: Get receipt
+    App->>Proxy: send receipt in response with header
+    Proxy->>User: send receipt in response with header
+    User->>User: Verify receipt with given request (and response)
+```

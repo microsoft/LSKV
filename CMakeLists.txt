@@ -48,10 +48,12 @@ add_ccf_app(
   "${CCF_DIR}/include/ccf/_private"
   LINK_LIBS_ENCLAVE
   etcd.enclave
+  lskvserver.enclave
   status.enclave
   protobuf.enclave
   LINK_LIBS_VIRTUAL
   etcd.virtual
+  lskvserver.virtual
   status.virtual
   protobuf.virtual)
 
