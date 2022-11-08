@@ -79,7 +79,7 @@ def test_kv_historical(http1_client):
 # pylint: disable=redefined-outer-name
 def test_lease(http1_client):
     """
-    Test that the sandbox starts.
+    Test lease creation, revocation and keep-alive.
     """
     res = http1_client.lease_grant()
     check_response(res)
