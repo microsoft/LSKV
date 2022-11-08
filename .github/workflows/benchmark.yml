@@ -34,7 +34,7 @@ jobs:
           sudo apt install gh -y
 
       - name: Build benchmark
-        run: export PATH=$HOME/.local/go/bin:$PATH && which go && make bin/benchmark
+        run: export PATH=$HOME/.local/go/bin:$PATH && make bin/benchmark
 
       - name: Build go-ycsb
         run: export PATH=$HOME/.local/go/bin:$PATH && make bin/go-ycsb
