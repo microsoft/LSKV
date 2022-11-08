@@ -81,20 +81,25 @@ def test_lease(http1_client):
     """
     Test lease creation, revocation and keep-alive.
     """
+    # creating a lease works
     res = http1_client.lease_grant()
     check_response(res)
     lease_id = res.json()["ID"]
 
+    # then we can keep that lease alive (extending the ttl)
     res = http1_client.lease_keep_alive(lease_id)
     check_response(res)
 
+    # and explicitly revoke the lease
     res = http1_client.lease_revoke(lease_id)
     check_response(res)
 
+    # but we can't keep a revoked lease alive
     res = http1_client.lease_keep_alive(lease_id)
     logger.info("res: {} {}", res.status_code, res.text)
     assert res.status_code == 400
 
+    # and we can't revoke lease that wasn't active (or known)
     missing_id = "002"
     res = http1_client.lease_revoke(missing_id)
     check_response(res)
