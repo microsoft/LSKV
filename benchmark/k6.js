@@ -1,16 +1,29 @@
 import { check } from "k6";
 import http from "k6/http";
 
+const rate = Number(__ENV.RATE);
+const workspace = __ENV.WORKSPACE;
+const preAllocatedVUs = __ENV.PRE_ALLOCATED_VUS;
+const maxVUs = __ENV.MAX_VUS;
+
 export let options = {
-  vus: 1,
-  duration: "10s",
   tlsAuth: [
     {
-      cert: open("../certs/client.pem"),
-      key: open("../certs/client-key.pem"),
+      cert: open(`${workspace}/user0_cert.pem`),
+      key: open(`${workspace}/user0_privk.pem`),
     },
   ],
   insecureSkipTLSVerify: true,
+  scenarios: {
+    default: {
+      executor: "constant-arrival-rate",
+      rate: rate,
+      duration: "10s",
+      timeUnit: "1s",
+      preAllocatedVUs: preAllocatedVUs,
+      maxVUs: maxVUs,
+    },
+  },
 };
 
 export default function () {
