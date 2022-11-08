@@ -108,7 +108,7 @@ class Store(abc.ABC):
             while self.proc.poll() is None and i < tries:
                 time.sleep(1)
                 i += 1
-            if not self.proc.poll():
+            if self.proc.poll() is None:
                 # process is still running, kill it
                 logger.info("killing store process")
                 self.proc.kill()
