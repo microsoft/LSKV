@@ -102,8 +102,8 @@ class Store(abc.ABC):
         if self.proc:
             logger.info("terminating store process")
             self.proc.terminate()
-            # give it a second to shutdown
-            time.sleep(1)
+            # give it some time to shutdown
+            time.sleep(30)
             if not self.proc.poll():
                 # process is still running, kill it
                 logger.info("killing store process")
