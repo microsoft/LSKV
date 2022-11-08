@@ -943,7 +943,10 @@ namespace app
       if (ttl == 0)
       {
         return ccf::grpc::make_error(
-          GRPC_STATUS_NOT_FOUND, "given lease has expired or has been revoked");
+          GRPC_STATUS_NOT_FOUND,
+          fmt::format(
+            "the lease with the given id '{}' has expired or has been revoked",
+            id));
       }
 
       response.set_id(id);
