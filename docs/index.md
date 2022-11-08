@@ -58,6 +58,8 @@ sequenceDiagram
 
 ### Receipts
 
+See [Receipts](./receipts.md) for how to verify the receipt.
+
 ```mermaid
 sequenceDiagram
     autonumber
