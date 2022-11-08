@@ -55,6 +55,4 @@ stdenv.mkDerivation rec {
     # rm $out/lib/libjs_generic.enclave.so.debuggable \
     #    $out/lib/libjs_generic.enclave.so.signed
   '';
-
-  # dontFixup = true;
 }
