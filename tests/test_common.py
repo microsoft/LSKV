@@ -13,14 +13,15 @@ import time
 from subprocess import PIPE, Popen
 from typing import List
 
+# pylint: disable=import-error
+import etcd_pb2  # type: ignore
 import httpx
+# pylint: disable=import-error
+import lskvserver_pb2  # type: ignore
 import pytest
 import typing_extensions
 from google.protobuf.json_format import MessageToDict, ParseDict
 from loguru import logger
-
-import etcd_pb2
-import lskvserver_pb2
 
 
 class Sandbox:
