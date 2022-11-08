@@ -12,26 +12,13 @@ env:
   DOCKER_BUILDKIT: 1 # https://docs.docker.com/develop/develop-images/build_enhancements/
 
 jobs:
-  build-app:
+  build-and-test:
     runs-on: ubuntu-20.04
     container: mcr.microsoft.com/ccf/app/dev:3.0.0-rc1-virtual
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
-      - name: Build app
-        run: make build-virtual
-
-  test-virtual:
-    runs-on: ubuntu-20.04
-    container: mcr.microsoft.com/ccf/app/dev:3.0.0-rc1-virtual
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          submodules: true
 
       - name: Build app
         run: make build-virtual
