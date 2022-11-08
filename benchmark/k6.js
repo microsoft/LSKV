@@ -7,8 +7,7 @@ const rate = Number(__ENV.RATE);
 const workspace = __ENV.WORKSPACE;
 const preAllocatedVUs = __ENV.PRE_ALLOCATED_VUS;
 const maxVUs = __ENV.MAX_VUS;
-// const exec = __ENV.EXEC;
-const exec = "get_single_wait";
+const func = __ENV.FUNC;
 
 export let options = {
   tlsAuth: [
@@ -21,7 +20,7 @@ export let options = {
   scenarios: {
     default: {
       executor: "constant-arrival-rate",
-      exec: exec,
+      exec: func,
       rate: rate,
       duration: "10s",
       timeUnit: "1s",
@@ -31,7 +30,8 @@ export let options = {
   },
 };
 
-export function get_single() {
+// perform a single get request at a preset key
+export function put_single() {
   let payload = JSON.stringify({
     key: "a2V5Cg==",
     value: "dmFsCg==",
@@ -58,13 +58,15 @@ export function get_single() {
   return txid;
 }
 
+// check the status of a transaction id with the service
 function get_tx_status(txid) {
   const response = http.get(`https://127.0.0.1:8000/app/tx?transaction_id=${txid}`);
   return response.json()["status"];
 }
 
-export function get_single_wait() {
-  const txid = get_single();
+// perform a single put request but poll until it is committed
+export function put_single_wait() {
+  const txid = put_single();
 
   var s = ""
   const tries = 1000;
