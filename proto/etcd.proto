@@ -36,11 +36,16 @@ message ResponseHeader {
     int64 revision = 3;
     // raft_term is the raft term when the request was applied.
     uint64 raft_term = 4;
+
+    // revision of the store that has most recently been committed (been through consensus).
+    int64 committed_revision = 5;
+    // raft term that the last committed item was committed in.
+    uint64 committed_raft_term = 6;
 }
 
 message RangeRequest {
     // option (versionpb.etcd_version_msg) = "3.0";
-  
+
     enum SortOrder {
     //   option (versionpb.etcd_version_enum) = "3.0";
       NONE = 0; // default, no sorting
