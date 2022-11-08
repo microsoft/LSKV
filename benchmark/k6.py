@@ -27,7 +27,7 @@ class K6Config(common.Config):
     """
 
     rate: int
-    vus:int
+    vus: int
 
     def bench_name(self) -> str:
         """
