@@ -4,9 +4,6 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  ACR_REGISTRY: ccfmsrc.azurecr.io
-
 jobs:
   benchmark:
     runs-on: ubuntu-20.04
