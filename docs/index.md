@@ -22,6 +22,7 @@ sequenceDiagram
     App->>KV: kvstore.put(key, value)
     App->>CCF: transaction commit
     CCF--)Index: handle_committed_transaction
+    App->>App: Fill in header with optimistic transaction id<br> and committed transaction id
     end
     App->>User: send response
     CCF--)Nodes: Consensus
@@ -52,6 +53,7 @@ sequenceDiagram
         Index->>App: return KVs
         note over App: this reads from the index so only observes values<br> that have been committed but may be stale
     end
+    App->>App: Fill in header with optimistic transaction id<br> and committed transaction id
     end
     App->>User: send response
 ```

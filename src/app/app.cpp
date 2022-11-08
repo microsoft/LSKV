@@ -1205,8 +1205,20 @@ namespace app
     {
       header.set_cluster_id(cluster_id);
       header.set_member_id(member_id());
-      header.set_raft_term(tx_id.view);
       header.set_revision(tx_id.seqno);
+      header.set_raft_term(tx_id.view);
+      ccf::View committed_view;
+      ccf::SeqNo committed_seqno;
+      auto res = get_last_committed_txid_v1(committed_view, committed_seqno);
+      if (res == ccf::ApiResult::OK)
+      {
+        header.set_committed_revision(committed_seqno);
+        header.set_committed_raft_term(committed_view);
+      }
+      else
+      {
+        CCF_APP_FAIL("failed to get last committed txid: {}", res);
+      }
     }
 
     void populate_cluster_id(kv::ReadOnlyTx& tx)
