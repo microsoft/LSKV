@@ -176,3 +176,12 @@ curl -X POST https://127.0.0.1:8000/v3/kv/delete_range --cacert workspace/sandbo
 ## Benchmarking
 
 See [BENCHMARKING.md](./BENCHMARKING.md) for instructions to run the benchmarks and analysis.
+
+## Receipts
+
+Receipts are cryptographic proofs that transactions which mutate the state of the service (i.e. `put` and `delete`) have been successfully committed to the ledger.
+The receipt includes claims for this purpose, for LSKV these are outlined below.
+
+The receipts are available through the `lskvserverpb.Receipt/GetReceipt` endpoint (`/v3/receipt/get_receipt` for json).
+The receipt is a protobuf form of the [output available from CCF](https://microsoft.github.io/CCF/main/use_apps/verify_tx.html#write-receipts), see [`lskvserver.proto`](./proto/lskvserver.proto) for the definition of the message types.
+The custom claims that are registered for the receipt take the form of the `ReceiptClaims` message in that `lskvserver.proto` file.
