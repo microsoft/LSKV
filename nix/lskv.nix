@@ -26,9 +26,6 @@ stdenv.mkDerivation rec {
     ninja
     protobuf
     sgx-dcap
-  ];
-
-  buildInputs = [
     (ccf {inherit enclave;})
     openenclave
   ];
