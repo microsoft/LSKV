@@ -23,7 +23,7 @@ def common_configurations(args: argparse.Namespace):
     args.worker_threads = [0]
     args.virtual = True
     args.etcd = True
-    args.sgx = False  # can't run both virtual and sgx in CI yet
+    args.sgx = False
     args.http2 = True
     args.nodes = [1]
 

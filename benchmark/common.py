@@ -102,9 +102,13 @@ class Store(abc.ABC):
         if self.proc:
             logger.info("terminating store process")
             self.proc.terminate()
-            # give it a second to shutdown
-            time.sleep(1)
-            if not self.proc.poll():
+            # give it some time to shutdown
+            tries = 30
+            i = 0
+            while self.proc.poll() is None and i < tries:
+                time.sleep(1)
+                i += 1
+            if self.proc.poll() is None:
                 # process is still running, kill it
                 logger.info("killing store process")
                 self.proc.kill()
@@ -254,11 +258,11 @@ def set_default_args(args: argparse.Namespace):
     if not args.sig_tx_intervals:
         args.sig_tx_intervals = [5000]
     if not args.sig_ms_intervals:
-        args.sig_ms_intervals = [100]
+        args.sig_ms_intervals = [1000]
     if not args.ledger_chunk_bytes:
-        args.ledger_chunk_bytes = ["20KB"]
+        args.ledger_chunk_bytes = ["5MB"]
     if not args.snapshot_tx_intervals:
-        args.snapshot_tx_intervals = [10]
+        args.snapshot_tx_intervals = [10000]
 
 
 def wait_with_timeout(
