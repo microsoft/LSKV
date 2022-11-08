@@ -1,9 +1,12 @@
 BUILD=build
-CCF_PREFIX=/opt/ccf
-CCF_UNSAFE_PREFIX=/opt/ccf_unsafe
+CCF_PREFIX_VIRTUAL=/opt/ccf_virtual
+CCF_PREFIX_SGX=/opt/ccf_sgx
 
-CC=/opt/oe_lvi/clang-10
-CXX=/opt/oe_lvi/clang++-10
+CC!=which clang-10
+CXX!=which clang++-10
+
+OE_CC=/opt/oe_lvi/clang-10
+OE_CXX=/opt/oe_lvi/clang++-10
 
 ETCD_VER=v3.5.4
 ETCD_DOWNLOAD_URL=https://github.com/etcd-io/etcd/releases/download
@@ -13,34 +16,45 @@ H_FILES=$(wildcard src/**/*.h)
 
 BIN_DIR=bin
 
-CCF_VER=ccf-3.0.0-dev6
-CCF_VER_LOWER=ccf_3.0.0_dev6
+CCF_VER=ccf-3.0.0-rc1
+CCF_VER_LOWER=ccf_virtual_3.0.0_rc1
+CCF_SGX_VER_LOWER=ccf_sgx_3.0.0_rc1
+CCF_SGX_UNSAFE_VER_LOWER=ccf_sgx_unsafe_3.0.0_rc1
 
-.PHONY: install-ccf
-install-ccf:
+.PHONY: install-ccf-virtual
+install-ccf-virtual:
 	wget -c https://github.com/microsoft/CCF/releases/download/$(CCF_VER)/$(CCF_VER_LOWER)_amd64.deb # download deb
-	sudo dpkg -i $(CCF_VER_LOWER)_amd64.deb # Installs CCF under /opt/ccf
-	/opt/ccf/getting_started/setup_vm/run.sh /opt/ccf/getting_started/setup_vm/app-dev.yml  # Install dependencies
+	sudo apt install ./$(CCF_VER_LOWER)_amd64.deb # Installs CCF under /opt/ccf_virtual
+	/opt/ccf_virtual/getting_started/setup_vm/run.sh /opt/ccf_virtual/getting_started/setup_vm/app-dev.yml  # Install dependencies
+
+.PHONY: install-ccf-sgx
+install-ccf-sgx:
+	wget -c https://github.com/microsoft/CCF/releases/download/$(CCF_VER)/$(CCF_SGX_VER_LOWER)_amd64.deb # download deb
+	sudo apt install ./$(CCF_SGX_VER_LOWER)_amd64.deb # Installs CCF under /opt/ccf_sgx
+	/opt/ccf_sgx/getting_started/setup_vm/run.sh /opt/ccf_sgx/getting_started/setup_vm/app-dev.yml  # Install dependencies
+
+.PHONY: install-ccf-sgx-unsafe
+install-ccf-sgx-unsafe:
+	wget -c https://github.com/microsoft/CCF/releases/download/$(CCF_VER)/$(CCF_SGX_UNSAFE_VER_LOWER)_amd64.deb # download deb
+	sudo apt install ./$(CCF_SGX_UNSAFE_VER_LOWER)_amd64.deb # Installs CCF under /opt/ccf_sgx_unsafe
+	/opt/ccf_sgx_unsafe/getting_started/setup_vm/run.sh /opt/ccf_sgx_unsafe/getting_started/setup_vm/app-dev.yml  # Install dependencies
 
 .PHONY: build-virtual
 build-virtual:
 	mkdir -p $(BUILD)
-	cd $(BUILD)
-	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCCF_UNSAFE=OFF -GNinja ..
+	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -GNinja ..
 	cd $(BUILD) && ninja
 
 .PHONY: build-virtual-unsafe
 build-virtual-unsafe:
 	mkdir -p $(BUILD)
-	cd $(BUILD)
-	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCCF_UNSAFE=ON -GNinja ..
+	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=ON -DCCF_UNSAFE=ON -GNinja ..
 	cd $(BUILD) && ninja
 
 .PHONY: build-sgx
 build-sgx:
 	mkdir -p $(BUILD)
-	cd $(BUILD)
-	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGETS=sgx -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja ..
+	cd $(BUILD) && CC=$(OE_CC) CXX=$(OE_CXX) cmake -DCOMPILE_TARGET=sgx -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -GNinja ..
 	cd $(BUILD) && ninja
 
 .PHONY: build-docker-virtual
@@ -61,23 +75,23 @@ debug-dockerignore:
 
 .PHONY: run-virtual
 run-virtual: build-virtual
-	VENV_DIR=.venv $(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2
+	VENV_DIR=.venv $(CCF_PREFIX_VIRTUAL)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2
 
 .PHONY: run-virtual-unsafe
 run-virtual-unsafe: build-virtual-unsafe
-	VENV_DIR=.venv $(CCF_UNSAFE_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2
+	VENV_DIR=.venv $(CCF_PREFIX_VIRTUAL)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2
 
 .PHONY: run-virtual-http1
 run-virtual-http1: build-virtual
-	VENV_DIR=.venv $(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so
+	VENV_DIR=.venv $(CCF_PREFIX_VIRTUAL)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so
 
 .PHONY: run-virtual-unsafe-http1
 run-virtual-unsafe-http1: build-virtual-unsafe
-	VENV_DIR=.venv $(CCF_UNSAFE_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so
+	VENV_DIR=.venv $(CCF_PREFIX_VIRTUAL)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so
 
 .PHONY: run-sgx
 run-sgx: build-sgx
-	VENV_DIR=.venv $(CCF_PREFIX)/bin/sandbox.sh -p $(BUILD)/liblskv.enclave.so.signed -e release --http2
+	VENV_DIR=.venv $(CCF_PREFIX_SGX)/bin/sandbox.sh -p $(BUILD)/liblskv.enclave.so.signed -e release --http2
 
 .PHONY: test-virtual
 test-virtual: build-virtual patched-etcd
