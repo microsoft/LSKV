@@ -26,8 +26,14 @@ in
       hash = "sha256-1r//S2Y98xXV1IhNm5zZ1SruMJXWiyEG52uVWsxLB/I=";
     };
 
-    buildInputs = [sgx-sdk curl boost];
-    nativeBuildInputs = [protobuf pkg-config which];
+    nativeBuildInputs = [
+      protobuf
+      pkg-config
+      which
+      sgx-sdk
+      curl
+      boost
+    ];
 
     # qcnl_wrapper qpl_wrapper qve_wrapper qe3_logic
     buildPhase = ''
