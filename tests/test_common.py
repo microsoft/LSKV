@@ -16,6 +16,7 @@ from typing import List
 # pylint: disable=import-error
 import etcd_pb2  # type: ignore
 import httpx
+
 # pylint: disable=import-error
 import lskvserver_pb2  # type: ignore
 import pytest
