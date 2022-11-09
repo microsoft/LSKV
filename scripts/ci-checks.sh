@@ -44,7 +44,7 @@ fi
 
 echo "$CHECK_DELIMITER"
 echo "-- Copyright notice headers"
-git ls-files -- . ':!:3rdparty/' | xargs python3.8 "$SCRIPT_DIR"/notice_check.py
+git ls-files -- src benchmark tests ':!:3rdparty/' ':!:.github/' ':!:*.ipynb' ':!:*.md' ':!:requirements.txt' | xargs python3 "$SCRIPT_DIR"/notice_check.py
 
 echo "$CHECK_DELIMITER"
 echo "-- CMake format"
