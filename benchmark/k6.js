@@ -36,6 +36,19 @@ export function setup() {
   randomSeed(123);
 }
 
+function check_success(response) {
+  check(response, {
+    "http1 is used": (r) => r.proto === "HTTP/1.1",
+    "status is 200": (r) => r.status === 200,
+  });
+}
+
+function check_committed(status) {
+  check(status, {
+    "committed within limit": (status) => status === "Committed",
+  });
+}
+
 // perform a single put request at a preset key
 export function put_single() {
   let payload = JSON.stringify({
@@ -51,10 +64,7 @@ export function put_single() {
 
   let response = http.post("https://127.0.0.1:8000/v3/kv/put", payload, params);
 
-  check(response, {
-    "http1 is used": (r) => r.proto === "HTTP/1.1",
-    "status is 200": (r) => r.status === 200,
-  });
+  check_success(response);
 
   const res = response.json();
   const header = res["header"];
@@ -86,9 +96,7 @@ export function put_single_wait() {
     }
   }
 
-  check(s, {
-    "committed within limit": (s) => s === "Committed",
-  });
+  check_committed(s);
 }
 
 // perform a single get request at a preset key
@@ -109,10 +117,7 @@ export function get_single() {
     params
   );
 
-  check(response, {
-    "http1 is used": (r) => r.proto === "HTTP/1.1",
-    "status is 200": (r) => r.status === 200,
-  });
+  check_success(response);
 }
 
 // perform a single delete request at a preset key
@@ -133,10 +138,7 @@ export function delete_single() {
     params
   );
 
-  check(response, {
-    "http1 is used": (r) => r.proto === "HTTP/1.1",
-    "status is 200": (r) => r.status === 200,
-  });
+  check_success(response);
 }
 
 // perform a single delete request but poll until it is committed
@@ -153,9 +155,7 @@ export function delete_single_wait() {
     }
   }
 
-  check(s, {
-    "committed within limit": (s) => s === "Committed",
-  });
+  check_committed(s);
 }
 
 // Randomly select a request type to run
