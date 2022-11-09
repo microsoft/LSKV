@@ -43,10 +43,6 @@ else
 fi
 
 echo "$CHECK_DELIMITER"
-echo "-- Copyright notice headers"
-python3 "$SCRIPT_DIR"/notice_check.py
-
-echo "$CHECK_DELIMITER"
 echo "-- CMake format"
 if [ $FIX -ne 0 ]; then
   "$SCRIPT_DIR"/check-cmake-format.sh -f cmake samples src tests CMakeLists.txt
@@ -68,6 +64,10 @@ source ${VENV_DIR}/bin/activate
 pip install -U pip
 pip install -U wheel black[jupyter] pylint mypy cpplint 1>/dev/null
 pip install -r requirements.txt
+
+echo "$CHECK_DELIMITER"
+echo "-- Copyright notice headers"
+python3 "$SCRIPT_DIR"/notice_check.py
 
 echo "$CHECK_DELIMITER"
 echo "-- Python format"
