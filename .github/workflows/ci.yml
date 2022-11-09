@@ -8,7 +8,6 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 env:
   ACR_REGISTRY: ccfmsrc.azurecr.io
