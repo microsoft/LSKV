@@ -35,6 +35,7 @@ def has_notice(path: str, prefixes: List[str]) -> bool:
                 return True
     return False
 
+
 if __name__ == "__main__":
     files = sys.argv[1:]
     missing = 0
