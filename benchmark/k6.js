@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 import { check, randomSeed } from "k6";
 import http from "k6/http";
+import encoding from "k6/encoding";
 
 const rate = Number(__ENV.RATE);
 const workspace = __ENV.WORKSPACE;
@@ -30,10 +31,13 @@ export let options = {
   },
 };
 
+const key0 = encoding.b64encode("key0");
+const val0 = encoding.b64encode("value0");
+
 const json_header_params = {
-    headers: {
-        "Content-Type": "application/json",
-    }
+  headers: {
+    "Content-Type": "application/json",
+  },
 };
 
 export function setup() {
@@ -58,11 +62,15 @@ function check_committed(status) {
 // perform a single put request at a preset key
 export function put_single() {
   let payload = JSON.stringify({
-    key: "a2V5Cg==",
-    value: "dmFsCg==",
+    key: key0,
+    value: val0,
   });
 
-  let response = http.post("https://127.0.0.1:8000/v3/kv/put", payload, json_header_params);
+  let response = http.post(
+    "https://127.0.0.1:8000/v3/kv/put",
+    payload,
+    json_header_params
+  );
 
   check_success(response);
 
@@ -101,7 +109,7 @@ export function put_single_wait() {
 // perform a single get request at a preset key
 export function get_single() {
   let payload = JSON.stringify({
-    key: "a2V5Cg==",
+    key: key0,
   });
 
   let response = http.post(
@@ -116,9 +124,8 @@ export function get_single() {
 // perform a single delete request at a preset key
 export function delete_single() {
   let payload = JSON.stringify({
-    key: "a2V5Cg==",
+    key: key0,
   });
-
 
   let response = http.post(
     "https://127.0.0.1:8000/v3/kv/delete_range",
