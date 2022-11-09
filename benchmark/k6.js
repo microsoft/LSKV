@@ -40,6 +40,8 @@ const json_header_params = {
   },
 };
 
+const host = "https://127.0.0.1:8000";
+
 export function setup() {
   // write a key to the store for get clients
   put_single_wait();
@@ -66,11 +68,7 @@ export function put_single() {
     value: val0,
   });
 
-  let response = http.post(
-    "https://127.0.0.1:8000/v3/kv/put",
-    payload,
-    json_header_params
-  );
+  let response = http.post(`${host}/v3/kv/put`, payload, json_header_params);
 
   check_success(response);
 
@@ -84,16 +82,11 @@ export function put_single() {
 
 // check the status of a transaction id with the service
 function get_tx_status(txid) {
-  const response = http.get(
-    `https://127.0.0.1:8000/app/tx?transaction_id=${txid}`
-  );
+  const response = http.get(`${host}/app/tx?transaction_id=${txid}`);
   return response.json()["status"];
 }
 
-// perform a single put request but poll until it is committed
-export function put_single_wait() {
-  const txid = put_single();
-
+function wait_for_committed(txid) {
   var s = "";
   const tries = 1000;
   for (let i = 0; i < tries; i++) {
@@ -102,8 +95,13 @@ export function put_single_wait() {
       break;
     }
   }
-
   check_committed(s);
+}
+
+// perform a single put request but poll until it is committed
+export function put_single_wait() {
+  const txid = put_single();
+  wait_for_committed(txid);
 }
 
 // perform a single get request at a preset key
@@ -112,11 +110,7 @@ export function get_single() {
     key: key0,
   });
 
-  let response = http.post(
-    "https://127.0.0.1:8000/v3/kv/range",
-    payload,
-    json_header_params
-  );
+  let response = http.post("${host}/v3/kv/range", payload, json_header_params);
 
   check_success(response);
 }
@@ -128,7 +122,7 @@ export function delete_single() {
   });
 
   let response = http.post(
-    "https://127.0.0.1:8000/v3/kv/delete_range",
+    `${host}/v3/kv/delete_range`,
     payload,
     json_header_params
   );
@@ -139,17 +133,7 @@ export function delete_single() {
 // perform a single delete request but poll until it is committed
 export function delete_single_wait() {
   const txid = delete_single();
-
-  var s = "";
-  const tries = 1000;
-  for (let i = 0; i < tries; i++) {
-    s = get_tx_status(txid);
-    if (s == "Committed" || s == "Invalid") {
-      break;
-    }
-  }
-
-  check_committed(s);
+  wait_for_committed(txid);
 }
 
 // Randomly select a request type to run
