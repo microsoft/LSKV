@@ -3,12 +3,15 @@
 import { check, randomSeed } from "k6";
 import http from "k6/http";
 import encoding from "k6/encoding";
+import exec from "k6/execution";
 
 const rate = Number(__ENV.RATE);
 const workspace = __ENV.WORKSPACE;
 const preAllocatedVUs = __ENV.PRE_ALLOCATED_VUS;
 const maxVUs = __ENV.MAX_VUS;
 const func = __ENV.FUNC;
+
+const duration_s = 10
 
 export let options = {
   tlsAuth: [
@@ -23,7 +26,7 @@ export let options = {
       executor: "constant-arrival-rate",
       exec: func,
       rate: rate,
-      duration: "10s",
+      duration: `${duration_s}s`,
       timeUnit: "1s",
       preAllocatedVUs: preAllocatedVUs,
       maxVUs: maxVUs,
@@ -46,6 +49,21 @@ export function setup() {
   // write a key to the store for get clients
   put_single_wait();
   randomSeed(123);
+
+  let receipt_txids = []
+  if (func == "get_receipt") {
+    console.log("setting up receipts")
+    const total_requests = rate * duration_s
+    var txid = ""
+    // trigger getting some cached ones too (maybe)
+    for (let i = 0; i< total_requests/2; i++) {
+      // issue some writes so we have things to get receipts for
+      txid = put_single()
+      receipt_txids.push(txid)
+    }
+    wait_for_committed(txid)
+  }
+  return receipt_txids
 }
 
 function check_success(response) {
@@ -155,4 +173,17 @@ export function mixed_single() {
     // 2% deletes
     delete_single_wait();
   }
+}
+
+export function get_receipt(receipt_txids) {
+  const txid = receipt_txids[exec.scenario.iterationInTest % receipt_txids.length]
+
+  const [revision, raftTerm] = txid.split(".")
+  let payload = JSON.stringify({
+    revision: revision,
+    raftTerm: raftTerm,
+  });
+
+  const response = http.post(`${host}/v3/receipt/get_receipt`, payload, json_header_params)
+  check_success(response)
 }

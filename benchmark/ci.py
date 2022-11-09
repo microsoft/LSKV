@@ -80,6 +80,7 @@ def k6_configurations(args: argparse.Namespace) -> List[k6.K6Config]:
         "delete_single",
         "delete_single_wait",
         "mixed_single",
+        "get_receipt",
     ]
 
     return k6.make_configurations(args)
