@@ -1193,6 +1193,10 @@ namespace app
       response.set_leader(0);
       response.set_version(LSKV_VERSION);
 
+      // read a value from a map so our fill_header doesn't get skipped
+      auto ccf_governance_map_nodes =
+        ctx.tx.template ro<ccf::Nodes>(ccf::Tables::NODES);
+
       return ccf::grpc::make_success(response);
     }
 
