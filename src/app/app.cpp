@@ -38,6 +38,8 @@
     ctx.rpc_ctx->set_claims_digest(ccf::ClaimsDigest::Digest(claims_data)); \
   }
 
+const VERSION = "0.1.0";
+
 namespace app
 {
   class AppHandlers : public ccf::UserEndpointRegistry
@@ -1191,6 +1193,7 @@ namespace app
       CCF_APP_DEBUG("MAINTENANCE STATUS");
 
       response.set_leader(0);
+      response.set_version(VERSION);
 
       return ccf::grpc::make_success(response);
     }
