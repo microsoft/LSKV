@@ -4,7 +4,6 @@
 Script to check that source files have license headers.
 """
 
-import os
 import subprocess
 import sys
 from typing import List
