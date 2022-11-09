@@ -11,7 +11,7 @@ const preAllocatedVUs = __ENV.PRE_ALLOCATED_VUS;
 const maxVUs = __ENV.MAX_VUS;
 const func = __ENV.FUNC;
 
-const duration_s = 10
+const duration_s = 10;
 
 export let options = {
   tlsAuth: [
@@ -50,20 +50,20 @@ export function setup() {
   put_single_wait();
   randomSeed(123);
 
-  let receipt_txids = []
+  let receipt_txids = [];
   if (func == "get_receipt") {
-    console.log("setting up receipts")
-    const total_requests = rate * duration_s
-    var txid = ""
+    console.log("setting up receipts");
+    const total_requests = rate * duration_s;
+    var txid = "";
     // trigger getting some cached ones too (maybe)
-    for (let i = 0; i< total_requests/2; i++) {
+    for (let i = 0; i < total_requests / 2; i++) {
       // issue some writes so we have things to get receipts for
-      txid = put_single()
-      receipt_txids.push(txid)
+      txid = put_single();
+      receipt_txids.push(txid);
     }
-    wait_for_committed(txid)
+    wait_for_committed(txid);
   }
-  return receipt_txids
+  return receipt_txids;
 }
 
 function check_success(response) {
@@ -176,14 +176,19 @@ export function mixed_single() {
 }
 
 export function get_receipt(receipt_txids) {
-  const txid = receipt_txids[exec.scenario.iterationInTest % receipt_txids.length]
+  const txid =
+    receipt_txids[exec.scenario.iterationInTest % receipt_txids.length];
 
-  const [revision, raftTerm] = txid.split(".")
+  const [revision, raftTerm] = txid.split(".");
   let payload = JSON.stringify({
     revision: revision,
     raftTerm: raftTerm,
   });
 
-  const response = http.post(`${host}/v3/receipt/get_receipt`, payload, json_header_params)
-  check_success(response)
+  const response = http.post(
+    `${host}/v3/receipt/get_receipt`,
+    payload,
+    json_header_params
+  );
+  check_success(response);
 }
