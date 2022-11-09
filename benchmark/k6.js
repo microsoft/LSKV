@@ -31,9 +31,9 @@ export let options = {
 };
 
 export function setup() {
-    // write a key to the store for get clients
-    put_single_wait()
-    randomSeed(123);
+  // write a key to the store for get clients
+  put_single_wait();
+  randomSeed(123);
 }
 
 // perform a single put request at a preset key
@@ -66,7 +66,9 @@ export function put_single() {
 
 // check the status of a transaction id with the service
 function get_tx_status(txid) {
-  const response = http.get(`https://127.0.0.1:8000/app/tx?transaction_id=${txid}`);
+  const response = http.get(
+    `https://127.0.0.1:8000/app/tx?transaction_id=${txid}`
+  );
   return response.json()["status"];
 }
 
@@ -74,7 +76,7 @@ function get_tx_status(txid) {
 export function put_single_wait() {
   const txid = put_single();
 
-  var s = ""
+  var s = "";
   const tries = 1000;
   for (let i = 0; i < tries; i++) {
     s = get_tx_status(txid);
@@ -101,7 +103,11 @@ export function get_single() {
     },
   };
 
-  let response = http.post("https://127.0.0.1:8000/v3/kv/range", payload, params);
+  let response = http.post(
+    "https://127.0.0.1:8000/v3/kv/range",
+    payload,
+    params
+  );
 
   check(response, {
     "http1 is used": (r) => r.proto === "HTTP/1.1",
@@ -121,7 +127,11 @@ export function delete_single() {
     },
   };
 
-  let response = http.post("https://127.0.0.1:8000/v3/kv/delete_range", payload, params);
+  let response = http.post(
+    "https://127.0.0.1:8000/v3/kv/delete_range",
+    payload,
+    params
+  );
 
   check(response, {
     "http1 is used": (r) => r.proto === "HTTP/1.1",
@@ -133,7 +143,7 @@ export function delete_single() {
 export function delete_single_wait() {
   const txid = delete_single();
 
-  var s = ""
+  var s = "";
   const tries = 1000;
   for (let i = 0; i < tries; i++) {
     s = get_tx_status(txid);
@@ -150,21 +160,21 @@ export function delete_single_wait() {
 
 // Randomly select a request type to run
 export function mixed_single() {
-    const rnd = Math.random();
-    if (rnd >= 0 && rnd < 0.6) {
-        // 60% reads
-        get_single()
-    }else if (rnd >= 0.5 && rnd < 0.85) {
-        // 35% writes
-        put_single()
-    } else if (rnd >= 0.85 && rnd < 0.9) {
-        // 5% writes
-        put_single_wait()
-    } else if (rnd >= 0.9 && rnd < 0.98) {
-        // 8% deletes
-        delete_single()
-    } else {
-        // 2% deletes
-        delete_single_wait()
-    }
+  const rnd = Math.random();
+  if (rnd >= 0 && rnd < 0.6) {
+    // 60% reads
+    get_single();
+  } else if (rnd >= 0.5 && rnd < 0.85) {
+    // 35% writes
+    put_single();
+  } else if (rnd >= 0.85 && rnd < 0.9) {
+    // 5% writes
+    put_single_wait();
+  } else if (rnd >= 0.9 && rnd < 0.98) {
+    // 8% deletes
+    delete_single();
+  } else {
+    // 2% deletes
+    delete_single_wait();
+  }
 }

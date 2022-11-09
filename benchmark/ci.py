@@ -73,7 +73,14 @@ def k6_configurations(args: argparse.Namespace) -> List[k6.K6Config]:
     args.http1 = True
     args.http2 = True
     args.etcd = False
-    args.func = ["put_single", "put_single_wait", "get_single", "delete_single", "mixed_single"]
+    args.func = [
+        "put_single",
+        "put_single_wait",
+        "get_single",
+        "delete_single",
+        "delete_single_wait",
+        "mixed_single",
+    ]
 
     return k6.make_configurations(args)
 
