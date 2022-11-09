@@ -30,6 +30,12 @@ export let options = {
   },
 };
 
+const json_header_params = {
+    headers: {
+        "Content-Type": "application/json",
+    }
+};
+
 export function setup() {
   // write a key to the store for get clients
   put_single_wait();
@@ -56,13 +62,7 @@ export function put_single() {
     value: "dmFsCg==",
   });
 
-  let params = {
-    headers: {
-      "Content-Type": "application/json",
-    },
-  };
-
-  let response = http.post("https://127.0.0.1:8000/v3/kv/put", payload, params);
+  let response = http.post("https://127.0.0.1:8000/v3/kv/put", payload, json_header_params);
 
   check_success(response);
 
@@ -105,16 +105,10 @@ export function get_single() {
     key: "a2V5Cg==",
   });
 
-  let params = {
-    headers: {
-      "Content-Type": "application/json",
-    },
-  };
-
   let response = http.post(
     "https://127.0.0.1:8000/v3/kv/range",
     payload,
-    params
+    json_header_params
   );
 
   check_success(response);
@@ -126,16 +120,11 @@ export function delete_single() {
     key: "a2V5Cg==",
   });
 
-  let params = {
-    headers: {
-      "Content-Type": "application/json",
-    },
-  };
 
   let response = http.post(
     "https://127.0.0.1:8000/v3/kv/delete_range",
     payload,
-    params
+    json_header_params
   );
 
   check_success(response);
