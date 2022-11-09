@@ -91,7 +91,6 @@ export function put_single_wait() {
   for (let i = 0; i < tries; i++) {
     s = get_tx_status(txid);
     if (s == "Committed" || s == "Invalid") {
-      console.log(`${s} in ${i}`);
       break;
     }
   }
@@ -139,7 +138,6 @@ export function delete_single_wait() {
   for (let i = 0; i < tries; i++) {
     s = get_tx_status(txid);
     if (s == "Committed" || s == "Invalid") {
-      console.log(`${s} in ${i}`);
       break;
     }
   }
