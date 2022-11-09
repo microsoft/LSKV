@@ -1,6 +1,6 @@
 #!/bin/bash
 # Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the Apache 2.0 License.
+# Licensed under the MIT License.
 
 set -e
 
@@ -44,7 +44,7 @@ fi
 
 echo "$CHECK_DELIMITER"
 echo "-- Copyright notice headers"
-git ls-files -- src benchmark tests ':!:3rdparty/' ':!:.github/' ':!:*.ipynb' ':!:*.md' ':!:requirements.txt' | xargs python3 "$SCRIPT_DIR"/notice_check.py
+python3 "$SCRIPT_DIR"/notice_check.py
 
 echo "$CHECK_DELIMITER"
 echo "-- CMake format"

@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
 # Build
 FROM mcr.microsoft.com/ccf/app/dev:3.0.0-rc1-virtual as builder
 
