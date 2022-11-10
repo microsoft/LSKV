@@ -34,7 +34,9 @@ export let options = {
   },
 };
 
-const key0 = encoding.b64encode("key0");
+function key(i) {
+  return encoding.b64encode(`key${i}`);
+}
 const val0 = encoding.b64encode("value0");
 
 const json_header_params = {
@@ -44,24 +46,19 @@ const json_header_params = {
 };
 
 const host = "https://127.0.0.1:8000";
+const total_requests = rate * duration_s;
+const prefill_keys = total_requests / 2;
 
 export function setup() {
-  // write a key to the store for get clients
-  put_single_wait();
   randomSeed(123);
 
   let receipt_txids = [];
-  if (func == "get_receipt") {
-    console.log("setting up receipts");
-    const total_requests = rate * duration_s;
-    var txid = "";
-    // trigger getting some cached ones too (maybe)
-    for (let i = 0; i < total_requests / 2; i++) {
-      // issue some writes so we have things to get receipts for
-      txid = put_single();
-      receipt_txids.push(txid);
-    }
-    wait_for_committed(txid);
+  var txid = "";
+  // trigger getting some cached ones too (maybe)
+  for (let i = 0; i < prefill_keys; i++) {
+    // issue some writes so we have things to get receipts for
+    txid = put_single(i);
+    receipt_txids.push(txid);
   }
   return receipt_txids;
 }
@@ -80,9 +77,9 @@ function check_committed(status) {
 }
 
 // perform a single put request at a preset key
-export function put_single() {
+export function put_single(i = 0) {
   let payload = JSON.stringify({
-    key: key0,
+    key: key(i),
     value: val0,
   });
 
@@ -117,15 +114,27 @@ function wait_for_committed(txid) {
 }
 
 // perform a single put request but poll until it is committed
-export function put_single_wait() {
-  const txid = put_single();
+export function put_single_wait(i = 0) {
+  const txid = put_single(i);
   wait_for_committed(txid);
 }
 
 // perform a single get request at a preset key
-export function get_single() {
+export function get_single(i = 0) {
   let payload = JSON.stringify({
-    key: key0,
+    key: key(i),
+  });
+
+  let response = http.post("${host}/v3/kv/range", payload, json_header_params);
+
+  check_success(response);
+}
+
+// perform a single get request at a preset key
+export function get_range(i = 0) {
+  let payload = JSON.stringify({
+    key: key(i),
+    range_end: key(i + 1000),
   });
 
   let response = http.post("${host}/v3/kv/range", payload, json_header_params);
@@ -134,9 +143,9 @@ export function get_single() {
 }
 
 // perform a single delete request at a preset key
-export function delete_single() {
+export function delete_single(i = 0) {
   let payload = JSON.stringify({
-    key: key0,
+    key: key(i),
   });
 
   let response = http.post(
@@ -149,8 +158,8 @@ export function delete_single() {
 }
 
 // perform a single delete request but poll until it is committed
-export function delete_single_wait() {
-  const txid = delete_single();
+export function delete_single_wait(i = 0) {
+  const txid = delete_single(i);
   wait_for_committed(txid);
 }
 

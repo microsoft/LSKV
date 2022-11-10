@@ -77,6 +77,7 @@ def k6_configurations(args: argparse.Namespace) -> List[k6.K6Config]:
         "put_single",
         "put_single_wait",
         "get_single",
+        "get_range",
         "delete_single",
         "delete_single_wait",
         "mixed_single",
