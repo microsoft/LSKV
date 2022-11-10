@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the
+# MIT License.
+
 function(build_proto proto_file src_dir)
   message(STATUS "Generating source files from proto file ${proto_file}")
   get_filename_component(PROTO_DIR ${proto_file} DIRECTORY)
@@ -20,7 +23,7 @@ function(build_proto proto_file src_dir)
       COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build.sh ${src_dir}/${proto_file}
               ${CMAKE_SOURCE_DIR}/tests/
       COMMENT "Generate Python source file from protobuf file ${PROTO_NAME}"
-      DEPENDS ${src_dir}/${proto_file})
+      DEPENDS ${src_dir}/${proto_file} ${CMAKE_CURRENT_SOURCE_DIR}/build.sh)
     add_custom_target(
       ${PROTO_NAME_WE}_proto_python ALL
       DEPENDS ${CMAKE_SOURCE_DIR}/tests/${PROTO_DIR}/${PROTO_NAME_WE}_pb2.py)
