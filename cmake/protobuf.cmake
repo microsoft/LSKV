@@ -18,23 +18,22 @@ function(build_proto proto_file src_dir)
     COMMENT "Generate C++ source files from protobuf file ${PROTO_NAME}"
     DEPENDS ${src_dir}/${proto_file})
 
-  if(${BUILD_TESTING})
-    # generate python grpc and protobuf files
-    add_custom_command(
-      OUTPUT ${CMAKE_SOURCE_DIR}/tests/${PROTO_DIR}/${PROTO_NAME_WE}_pb2.py
-             ${CMAKE_SOURCE_DIR}/tests/${PROTO_DIR}/${PROTO_NAME_WE}_pb2.pyi
-             ${CMAKE_SOURCE_DIR}/tests/${PROTO_DIR}/${PROTO_NAME_WE}_pb2_grpc.py
-      COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build.sh ${src_dir}/${proto_file}
-              ${CMAKE_SOURCE_DIR}/tests/
-      COMMENT "Generate Python source files from protobuf file ${PROTO_NAME}"
-      DEPENDS ${src_dir}/${proto_file} ${CMAKE_CURRENT_SOURCE_DIR}/build.sh)
-    add_custom_target(
-      ${PROTO_NAME_WE}_proto_python ALL
-      DEPENDS
-        ${CMAKE_SOURCE_DIR}/tests/${PROTO_DIR}/${PROTO_NAME_WE}_pb2.py
-        ${CMAKE_SOURCE_DIR}/tests/${PROTO_DIR}/${PROTO_NAME_WE}_pb2.pyi
-        ${CMAKE_SOURCE_DIR}/tests/${PROTO_DIR}/${PROTO_NAME_WE}_pb2_grpc.py)
-  endif()
+  # generate python grpc and protobuf files
+  add_custom_command(
+    OUTPUT
+      ${CMAKE_SOURCE_DIR}/python/lskv/${PROTO_DIR}/${PROTO_NAME_WE}_pb2.py
+      ${CMAKE_SOURCE_DIR}/python/lskv/${PROTO_DIR}/${PROTO_NAME_WE}_pb2.pyi
+      ${CMAKE_SOURCE_DIR}/python/lskv/${PROTO_DIR}/${PROTO_NAME_WE}_pb2_grpc.py
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build.sh ${src_dir}/${proto_file}
+            ${CMAKE_SOURCE_DIR}/python/lskv/
+    COMMENT "Generate Python source files from protobuf file ${PROTO_NAME}"
+    DEPENDS ${src_dir}/${proto_file} ${CMAKE_CURRENT_SOURCE_DIR}/build.sh)
+  add_custom_target(
+    ${PROTO_NAME_WE}_proto_python ALL
+    DEPENDS
+      ${CMAKE_SOURCE_DIR}/python/lskv/${PROTO_DIR}/${PROTO_NAME_WE}_pb2.py
+      ${CMAKE_SOURCE_DIR}/python/lskv/${PROTO_DIR}/${PROTO_NAME_WE}_pb2.pyi
+      ${CMAKE_SOURCE_DIR}/python/lskv/${PROTO_DIR}/${PROTO_NAME_WE}_pb2_grpc.py)
 
   set(PROTOBUF_INCLUDE_DIR ${CCF_DIR}/include/3rdparty/protobuf/src/)
 
