@@ -45,6 +45,7 @@ add_ccf_app(
   src/app/leases.cpp
   INCLUDE_DIRS
   "${CMAKE_BINARY_DIR}/proto"
+  "${CMAKE_BINARY_DIR}/proto/google/api"
   "${CCF_DIR}/include/ccf/_private"
   LINK_LIBS_ENCLAVE
   etcd.enclave
