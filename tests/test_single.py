@@ -5,11 +5,18 @@
 Test a single node
 """
 
+from http import HTTPStatus
+
 from loguru import logger
 
 # pylint: disable=unused-import
 # pylint: disable=no-name-in-module
-from test_common import b64decode, fixture_http1_client, fixture_sandbox
+from test_common import (
+    b64decode,
+    fixture_http1_client,
+    fixture_http1_client_unauthenticated,
+    fixture_sandbox,
+)
 
 
 # pylint: disable=redefined-outer-name
@@ -18,7 +25,20 @@ def test_starts(http1_client):
     Test that the sandbox starts.
     """
     res = http1_client.raw().get("api")
-    assert res.status_code == 200
+    assert res.status_code == HTTPStatus.OK
+
+
+# pylint: disable=redefined-outer-name
+def test_unauthenticated(http1_client_unauthenticated):
+    """
+    Test that the unauthenticated users can't interact.
+    """
+    res = http1_client_unauthenticated.put("foo", "bar")
+    assert res.status_code == HTTPStatus.UNAUTHORIZED
+    res = http1_client_unauthenticated.get("foo")
+    assert res.status_code == HTTPStatus.UNAUTHORIZED
+    res = http1_client_unauthenticated.delete("foo")
+    assert res.status_code == HTTPStatus.UNAUTHORIZED
 
 
 # pylint: disable=redefined-outer-name
@@ -81,7 +101,7 @@ def check_response(res):
     Check a response to be success.
     """
     logger.info("res: {} {}", res.status_code, res.text)
-    assert res.status_code == 200
+    assert res.status_code == HTTPStatus.OK
     check_header(res.json())
 
 

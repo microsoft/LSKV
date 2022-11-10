@@ -8,6 +8,7 @@ Common utils for testing.
 import base64
 import os
 import time
+from http import HTTPStatus
 from subprocess import PIPE, Popen
 from typing import Any, Dict, List
 
@@ -202,6 +203,18 @@ def fixture_http1_client(sandbox):
         yield HttpClient(client)
 
 
+@pytest.fixture(name="http1_client_unauthenticated", scope="module")
+def fixture_http1_client_unauthenticated(sandbox):
+    """
+    Make an unauthenticated http1 client for the sandbox.
+    """
+    cacert = sandbox.cacert()
+    with httpx.Client(
+        http2=False, verify=cacert, base_url="https://127.0.0.1:8000"
+    ) as client:
+        yield HttpClient(client)
+
+
 def b64encode(in_str: str) -> str:
     """
     Base64 encode a string.
@@ -237,7 +250,7 @@ class HttpClient:
             i += 1
             tx_status = self.tx_status(txid)
             logger.debug("tx_status: {}", tx_status)
-            if tx_status.status_code == 200:
+            if tx_status.status_code == HTTPStatus.OK:
                 body = tx_status.json()
                 if "status" in body:
                     status = body["status"]
