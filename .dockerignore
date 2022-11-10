@@ -19,6 +19,7 @@
 /.venv_ccf_sandbox/
 /.vscode/
 /3rdparty/
+!/3rdparty/googleapis
 /Dockerfile.*
 /LICENSE
 /Makefile
