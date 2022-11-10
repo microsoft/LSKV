@@ -14,6 +14,104 @@ service KV
       body : "*"
     };
   }
+
+  // Put puts the given key into the key-value store.
+  // A put request increments the revision of the key-value store
+  // and generates one event in the event history.
+  rpc Put(PutRequest) returns (PutResponse) {
+      option (google.api.http) = {
+        post: "/v3/kv/put"
+        body: "*"
+    };
+  }
+
+  // DeleteRange deletes the given range from the key-value store.
+  // A delete request increments the revision of the key-value store
+  // and generates a delete event in the event history for every deleted key.
+  rpc DeleteRange(DeleteRangeRequest) returns (DeleteRangeResponse) {
+      option (google.api.http) = {
+        post: "/v3/kv/deleterange"
+        body: "*"
+    };
+  }
+
+  // Txn processes multiple requests in a single transaction.
+  // A txn request increments the revision of the key-value store
+  // and generates events with the same revision for every completed request.
+  // It is not allowed to modify the same key several times within one txn.
+  rpc Txn(TxnRequest) returns (TxnResponse) {
+      option (google.api.http) = {
+        post: "/v3/kv/txn"
+        body: "*"
+    };
+  }
+
+  // Compact compacts the event history in the etcd key-value store. The key-value
+  // store should be periodically compacted or the event history will continue to grow
+  // indefinitely.
+  rpc Compact(CompactionRequest) returns (CompactionResponse) {
+      option (google.api.http) = {
+        post: "/v3/kv/compaction"
+        body: "*"
+    };
+  }
+}
+
+service Lease {
+  // LeaseGrant creates a lease which expires if the server does not receive a keepAlive
+  // within a given time to live period. All keys attached to the lease will be expired and
+  // deleted if the lease expires. Each expired key generates a delete event in the event history.
+  rpc LeaseGrant(LeaseGrantRequest) returns (LeaseGrantResponse) {
+      option (google.api.http) = {
+        post: "/v3/lease/grant"
+        body: "*"
+    };
+  }
+
+  // LeaseRevoke revokes a lease. All keys attached to the lease will expire and be deleted.
+  rpc LeaseRevoke(LeaseRevokeRequest) returns (LeaseRevokeResponse) {
+      option (google.api.http) = {
+        post: "/v3/lease/revoke"
+        body: "*"
+        additional_bindings {
+            post: "/v3/kv/lease/revoke"
+            body: "*"
+        }
+    };
+  }
+
+  // LeaseKeepAlive keeps the lease alive by streaming keep alive requests from the client
+  // to the server and streaming keep alive responses from the server to the client.
+  rpc LeaseKeepAlive(stream LeaseKeepAliveRequest) returns (stream LeaseKeepAliveResponse) {
+      option (google.api.http) = {
+        post: "/v3/lease/keepalive"
+        body: "*"
+    };
+  }
+
+  // LeaseTimeToLive retrieves lease information.
+  rpc LeaseTimeToLive(LeaseTimeToLiveRequest) returns (LeaseTimeToLiveResponse) {
+      option (google.api.http) = {
+        post: "/v3/lease/timetolive"
+        body: "*"
+        additional_bindings {
+            post: "/v3/kv/lease/timetolive"
+            body: "*"
+        }
+    };
+  }
+
+  // LeaseLeases lists all existing leases.
+  rpc LeaseLeases(LeaseLeasesRequest) returns (LeaseLeasesResponse) {
+      option (google.api.http) = {
+        post: "/v3/lease/leases"
+        body: "*"
+        additional_bindings {
+            post: "/v3/kv/lease/leases"
+            body: "*"
+        }
+    };
+  }
 }
 
 message KeyValue
