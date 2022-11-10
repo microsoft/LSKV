@@ -7,6 +7,7 @@ function(build_proto proto_file src_dir)
   get_filename_component(PROTO_NAME ${proto_file} NAME)
   get_filename_component(PROTO_NAME_WE ${proto_file} NAME_WE)
 
+  # generate cpp protoc files
   add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_DIR}/${PROTO_NAME_WE}.pb.h
            ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_DIR}/${PROTO_NAME_WE}.pb.cc
@@ -18,6 +19,7 @@ function(build_proto proto_file src_dir)
     DEPENDS ${src_dir}/${proto_file})
 
   if(${BUILD_TESTING})
+    # generate python grpc and protobuf files
     add_custom_command(
       OUTPUT ${CMAKE_SOURCE_DIR}/tests/${PROTO_DIR}/${PROTO_NAME_WE}_pb2.py
              ${CMAKE_SOURCE_DIR}/tests/${PROTO_DIR}/${PROTO_NAME_WE}_pb2.pyi
