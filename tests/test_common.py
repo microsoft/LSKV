@@ -272,14 +272,15 @@ class HttpClient:
             j["revision"] = rev
         return self.client.post("/v3/kv/range", json=j)
 
-    def put(self, key: str, value: str):
+    def put(self, key: str, value: str, lease_id: int = 0):
         """
         Perform a put operation on lskv.
         """
-        logger.info("Put: {} {}", key, value)
-        return self.client.post(
-            "/v3/kv/put", json={"key": b64encode(key), "value": b64encode(value)}
-        )
+        logger.info("Put: {} {} {}", key, value, lease_id)
+        j: Dict[str, Any] = {"key": b64encode(key), "value": b64encode(value)}
+        if lease_id:
+            j["lease"] = lease_id
+        return self.client.post("/v3/kv/put", json=j)
 
     def delete(self, key: str, range_end: str = ""):
         """
