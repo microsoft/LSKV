@@ -4,12 +4,14 @@ package etcdserverpb;
 
 import "google/api/annotations.proto";
 
-service KV {
+service KV
+{
   // Range gets the keys in the range from the key-value store.
-  rpc Range(RangeRequest) returns (RangeResponse) {
-      option (google.api.http) = {
-        post: "/v3/kv/range"
-        body: "*"
+  rpc Range(RangeRequest) returns (RangeResponse)
+  {
+    option (google.api.http) = {
+      post : "/v3/kv/range"
+      body : "*"
     };
   }
 }
