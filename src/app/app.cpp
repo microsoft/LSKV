@@ -304,6 +304,13 @@ namespace app
       return *res;
     }
 
+    static ccf::AuthnPolicies auth_policies()
+    {
+      ccf::AuthnPolicies policies;
+      policies.push_back(ccf::user_cert_auth_policy);
+      return policies;
+    }
+
     template <typename In, typename Out>
     void install_endpoint_with_header_ro(
       const std::string& package,
@@ -326,7 +333,7 @@ namespace app
           auto res = post_commit<Out>(ctx, tx_id);
           ccf::grpc::set_grpc_response(res, ctx.rpc_ctx);
         },
-        ccf::no_auth_required)
+        auth_policies())
         .install();
       make_read_only_endpoint_with_local_commit_handler(
         path,
@@ -336,7 +343,7 @@ namespace app
           auto res = post_commit<Out>(ctx, tx_id);
           app::json_grpc::set_json_grpc_response(res, ctx.rpc_ctx);
         },
-        ccf::no_auth_required)
+        auth_policies())
         .install();
     }
 
@@ -362,7 +369,7 @@ namespace app
           auto res = post_commit<Out>(ctx, tx_id);
           ccf::grpc::set_grpc_response(res, ctx.rpc_ctx);
         },
-        ccf::no_auth_required)
+        auth_policies())
         .install();
       make_endpoint_with_local_commit_handler(
         path,
@@ -372,7 +379,7 @@ namespace app
           auto res = post_commit<Out>(ctx, tx_id);
           app::json_grpc::set_json_grpc_response(res, ctx.rpc_ctx);
         },
-        ccf::no_auth_required)
+        auth_policies())
         .install();
     }
 
@@ -407,7 +414,7 @@ namespace app
           [](ccf::endpoints::ReadOnlyEndpointContext& ctx) {
             return txid_from_body(ccf::grpc::get_grpc_payload<In>(ctx.rpc_ctx));
           }),
-        ccf::no_auth_required)
+        auth_policies())
         .set_forwarding_required(ccf::endpoints::ForwardingRequired::Never)
         .install();
       make_read_only_endpoint(
@@ -421,7 +428,7 @@ namespace app
             return txid_from_body(
               app::json_grpc::get_json_grpc_payload<In>(ctx.rpc_ctx));
           }),
-        ccf::no_auth_required)
+        auth_policies())
         .set_forwarding_required(ccf::endpoints::ForwardingRequired::Never)
         .install();
     }
