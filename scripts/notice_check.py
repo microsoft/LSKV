@@ -4,102 +4,98 @@
 Script to check that source files have license headers.
 """
 
-import os
+import subprocess
 import sys
 from typing import List
-import subprocess
 
-NOTICE_LINES_CCF = [
-    "Copyright (c) Microsoft Corporation. All rights reserved.",
-    "Licensed under the MIT License.",
-]
+from loguru import logger
 
-PREFIXES_CCF = [
-    os.linesep.join([prefix + " " + line for line in NOTICE_LINES_CCF])
-    for prefix in ["//", "--", "#"]
-]
-PREFIXES_CCF.append("#!/bin/bash" + os.linesep + "#")
-PREFIXES_CCF.append("#!/usr/bin/env sh" + os.linesep + "#")
-PREFIXES_CCF.append("#!/usr/bin/env bash" + os.linesep + "#")
-PREFIXES_CCF.append("#!/usr/bin/env python3" + os.linesep + "#")
+LICENSE_HEADER = (
+    "Copyright (c) Microsoft Corporation. "
+    "All rights reserved. "
+    "Licensed under the MIT License."
+)
+
+COMMENT_PREFIXES = ["//", "#"]
 
 
-def has_notice(path: str, prefixes: List[str]) -> bool:
+def extract_potential_license(lines: List[str]) -> str:
+    """
+    Extract the first lines of a file that start with a comment prefix.
+
+    These could contain license lines.
+    """
+    license_lines: List[str] = []
+    for line in lines:
+        was_comment = False
+        for comment_prefix in COMMENT_PREFIXES:
+            if line.startswith(comment_prefix):
+                line = line.lstrip(comment_prefix)
+                was_comment = True
+        if not was_comment:
+            logger.debug("stopping at line: {}", line.strip())
+            return " ".join(license_lines)
+        license_lines.append(line.strip())
+
+    return " ".join(license_lines)
+
+
+def has_notice(path: str) -> bool:
     """
     Check that the given file has a notice.
     """
     with open(path, "r", encoding="utf-8") as file:
-        text = file.read()
-        for prefix in prefixes:
-            if text.startswith(prefix):
-                return True
-    return False
-
-
-def is_src(name: str) -> bool:
-    """
-    Check whether the file is a source file based on the extension.
-    """
-    for suffix in [".c", ".cpp", ".h", ".hpp", ".py", ".sh", ".cmake"]:
-        if name.endswith(suffix):
+        lines = file.readlines()
+        license_lines = extract_potential_license(lines)
+        if LICENSE_HEADER in license_lines:
             return True
+        logger.debug("   found: {}", license_lines)
+        logger.debug("expected: {}", LICENSE_HEADER)
+
     return False
 
 
-def submodules() -> List[str]:
+def git_ls_files() -> List[str]:
     """
-    Get the paths of submodules in the repo.
+    Get the list of files to check that are tracked by git.
     """
-    res = subprocess.run(
-        ["git", "submodule", "status"], capture_output=True, check=True
-    )
-    return [
-        line.strip().split(" ")[1]
-        for line in res.stdout.decode().split(os.linesep)
-        if line
-    ]
-
-
-def gitignored(path: str) -> bool:
-    """
-    Check if the path is ignored by git.
-    """
-    res = subprocess.run(
-        ["git", "check-ignore", path], capture_output=True, check=False
-    )
-    return res.returncode == 0  # Returns 0 for files which _are_ ignored
-
-
-def check_repo() -> List[str]:
-    """
-    Check whether the repo's sources conform to the license headers requirement.
-    """
-    missing = []
     excluded = [
-        "3rdparty",
-        ".git",
-        "build",
-        "env",
-        ".venv",
-        ".venv_ccf_sandbox",
-    ] + submodules()
-    for root, dirs, files in os.walk("."):
-        for edir in excluded:
-            if edir in dirs:
-                dirs.remove(edir)
-        for name in files:
-            if name.startswith("."):
-                continue
-            if is_src(name):
-                path = os.path.join(root, name)
-                if not gitignored(path):
-                    if not has_notice(path, PREFIXES_CCF):
-                        missing.append(path)
-    return missing
+        "3rdparty/",  # these aren't ours
+        "LICENSE",  # don't need a license on the license
+        "*.json",  # can't add comments to these files
+        "*.ipynb",  # can't add comments to these files
+        "*.md",  # just documentation
+        ".gitmodules",  # not a source file
+        ".gitignore",  # not a source file
+        ".dockerignore",  # not a source file
+        ".clang-format",  # not a source file
+        "proto/etcd.proto",  # mostly not ours
+        "proto/status.proto",  # mostly not ours
+        ".github/workflows",  # not source files
+    ]
+    excluded = [f":!:{e}" for e in excluded]
+    cmd = ["git", "ls-files", "--", "."] + excluded
+    res = subprocess.run(cmd, check=True, capture_output=True)
+    return res.stdout.decode("utf-8").strip().split("\n")
+
+
+def main():
+    """
+    Main function.
+    """
+    logger.remove()
+    logger.add(sink=sys.stdout, level="WARNING")
+
+    files = git_ls_files()
+
+    missing = 0
+    for file in files:
+        logger.info("Checking {}", file)
+        if not has_notice(file):
+            missing += 1
+            logger.warning("Copyright notice missing from {}", file)
+    sys.exit(missing)
 
 
 if __name__ == "__main__":
-    missing_paths = check_repo()
-    for missing_path in missing_paths:
-        print(f"Copyright notice missing from {missing_path}")
-    sys.exit(len(missing_paths))
+    main()

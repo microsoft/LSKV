@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
 BUILD=build
 CCF_PREFIX_VIRTUAL=/opt/ccf_virtual
 CCF_PREFIX_SGX=/opt/ccf_sgx
