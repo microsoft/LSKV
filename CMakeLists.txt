@@ -51,15 +51,15 @@ add_ccf_app(
   etcd.enclave
   lskvserver.enclave
   status.enclave
-  http.enclave
   annotations.enclave
+  http.enclave
   protobuf.enclave
   LINK_LIBS_VIRTUAL
   etcd.virtual
   lskvserver.virtual
   status.virtual
-  http.virtual
   annotations.virtual
+  http.virtual
   protobuf.virtual)
 
 if(PUBLIC_MAPS)
