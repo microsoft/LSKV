@@ -9,6 +9,7 @@ if [ "$#" -ne 2 ]; then
 fi
 
 THIS_DIR=$( dirname "${BASH_SOURCE[0]}" )
+GOOGLE_PROTO_DIR="$(dirname "${THIS_DIR}")/3rdparty/googleapis"
 SOURCE_FILE=${1}
 GENERATED_DIR=${2}
 
@@ -16,7 +17,8 @@ mkdir -p "${GENERATED_DIR}"
 
 echo " -- Building ${SOURCE_FILE} into ${GENERATED_DIR}"
 python3 -m grpc_tools.protoc \
-        -I "${THIS_DIR}" \
+        --proto_path "${THIS_DIR}" \
+        --proto_path "${GOOGLE_PROTO_DIR}" \
         --python_out "${GENERATED_DIR}" \
         --mypy_out "${GENERATED_DIR}" \
         "${SOURCE_FILE}"
