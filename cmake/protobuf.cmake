@@ -30,7 +30,10 @@ function(build_proto proto_file src_dir)
       DEPENDS ${src_dir}/${proto_file} ${CMAKE_CURRENT_SOURCE_DIR}/build.sh)
     add_custom_target(
       ${PROTO_NAME_WE}_proto_python ALL
-      DEPENDS ${CMAKE_SOURCE_DIR}/tests/${PROTO_DIR}/${PROTO_NAME_WE}_pb2.py)
+      DEPENDS
+        ${CMAKE_SOURCE_DIR}/tests/${PROTO_DIR}/${PROTO_NAME_WE}_pb2.py
+        ${CMAKE_SOURCE_DIR}/tests/${PROTO_DIR}/${PROTO_NAME_WE}_pb2.pyi
+        ${CMAKE_SOURCE_DIR}/tests/${PROTO_DIR}/${PROTO_NAME_WE}_pb2_grpc.py)
   endif()
 
   set(PROTOBUF_INCLUDE_DIR ${CCF_DIR}/include/3rdparty/protobuf/src/)
