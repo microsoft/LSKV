@@ -21,4 +21,5 @@ python3 -m grpc_tools.protoc \
         --proto_path "${GOOGLE_PROTO_DIR}" \
         --python_out "${GENERATED_DIR}" \
         --mypy_out "${GENERATED_DIR}" \
+        --grpc_python_out "${GENERATED_DIR}" \
         "${SOURCE_FILE}"
