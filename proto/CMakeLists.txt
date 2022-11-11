@@ -19,17 +19,20 @@ build_proto(etcd.proto ${CMAKE_CURRENT_SOURCE_DIR})
 build_proto(status.proto ${CMAKE_CURRENT_SOURCE_DIR})
 build_proto(lskvserver.proto ${CMAKE_CURRENT_SOURCE_DIR})
 
-file(GLOB PROTO_FILES *.proto)
+option(GENERATE_OPENAPI "generate openapi protobuf spec" OFF)
+if(${GENERATE_OPENAPI})
+  file(GLOB PROTO_FILES *.proto)
 
-add_custom_command(
-  OUTPUT ${CMAKE_SOURCE_DIR}/openapi.yaml
-  COMMAND
-    ${PROTOC_BINARY_PATH} --proto_path=${CMAKE_CURRENT_SOURCE_DIR}
-    --proto_path=${CMAKE_SOURCE_DIR}/3rdparty/googleapis
-    --openapi_out=version=0.2.0:${CMAKE_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/lskvserver.proto
-    ${CMAKE_CURRENT_SOURCE_DIR}/etcd.proto
-  COMMENT
-    "Generate OpenAPI source file from protobuf files in ${CMAKE_CURRENT_SOURCE_DIR}"
-  DEPENDS ${PROTO_FILES})
-add_custom_target(openapi ALL DEPENDS ${CMAKE_SOURCE_DIR}/openapi.yaml)
+  add_custom_command(
+    OUTPUT ${CMAKE_SOURCE_DIR}/openapi.yaml
+    COMMAND
+      ${PROTOC_BINARY_PATH} --proto_path=${CMAKE_CURRENT_SOURCE_DIR}
+      --proto_path=${CMAKE_SOURCE_DIR}/3rdparty/googleapis
+      --openapi_out=version=0.2.0:${CMAKE_SOURCE_DIR}
+      ${CMAKE_CURRENT_SOURCE_DIR}/lskvserver.proto
+      ${CMAKE_CURRENT_SOURCE_DIR}/etcd.proto
+    COMMENT
+      "Generate OpenAPI source file from protobuf files in ${CMAKE_CURRENT_SOURCE_DIR}"
+    DEPENDS ${PROTO_FILES})
+  add_custom_target(openapi ALL DEPENDS ${CMAKE_SOURCE_DIR}/openapi.yaml)
+endif()

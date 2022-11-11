@@ -42,21 +42,21 @@ install-ccf-sgx-unsafe:
 	/opt/ccf_sgx_unsafe/getting_started/setup_vm/run.sh /opt/ccf_sgx_unsafe/getting_started/setup_vm/app-dev.yml  # Install dependencies
 
 .PHONY: build-virtual
-build-virtual: .venv
+build-virtual: .venv protoc-gen-openapi
 	mkdir -p $(BUILD)
-	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -DBUILD_TESTING=ON -GNinja ..
+	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -DBUILD_TESTING=ON -DGENERATE_PYTHON=ON -DGENERATE_OPENAPI=ON -GNinja ..
 	. .venv/bin/activate && cd $(BUILD) && ninja
 
 .PHONY: build-virtual-unsafe
-build-virtual-unsafe: .venv
+build-virtual-unsafe: .venv protoc-gen-openapi
 	mkdir -p $(BUILD)
-	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=ON -DCCF_UNSAFE=ON -DBUILD_TESTING=ON -GNinja ..
+	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=ON -DCCF_UNSAFE=ON -DBUILD_TESTING=ON -DGENERATE_PYTHON=ON -DGENERATE_OPENAPI=ON -GNinja ..
 	. .venv/bin/activate && cd $(BUILD) && ninja
 
 .PHONY: build-sgx
-build-sgx: .venv
+build-sgx: .venv protoc-gen-openapi
 	mkdir -p $(BUILD)
-	cd $(BUILD) && CC=$(OE_CC) CXX=$(OE_CXX) cmake -DCOMPILE_TARGET=sgx -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -DBUILD_TESTING=ON -GNinja ..
+	cd $(BUILD) && CC=$(OE_CC) CXX=$(OE_CXX) cmake -DCOMPILE_TARGET=sgx -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -DBUILD_TESTING=ON -DGENERATE_PYTHON=ON -DGENERATE_OPENAPI=ON -GNinja ..
 	. .venv/bin/activate && cd $(BUILD) && ninja
 
 .PHONY: build-docker-virtual
