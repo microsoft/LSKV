@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
 diff --git a/output/csv/output.go b/output/csv/output.go
 index 582ad7e5..c4e94ba2 100644
 --- a/output/csv/output.go
@@ -9,5 +11,5 @@ index 582ad7e5..c4e94ba2 100644
 -		row[1] = strconv.FormatInt(sample.Time.Unix(), 10)
 +		row[1] = strconv.FormatInt(sample.Time.UnixMicro(), 10)
  	}
- 
+
  	row[2] = fmt.Sprintf("%f", sample.Value)

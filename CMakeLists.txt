@@ -1,9 +1,14 @@
 # Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the
-# MIT license.
+# MIT License.
 
 cmake_minimum_required(VERSION 3.16)
 
-project(lskv LANGUAGES C CXX)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cmake)
+
+project(
+  lskv
+  LANGUAGES C CXX
+  VERSION ${LSKV_VERSION_SHORT})
 
 option(
   COMPILE_TARGET
@@ -35,6 +40,8 @@ option(
   OFF)
 
 option(VERBOSE_LOGGING "enable verbose logging" OFF)
+
+add_compile_definitions(LSKV_VERSION="${LSKV_VERSION}")
 
 add_ccf_app(
   lskv

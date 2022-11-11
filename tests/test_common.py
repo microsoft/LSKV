@@ -10,6 +10,7 @@ import hashlib
 import http
 import os
 import time
+from http import HTTPStatus
 from subprocess import PIPE, Popen
 from typing import List
 
@@ -211,6 +212,18 @@ def fixture_http1_client(sandbox):
         yield HttpClient(client)
 
 
+@pytest.fixture(name="http1_client_unauthenticated", scope="module")
+def fixture_http1_client_unauthenticated(sandbox):
+    """
+    Make an unauthenticated http1 client for the sandbox.
+    """
+    cacert = sandbox.cacert()
+    with httpx.Client(
+        http2=False, verify=cacert, base_url="https://127.0.0.1:8000"
+    ) as client:
+        yield HttpClient(client)
+
+
 def b64encode(in_str: str) -> str:
     """
     Base64 encode a string.
@@ -246,7 +259,7 @@ class HttpClient:
             i += 1
             tx_status = self.tx_status(txid)
             logger.debug("tx_status: {}", tx_status)
-            if tx_status.status_code == 200:
+            if tx_status.status_code == HTTPStatus.OK:
                 body = tx_status.json()
                 if "status" in body:
                     status = body["status"]
@@ -286,7 +299,7 @@ class HttpClient:
         return res
 
     def put(
-        self, key: str, value: str, wait_for_commit: bool = True, check_receipt=True
+        self, key: str, value: str, lease_id:int=0, wait_for_commit: bool = True, check_receipt=True
     ):
         """
         Perform a put operation on lskv.
@@ -295,6 +308,8 @@ class HttpClient:
         req = etcd_pb2.PutRequest()
         req.key = key.encode("utf-8")
         req.value = value.encode("utf-8")
+        if lease_id:
+            req.lease = lease_id
         j = MessageToDict(req)
         res = self.client.post("/v3/kv/put", json=j)
         check_response(res)
@@ -352,6 +367,36 @@ class HttpClient:
                 "/v3/receipt/get_receipt",
                 json=j,
             )
+        return res
+
+    def lease_grant(self, ttl: int = 60):
+        """
+        Perform a lease grant operation.
+        """
+        logger.info("LeaseGrant: {}", ttl)
+        j = {"TTL": ttl}
+        res =  self.client.post("/v3/lease/grant", json=j)
+        check_response(res)
+        return res
+
+    def lease_revoke(self, lease_id: str):
+        """
+        Perform a lease revoke operation.
+        """
+        logger.info("LeaseRevoke: {}", lease_id)
+        j = {"ID": lease_id}
+        res =  self.client.post("/v3/lease/revoke", json=j)
+        check_response(res)
+        return res
+
+    def lease_keep_alive(self, lease_id: str):
+        """
+        Perform a lease keep_alive operation.
+        """
+        logger.info("LeaseKeepAlive: {}", lease_id)
+        j = {"ID": lease_id}
+        res =  self.client.post("/v3/lease/keepalive", json=j)
+        check_response(res)
         return res
 
     def raw(self) -> httpx.Client:

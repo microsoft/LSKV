@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the
-# Apache 2.0 License.
+# MIT License.
 
 # protoc should be installed under /opt/protoc
 set(PROTOC_BINARY_PATH "/opt/protoc/bin/protoc")
