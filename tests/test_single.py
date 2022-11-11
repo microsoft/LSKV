@@ -9,6 +9,7 @@ import re
 from http import HTTPStatus
 
 from loguru import logger
+
 # pylint: disable=unused-import
 # pylint: disable=no-name-in-module
 from test_common import (b64decode, fixture_http1_client,
