@@ -381,7 +381,9 @@ class HttpClient:
                 "/v3/receipt/get_receipt",
                 json=j,
             )
-        return res
+        check_response(res)
+        proto = ParseDict(res.json(), lskvserver_pb2.GetReceiptResponse())
+        return (res, proto)
 
     def lease_grant(self, ttl: int = 60):
         """
@@ -439,29 +441,33 @@ class HttpClient:
         Check a receipt for a request and response.
         """
         rev, term = extract_rev_term_pb(response)
-        res = self.get_receipt(rev, term)
-        check_response(res)
-        receipt = res.json()["receipt"]
-        tx_receipt = receipt["txReceipt"]
-        leaf_components = tx_receipt["leafComponents"]
-        claims_digest: str = leaf_components["claimsDigest"]
-        write_set_digest: str = leaf_components["writeSetDigest"]
-        commit_evidence = leaf_components["commitEvidence"]
+        res, proto = self.get_receipt(rev, term)
+
+        receipt = proto.receipt
+        tx_receipt = receipt.tx_receipt
+        leaf_components = tx_receipt.leaf_components
+        claims_digest = leaf_components.claims_digest
+        write_set_digest = leaf_components.write_set_digest
+        commit_evidence = leaf_components.commit_evidence
 
         response.ClearField("header")
 
-        commit_evidence_digest = hashlib.sha256(
-            commit_evidence.encode("utf-8")
-        ).hexdigest()
+        commit_evidence_digest = hashlib.sha256(commit_evidence.encode()).hexdigest()
         leaf_parts = [write_set_digest, commit_evidence_digest, claims_digest]
-        leaf = hashlib.sha256("".join(leaf_parts).encode("utf-8")).hexdigest()
+        leaf = hashlib.sha256("".join(leaf_parts).encode()).hexdigest()
 
-        proof = tx_receipt["proof"]
-        signature = receipt["signature"]
-        cert = receipt["cert"]
+        proof = tx_receipt.proof
+        signature = receipt.signature
+        cert = receipt.cert
         node_cert = load_pem_x509_certificate(cert.encode())
 
-        root = ccf.receipt.root(leaf, proof)
+        json_root = ccf.receipt.root(leaf, res.json()["receipt"]["txReceipt"]["proof"])
+        root = receipt_root(leaf, proof)
+        logger.debug("calculated root {} from leaf:{} and proof:{}", root, leaf, proof)
+        assert json_root == root
+
+        signature = base64.b64encode(signature).decode()
+        logger.debug("verifying receipt signature:{}", signature)
         ccf.receipt.verify(root, signature, node_cert)
 
         # receipt is valid, check if it matches our claims too
@@ -471,6 +477,19 @@ class HttpClient:
         claims_ser = claims.SerializeToString()
         claims_digest_calculated = hashlib.sha256(claims_ser).hexdigest()
         assert claims_digest == claims_digest_calculated
+
+
+def receipt_root(leaf: str, proof: lskvserver_pb2.Proof) -> str:
+    """
+    Recompute root of Merkle tree from a leaf and a proof.
+    """
+    current = bytes.fromhex(leaf)
+    for n in proof:
+        if n.left:
+            current = hashlib.sha256(bytes.fromhex(n.left) + current).digest()
+        else:
+            current = hashlib.sha256(current + bytes.fromhex(n.right)).digest()
+    return current.hex()
 
 
 def check_response(res):
