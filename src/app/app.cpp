@@ -337,7 +337,8 @@ namespace app
         if (auto success = std::get_if<ccf::grpc::SuccessResponse<Out>>(&res))
         {
           auto* header = success->body.mutable_header();
-          // command endpoints don't have a transaction so return the last committed one so etcd clients can use it still
+          // command endpoints don't have a transaction so return the last
+          // committed one so etcd clients can use it still
           auto committed = last_committed_txid();
           fill_header(*header, committed);
         } // else just leave the response

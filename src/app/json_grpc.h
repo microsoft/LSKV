@@ -195,7 +195,6 @@ namespace app::json_grpc
     };
   }
 
-
   template <typename In, typename Out>
   ccf::historical::HandleReadOnlyHistoricalQuery historical_json_grpc_adapter(
     const app::grpc::HistoricalGrpcReadOnlyEndpoint<In, Out>& f)
