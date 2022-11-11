@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Build container
         run: docker build -t $ACR_REGISTRY/public/lskv:latest-virtual -f Dockerfile.virtual .
@@ -37,6 +39,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Build container
         run: docker build -t $ACR_REGISTRY/public/lskv:latest-sgx -f Dockerfile.sgx .
