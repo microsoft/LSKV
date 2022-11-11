@@ -45,7 +45,7 @@ Builds `build/liblskv.virtual.so`.
 Alternatively, it is possible to build a runtime image of this application via docker:
 
 ```bash
-$ docker build -t lskv-virtual -f Dockerfile.virtual .
+$ make build-docker-virtual
 ```
 
 ### SGX (attested)
@@ -64,7 +64,7 @@ Builds `build/liblskv.enclave.so.signed`.
 Alternatively, it is possible to build a runtime image of this application via docker:
 
 ```bash
-$ docker build -t lskv-sgx -f Dockerfile.sgx .
+$ make build-docker-sgx
 ```
 
 ## Build options
@@ -119,8 +119,10 @@ Or, for an SGX-enabled application: `$ make run-sgx` or `$ /opt/ccf_sgx/bin/sand
 
 ### With docker in Virtual mode
 
+**Note**: A Docker image following the latest changes on the `main` branch is available as `ccfmsrc.azurecr.io/public/lskv:latest-virtual`.
+
 ```bash
-$ docker run --name lskv -it --rm lskv-virtual
+$ docker run --name ccfmsrc.azurecr.io/public/lskv:latest-virtual -it --rm lskv-virtual
 ...
 2022-01-01T12:00:00.000000Z -0.000 0   [info ] ../src/node/node_state.h:1790        | Network TLS connections now accepted
 # It is then possible to interact with the service
@@ -128,8 +130,10 @@ $ docker run --name lskv -it --rm lskv-virtual
 
 ### With docker in SGX mode
 
+**Note**: A Docker image following the latest changes on the `main` branch is available as `ccfmsrc.azurecr.io/public/lskv:latest-sgx`.
+
 ```bash
-$ docker run --name lskv -it --rm --device /dev/sgx_enclave:/dev/sgx_enclave --device /dev/sgx_provision:/dev/sgx_provision -v /dev/sgx:/dev/sgx lskv-sgx
+$ docker run --name ccfmsrc.azurecr.io/public/lskv:latest-sgx -it --rm --device /dev/sgx_enclave:/dev/sgx_enclave --device /dev/sgx_provision:/dev/sgx_provision -v /dev/sgx:/dev/sgx lskv-sgx
 ...
 2022-01-01T12:00:00.000000Z -0.000 0   [info ] ../src/node/node_state.h:1790        | Network TLS connections now accepted
 # It is then possible to interact with the service
@@ -138,6 +142,7 @@ $ docker run --name lskv -it --rm --device /dev/sgx_enclave:/dev/sgx_enclave --d
 ## Interacting with the store
 
 **Note**: When running with Docker extra setup steps are currently required before interacting with the store as below, see [Running a CCF Service](https://microsoft.github.io/CCF/main/operations/start_network.html#opening-a-network-to-users).
+The [`lskv_cluster.py`](./benchmark/lskv_cluster.py) may also be useful for setting up a local docker cluster.
 
 ### etcdctl (gRPC API)
 

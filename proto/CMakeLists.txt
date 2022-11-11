@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the
-# Apache 2.0 License.
+# MIT License.
 
 # protoc should be installed under /opt/protoc
 set(PROTOC_BINARY_PATH "/opt/protoc/bin/protoc")
@@ -46,7 +46,7 @@ foreach(proto_file ${PROTO_FILES})
     add_enclave_library(
       ${PROTO_NAME_WE}.enclave
       ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.cc
-      ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.h)
+      ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.h ${EXTRA_INCLUDES})
     target_include_directories(
       ${PROTO_NAME_WE}.enclave PUBLIC ${PROTOBUF_INCLUDE_DIR}
                                       ${CMAKE_CURRENT_BINARY_DIR})
