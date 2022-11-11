@@ -5,19 +5,14 @@
 Test a single node
 """
 
+import re
 from http import HTTPStatus
 
 from loguru import logger
-import re
-
 # pylint: disable=unused-import
 # pylint: disable=no-name-in-module
-from test_common import (
-    b64decode,
-    fixture_http1_client,
-    fixture_http1_client_unauthenticated,
-    fixture_sandbox,
-)
+from test_common import (b64decode, fixture_http1_client,
+                         fixture_http1_client_unauthenticated, fixture_sandbox)
 
 
 # pylint: disable=redefined-outer-name
