@@ -28,7 +28,7 @@ if(${GENERATE_OPENAPI})
     COMMAND
       ${PROTOC_BINARY_PATH} --proto_path=${CMAKE_CURRENT_SOURCE_DIR}
       --proto_path=${CMAKE_SOURCE_DIR}/3rdparty/googleapis
-      --openapi_out=version=0.2.0:${CMAKE_SOURCE_DIR}
+      --openapi_out=version=0.0.1:${CMAKE_SOURCE_DIR}
       ${CMAKE_CURRENT_SOURCE_DIR}/lskvserver.proto
       ${CMAKE_CURRENT_SOURCE_DIR}/etcd.proto
     COMMENT

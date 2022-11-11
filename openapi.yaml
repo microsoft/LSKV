@@ -4,7 +4,7 @@
 openapi: 3.0.3
 info:
     title: ""
-    version: 0.2.0
+    version: 0.0.1
 paths:
     /v3/kv/compaction:
         post:
