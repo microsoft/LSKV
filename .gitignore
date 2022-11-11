@@ -21,6 +21,7 @@ bin/
 
 *.pyc
 
-/*.out
+*.out
+*.err
 
 /docker-workspace/
