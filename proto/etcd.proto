@@ -439,6 +439,8 @@ message MemberListResponse
 
 message StatusRequest {}
 
+// NOTE: This is mostly unimplemented, only returning the header and version
+// currently.
 message StatusResponse
 {
   ResponseHeader header = 1;
