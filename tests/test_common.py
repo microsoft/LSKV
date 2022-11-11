@@ -423,7 +423,9 @@ class HttpClient:
         Get the status of LSKV.
         """
         logger.info("Status")
-        return self.client.post("/v3/maintenance/status", json={})
+        res = self.client.post("/v3/maintenance/status", json={})
+        check_response(res)
+        return res
 
     def raw(self) -> httpx.Client:
         """

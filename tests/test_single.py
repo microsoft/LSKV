@@ -94,7 +94,6 @@ def test_status_version(http1_client):
     Test that the status endpoint returns the version.
     """
     res = http1_client.status()
-    check_response(res)
     version = res.json()["version"]
     version_re = r"^\d+\.\d+\.\d+(-.*)?$"
     assert re.match(version_re, version)
