@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the
-# MIT license.
+# MIT License.
 
 cmake_minimum_required(VERSION 3.16)
 
@@ -45,16 +45,21 @@ add_ccf_app(
   src/app/leases.cpp
   INCLUDE_DIRS
   "${CMAKE_BINARY_DIR}/proto"
+  "${CMAKE_BINARY_DIR}/proto/google/api"
   "${CCF_DIR}/include/ccf/_private"
   LINK_LIBS_ENCLAVE
   etcd.enclave
   lskvserver.enclave
   status.enclave
+  annotations.enclave
+  http.enclave
   protobuf.enclave
   LINK_LIBS_VIRTUAL
   etcd.virtual
   lskvserver.virtual
   status.virtual
+  annotations.virtual
+  http.virtual
   protobuf.virtual)
 
 if(PUBLIC_MAPS)

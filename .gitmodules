@@ -7,3 +7,6 @@
 [submodule "3rdparty/k6"]
 	path = 3rdparty/k6
 	url = https://github.com/grafana/k6.git
+[submodule "3rdparty/googleapis"]
+	path = 3rdparty/googleapis
+	url = https://github.com/googleapis/googleapis

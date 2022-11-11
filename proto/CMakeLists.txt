@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the
-# Apache 2.0 License.
+# MIT License.
 
 # protoc should be installed under /opt/protoc
 set(PROTOC_BINARY_PATH "/opt/protoc/bin/protoc")
@@ -10,56 +10,29 @@ else()
   message(FATAL_ERROR "Cannot find protobuf compiler: ${PROTOC_BINARY_PATH}")
 endif()
 
-set(PROTOBUF_INCLUDE_DIR ${CCF_DIR}/include/3rdparty/protobuf/src/)
+include(${CMAKE_SOURCE_DIR}/cmake/protobuf.cmake)
 
-set(PROTO_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/etcd.proto
-    ${CMAKE_CURRENT_SOURCE_DIR}/lskvserver.proto
-    ${CMAKE_CURRENT_SOURCE_DIR}/status.proto)
+build_proto(google/api/http.proto ${CMAKE_SOURCE_DIR}/3rdparty/googleapis)
+build_proto(google/api/annotations.proto
+            ${CMAKE_SOURCE_DIR}/3rdparty/googleapis)
+build_proto(etcd.proto ${CMAKE_CURRENT_SOURCE_DIR})
+build_proto(status.proto ${CMAKE_CURRENT_SOURCE_DIR})
+build_proto(lskvserver.proto ${CMAKE_CURRENT_SOURCE_DIR})
 
-foreach(proto_file ${PROTO_FILES})
-  get_filename_component(PROTO_NAME ${proto_file} NAME)
-  get_filename_component(PROTO_NAME_WE ${proto_file} NAME_WE)
-  message(TRACE "Generating source files from proto file ${PROTO_NAME}")
+option(GENERATE_OPENAPI "generate openapi protobuf spec" OFF)
+if(${GENERATE_OPENAPI})
+  file(GLOB PROTO_FILES *.proto)
 
   add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.h
-           ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.cc
-    COMMAND ${PROTOC_BINARY_PATH} --proto_path=${CMAKE_CURRENT_SOURCE_DIR}
-            --cpp_out=${CMAKE_CURRENT_BINARY_DIR} ${proto_file}
-    COMMENT "Generate C++ source files from protobuf file ${PROTO_NAME}"
-    DEPENDS ${proto_file})
-
-  if(${PROTO_NAME_WE} STREQUAL "lskvserver")
-    set(EXTRA_INCLUDES ${CMAKE_CURRENT_BINARY_DIR}/etcd.pb.h)
-  endif()
-
-  if(${BUILD_TESTING})
-    add_custom_command(
-      OUTPUT ${CMAKE_SOURCE_DIR}/tests/${PROTO_NAME_WE}_pb2.py
-      COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build.sh ${proto_file}
-              ${CMAKE_SOURCE_DIR}/tests/
-      COMMENT "Generate Python source file from protobuf file ${PROTO_NAME}"
-      DEPENDS ${proto_file})
-    add_custom_target(${PROTO_NAME_WE}_proto_python ALL
-                      DEPENDS ${CMAKE_SOURCE_DIR}/tests/${PROTO_NAME_WE}_pb2.py)
-  endif()
-
-  if(${COMPILE_TARGET} STREQUAL "virtual")
-    add_host_library(
-      ${PROTO_NAME_WE}.virtual
-      ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.cc
-      ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.h ${EXTRA_INCLUDES})
-    target_include_directories(
-      ${PROTO_NAME_WE}.virtual PUBLIC ${PROTOBUF_INCLUDE_DIR}
-                                      ${CMAKE_CURRENT_BINARY_DIR})
-  else()
-    add_enclave_library(
-      ${PROTO_NAME_WE}.enclave
-      ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.cc
-      ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.h ${EXTRA_INCLUDES})
-    target_include_directories(
-      ${PROTO_NAME_WE}.enclave PUBLIC ${PROTOBUF_INCLUDE_DIR}
-                                      ${CMAKE_CURRENT_BINARY_DIR})
-  endif()
-endforeach()
+    OUTPUT ${CMAKE_SOURCE_DIR}/openapi.yaml
+    COMMAND
+      ${PROTOC_BINARY_PATH} --proto_path=${CMAKE_CURRENT_SOURCE_DIR}
+      --proto_path=${CMAKE_SOURCE_DIR}/3rdparty/googleapis
+      --openapi_out=version=0.0.1:${CMAKE_SOURCE_DIR}
+      ${CMAKE_CURRENT_SOURCE_DIR}/lskvserver.proto
+      ${CMAKE_CURRENT_SOURCE_DIR}/etcd.proto
+    COMMENT
+      "Generate OpenAPI source file from protobuf files in ${CMAKE_CURRENT_SOURCE_DIR}"
+    DEPENDS ${PROTO_FILES})
+  add_custom_target(openapi ALL DEPENDS ${CMAKE_SOURCE_DIR}/openapi.yaml)
+endif()

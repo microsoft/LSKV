@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
 BUILD=build
 CCF_PREFIX_VIRTUAL=/opt/ccf_virtual
 CCF_PREFIX_SGX=/opt/ccf_sgx
@@ -40,21 +42,21 @@ install-ccf-sgx-unsafe:
 	/opt/ccf_sgx_unsafe/getting_started/setup_vm/run.sh /opt/ccf_sgx_unsafe/getting_started/setup_vm/app-dev.yml  # Install dependencies
 
 .PHONY: build-virtual
-build-virtual: .venv
+build-virtual: .venv protoc-gen-openapi
 	mkdir -p $(BUILD)
-	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -DBUILD_TESTING=ON -GNinja ..
+	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -DBUILD_TESTING=ON -DGENERATE_PYTHON=ON -DGENERATE_OPENAPI=ON -GNinja ..
 	. .venv/bin/activate && cd $(BUILD) && ninja
 
 .PHONY: build-virtual-unsafe
-build-virtual-unsafe: .venv
+build-virtual-unsafe: .venv protoc-gen-openapi
 	mkdir -p $(BUILD)
-	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=ON -DCCF_UNSAFE=ON -DBUILD_TESTING=ON -GNinja ..
+	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=ON -DCCF_UNSAFE=ON -DBUILD_TESTING=ON -DGENERATE_PYTHON=ON -DGENERATE_OPENAPI=ON -GNinja ..
 	. .venv/bin/activate && cd $(BUILD) && ninja
 
 .PHONY: build-sgx
-build-sgx: .venv
+build-sgx: .venv protoc-gen-openapi
 	mkdir -p $(BUILD)
-	cd $(BUILD) && CC=$(OE_CC) CXX=$(OE_CXX) cmake -DCOMPILE_TARGET=sgx -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -DBUILD_TESTING=ON -GNinja ..
+	cd $(BUILD) && CC=$(OE_CC) CXX=$(OE_CXX) cmake -DCOMPILE_TARGET=sgx -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -DBUILD_TESTING=ON -DGENERATE_PYTHON=ON -DGENERATE_OPENAPI=ON -GNinja ..
 	. .venv/bin/activate && cd $(BUILD) && ninja
 
 .PHONY: build-docker-virtual
@@ -114,6 +116,10 @@ patched-k6:
 	mkdir -p $(BUILD)/3rdparty
 	cp -r 3rdparty/k6 $(BUILD)/3rdparty/.
 	git apply --directory=$(BUILD)/3rdparty/k6 patches/k6-micro.diff
+
+.PHONY: protoc-gen-openapi
+protoc-gen-openapi:
+	go install github.com/google/gnostic/cmd/protoc-gen-openapi@v0.6.9
 
 $(BIN_DIR)/benchmark: patched-etcd
 	cd $(BUILD)/3rdparty/etcd && go build -buildvcs=false ./tools/benchmark

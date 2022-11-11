@@ -1,6 +1,6 @@
 #!/bin/bash
 # Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the Apache 2.0 License.
+# Licensed under the MIT License.
 
 set -e
 
@@ -28,9 +28,9 @@ echo "-- TODOs"
 echo "$CHECK_DELIMITER"
 echo "-- C/C++/Proto format"
 if [ $FIX -ne 0 ]; then
-  "$SCRIPT_DIR"/check-format.sh -f include src samples
+  "$SCRIPT_DIR"/check-format.sh -f include src samples proto
 else
-  "$SCRIPT_DIR"/check-format.sh include src samples
+  "$SCRIPT_DIR"/check-format.sh include src samples proto
 fi
 
 echo "$CHECK_DELIMITER"
@@ -41,10 +41,6 @@ if [ $FIX -ne 0 ]; then
 else
   git ls-files -- . ':!:3rdparty/' | grep -e '\.ts$' -e '\.js$' -e '\.md$' -e '\.yaml$' -e '\.yml$' -e '\.json$' | xargs npx prettier --check
 fi
-
-echo "$CHECK_DELIMITER"
-echo "-- Copyright notice headers"
-python3.8 "$SCRIPT_DIR"/notice_check.py
 
 echo "$CHECK_DELIMITER"
 echo "-- CMake format"
@@ -68,6 +64,10 @@ source ${VENV_DIR}/bin/activate
 pip install -U pip
 pip install -U wheel black[jupyter] pylint mypy cpplint 1>/dev/null
 pip install -r requirements.txt
+
+echo "$CHECK_DELIMITER"
+echo "-- Copyright notice headers"
+python3 "$SCRIPT_DIR"/notice_check.py
 
 echo "$CHECK_DELIMITER"
 echo "-- Python format"

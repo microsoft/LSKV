@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
 export function resolve(proposal, proposerId, votes) {
   const memberVoteCount = votes.filter((v) => v.vote).length;
 

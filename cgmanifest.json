@@ -27,6 +27,15 @@
           "commitHash": "2fe2dd32b3827eeeeb3959aff63a6b402aab0a5a"
         }
       }
+    },
+    {
+      "component": {
+        "type": "git",
+        "git": {
+          "repositoryUrl": "https://github.com/googleapis/googleapis",
+          "commitHash": "da380c77bb87ba0f752baf07605dd1db30e1f7e1"
+        }
+      }
     }
   ],
   "Version": 1

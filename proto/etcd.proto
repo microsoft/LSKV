@@ -2,194 +2,329 @@ syntax = "proto3";
 
 package etcdserverpb;
 
-message KeyValue {
-    // key is the key in bytes. An empty key is not allowed.
-    bytes key = 1;
-    // create_revision is the revision of last creation on this key.
-    int64 create_revision = 2;
-    // mod_revision is the revision of last modification on this key.
-    int64 mod_revision = 3;
-    // version is the version of the key. A deletion resets
-    // the version to zero and any modification of the key
-    // increases its version.
-    int64 version = 4;
-    // value is the value held by the key, in bytes.
-    bytes value = 5;
-    // lease is the ID of the lease that attached to key.
-    // When the attached lease expires, the key will be deleted.
-    // If lease is 0, then no lease is attached to the key.
-    int64 lease = 6;
+import "google/api/annotations.proto";
+
+option go_package = "github.com/microsoft/lskv/proto/etcd;etcd";
+
+service KV
+{
+  // Range gets the keys in the range from the key-value store.
+  rpc Range(RangeRequest) returns (RangeResponse)
+  {
+    option (google.api.http) = {
+      post : "/v3/kv/range"
+      body : "*"
+    };
   }
 
-message ResponseHeader {
-    // option (versionpb.etcd_version_msg) = "3.0";
-  
-    // cluster_id is the ID of the cluster which sent the response.
-    uint64 cluster_id = 1;
-    // member_id is the ID of the member which sent the response.
-    uint64 member_id = 2;
-    // revision is the key-value store revision when the request was applied, and it's
-    // unset (so 0) in case of calls not interacting with key-value store.
-    // For watch progress responses, the header.revision indicates progress. All future events
-    // received in this stream are guaranteed to have a higher revision number than the
-    // header.revision number.
-    int64 revision = 3;
-    // raft_term is the raft term when the request was applied.
-    uint64 raft_term = 4;
+  // Put puts the given key into the key-value store.
+  // A put request increments the revision of the key-value store
+  // and generates one event in the event history.
+  rpc Put(PutRequest) returns (PutResponse) {
+      option (google.api.http) = {
+        post: "/v3/kv/put"
+        body: "*"
+    };
+  }
 
-    // revision of the store that has most recently been committed (been through consensus).
-    int64 committed_revision = 5;
-    // raft term that the last committed item was committed in.
-    uint64 committed_raft_term = 6;
+  // DeleteRange deletes the given range from the key-value store.
+  // A delete request increments the revision of the key-value store
+  // and generates a delete event in the event history for every deleted key.
+  rpc DeleteRange(DeleteRangeRequest) returns (DeleteRangeResponse) {
+      option (google.api.http) = {
+        post: "/v3/kv/deleterange"
+        body: "*"
+    };
+  }
+
+  // Txn processes multiple requests in a single transaction.
+  // A txn request increments the revision of the key-value store
+  // and generates events with the same revision for every completed request.
+  // It is not allowed to modify the same key several times within one txn.
+  rpc Txn(TxnRequest) returns (TxnResponse) {
+      option (google.api.http) = {
+        post: "/v3/kv/txn"
+        body: "*"
+    };
+  }
+
+  // Compact compacts the event history in the etcd key-value store. The key-value
+  // store should be periodically compacted or the event history will continue to grow
+  // indefinitely.
+  rpc Compact(CompactionRequest) returns (CompactionResponse) {
+      option (google.api.http) = {
+        post: "/v3/kv/compaction"
+        body: "*"
+    };
+  }
 }
 
-message RangeRequest {
-    // option (versionpb.etcd_version_msg) = "3.0";
+service Lease {
+  // LeaseGrant creates a lease which expires if the server does not receive a keepAlive
+  // within a given time to live period. All keys attached to the lease will be expired and
+  // deleted if the lease expires. Each expired key generates a delete event in the event history.
+  rpc LeaseGrant(LeaseGrantRequest) returns (LeaseGrantResponse) {
+      option (google.api.http) = {
+        post: "/v3/lease/grant"
+        body: "*"
+    };
+  }
 
-    enum SortOrder {
+  // LeaseRevoke revokes a lease. All keys attached to the lease will expire and be deleted.
+  rpc LeaseRevoke(LeaseRevokeRequest) returns (LeaseRevokeResponse) {
+      option (google.api.http) = {
+        post: "/v3/lease/revoke"
+        body: "*"
+        additional_bindings {
+            post: "/v3/kv/lease/revoke"
+            body: "*"
+        }
+    };
+  }
+
+  // LeaseKeepAlive keeps the lease alive by streaming keep alive requests from the client
+  // to the server and streaming keep alive responses from the server to the client.
+  rpc LeaseKeepAlive(stream LeaseKeepAliveRequest) returns (stream LeaseKeepAliveResponse) {
+      option (google.api.http) = {
+        post: "/v3/lease/keepalive"
+        body: "*"
+    };
+  }
+
+  // LeaseTimeToLive retrieves lease information.
+  rpc LeaseTimeToLive(LeaseTimeToLiveRequest) returns (LeaseTimeToLiveResponse) {
+      option (google.api.http) = {
+        post: "/v3/lease/timetolive"
+        body: "*"
+        additional_bindings {
+            post: "/v3/kv/lease/timetolive"
+            body: "*"
+        }
+    };
+  }
+
+  // LeaseLeases lists all existing leases.
+  rpc LeaseLeases(LeaseLeasesRequest) returns (LeaseLeasesResponse) {
+      option (google.api.http) = {
+        post: "/v3/lease/leases"
+        body: "*"
+        additional_bindings {
+            post: "/v3/kv/lease/leases"
+            body: "*"
+        }
+    };
+  }
+}
+
+message KeyValue
+{
+  // key is the key in bytes. An empty key is not allowed.
+  bytes key = 1;
+  // create_revision is the revision of last creation on this key.
+  int64 create_revision = 2;
+  // mod_revision is the revision of last modification on this key.
+  int64 mod_revision = 3;
+  // version is the version of the key. A deletion resets
+  // the version to zero and any modification of the key
+  // increases its version.
+  int64 version = 4;
+  // value is the value held by the key, in bytes.
+  bytes value = 5;
+  // lease is the ID of the lease that attached to key.
+  // When the attached lease expires, the key will be deleted.
+  // If lease is 0, then no lease is attached to the key.
+  int64 lease = 6;
+}
+
+message ResponseHeader
+{
+  // option (versionpb.etcd_version_msg) = "3.0";
+
+  // cluster_id is the ID of the cluster which sent the response.
+  uint64 cluster_id = 1;
+  // member_id is the ID of the member which sent the response.
+  uint64 member_id = 2;
+  // revision is the key-value store revision when the request was applied, and
+  // it's unset (so 0) in case of calls not interacting with key-value store.
+  // For watch progress responses, the header.revision indicates progress. All
+  // future events received in this stream are guaranteed to have a higher
+  // revision number than the header.revision number.
+  int64 revision = 3;
+  // raft_term is the raft term when the request was applied.
+  uint64 raft_term = 4;
+
+  // revision of the store that has most recently been committed (been through
+  // consensus).
+  int64 committed_revision = 5;
+  // raft term that the last committed item was committed in.
+  uint64 committed_raft_term = 6;
+}
+
+message RangeRequest
+{
+  // option (versionpb.etcd_version_msg) = "3.0";
+
+  enum SortOrder {
     //   option (versionpb.etcd_version_enum) = "3.0";
-      NONE = 0; // default, no sorting
-      ASCEND = 1; // lowest target value first
-      DESCEND = 2; // highest target value first
-    }
-    enum SortTarget {
+    NONE = 0;    // default, no sorting
+    ASCEND = 1;  // lowest target value first
+    DESCEND = 2; // highest target value first
+  }
+  enum SortTarget {
     //   option (versionpb.etcd_version_enum) = "3.0";
-      KEY = 0;
-      VERSION = 1;
-      CREATE = 2;
-      MOD = 3;
-      VALUE = 4;
-    }
-  
-    // key is the first key for the range. If range_end is not given, the request only looks up key.
-    bytes key = 1;
-    // range_end is the upper bound on the requested range [key, range_end).
-    // If range_end is '\0', the range is all keys >= key.
-    // If range_end is key plus one (e.g., "aa"+1 == "ab", "a\xff"+1 == "b"),
-    // then the range request gets all keys prefixed with key.
-    // If both key and range_end are '\0', then the range request returns all keys.
-    bytes range_end = 2;
-    // limit is a limit on the number of keys returned for the request. When limit is set to 0,
-    // it is treated as no limit.
-    int64 limit = 3;
-    // revision is the point-in-time of the key-value store to use for the range.
-    // If revision is less or equal to zero, the range is over the newest key-value store.
-    // If the revision has been compacted, ErrCompacted is returned as a response.
-    int64 revision = 4;
-  
-    // sort_order is the order for returned sorted results.
-    SortOrder sort_order = 5;
-  
-    // sort_target is the key-value field to use for sorting.
-    SortTarget sort_target = 6;
-  
-    // serializable sets the range request to use serializable member-local reads.
-    // Range requests are linearizable by default; linearizable requests have higher
-    // latency and lower throughput than serializable requests but reflect the current
-    // consensus of the cluster. For better performance, in exchange for possible stale reads,
-    // a serializable range request is served locally without needing to reach consensus
-    // with other nodes in the cluster.
-    bool serializable = 7;
-  
-    // keys_only when set returns only the keys and not the values.
-    bool keys_only = 8;
-  
-    // count_only when set returns only the count of the keys in the range.
-    bool count_only = 9;
-  
-    // min_mod_revision is the lower bound for returned key mod revisions; all keys with
-    // lesser mod revisions will be filtered away.
-    int64 min_mod_revision = 10; // [(versionpb.etcd_version_field)="3.1"];
-  
-    // // max_mod_revision is the upper bound for returned key mod revisions; all keys with
-    // // greater mod revisions will be filtered away.
-    int64 max_mod_revision = 11; // [(versionpb.etcd_version_field)="3.1"];
-  
-    // // min_create_revision is the lower bound for returned key create revisions; all keys with
-    // // lesser create revisions will be filtered away.
-    int64 min_create_revision = 12; // [(versionpb.etcd_version_field)="3.1"];
-  
-    // // max_create_revision is the upper bound for returned key create revisions; all keys with
-    // // greater create revisions will be filtered away.
-    int64 max_create_revision = 13;// [(versionpb.etcd_version_field)="3.1"];
+    KEY = 0;
+    VERSION = 1;
+    CREATE = 2;
+    MOD = 3;
+    VALUE = 4;
   }
-  
-  message RangeResponse {
-    // option (versionpb.etcd_version_msg) = "3.0";
-  
-    ResponseHeader header = 1;
-    // kvs is the list of key-value pairs matched by the range request.
-    // kvs is empty when count is requested.
-    repeated KeyValue kvs = 2; // TODO: Move to new file
-    // more indicates if there are more keys to return in the requested range.
-    bool more = 3;
-    // count is set to the number of keys within the range when requested.
-    int64 count = 4;
-  }
-  
 
-message PutRequest {
-    // option (versionpb.etcd_version_msg) = "3.0";
-  
-    // key is the key, in bytes, to put into the key-value store.
-    bytes key = 1;
-    // value is the value, in bytes, to associate with the key in the key-value store.
-    bytes value = 2;
-    // lease is the lease ID to associate with the key in the key-value store. A lease
-    // value of 0 indicates no lease.
-    int64 lease = 3;
-  
-    // If prev_kv is set, etcd gets the previous key-value pair before changing it.
-    // The previous key-value pair will be returned in the put response.
-    bool prev_kv = 4;// [(versionpb.etcd_version_field)="3.1"];
-  
-    // // If ignore_value is set, etcd updates the key using its current value.
-    // // Returns an error if the key does not exist.
-    bool ignore_value = 5; // [(versionpb.etcd_version_field)="3.2"];
-  
-    // // If ignore_lease is set, etcd updates the key using its current lease.
-    // // Returns an error if the key does not exist.
-    bool ignore_lease = 6;// [(versionpb.etcd_version_field)="3.2"];
+  // key is the first key for the range. If range_end is not given, the request
+  // only looks up key.
+  bytes key = 1;
+  // range_end is the upper bound on the requested range [key, range_end).
+  // If range_end is '\0', the range is all keys >= key.
+  // If range_end is key plus one (e.g., "aa"+1 == "ab", "a\xff"+1 == "b"),
+  // then the range request gets all keys prefixed with key.
+  // If both key and range_end are '\0', then the range request returns all
+  // keys.
+  bytes range_end = 2;
+  // limit is a limit on the number of keys returned for the request. When limit
+  // is set to 0, it is treated as no limit.
+  int64 limit = 3;
+  // revision is the point-in-time of the key-value store to use for the range.
+  // If revision is less or equal to zero, the range is over the newest
+  // key-value store. If the revision has been compacted, ErrCompacted is
+  // returned as a response.
+  int64 revision = 4;
+
+  // sort_order is the order for returned sorted results.
+  SortOrder sort_order = 5;
+
+  // sort_target is the key-value field to use for sorting.
+  SortTarget sort_target = 6;
+
+  // serializable sets the range request to use serializable member-local reads.
+  // Range requests are linearizable by default; linearizable requests have
+  // higher latency and lower throughput than serializable requests but reflect
+  // the current consensus of the cluster. For better performance, in exchange
+  // for possible stale reads, a serializable range request is served locally
+  // without needing to reach consensus with other nodes in the cluster.
+  bool serializable = 7;
+
+  // keys_only when set returns only the keys and not the values.
+  bool keys_only = 8;
+
+  // count_only when set returns only the count of the keys in the range.
+  bool count_only = 9;
+
+  // min_mod_revision is the lower bound for returned key mod revisions; all
+  // keys with lesser mod revisions will be filtered away.
+  int64 min_mod_revision = 10; // [(versionpb.etcd_version_field)="3.1"];
+
+  // // max_mod_revision is the upper bound for returned key mod revisions; all
+  // keys with
+  // // greater mod revisions will be filtered away.
+  int64 max_mod_revision = 11; // [(versionpb.etcd_version_field)="3.1"];
+
+  // // min_create_revision is the lower bound for returned key create
+  // revisions; all keys with
+  // // lesser create revisions will be filtered away.
+  int64 min_create_revision = 12; // [(versionpb.etcd_version_field)="3.1"];
+
+  // // max_create_revision is the upper bound for returned key create
+  // revisions; all keys with
+  // // greater create revisions will be filtered away.
+  int64 max_create_revision = 13; // [(versionpb.etcd_version_field)="3.1"];
 }
 
-message PutResponse {
-    // option (versionpb.etcd_version_msg) = "3.0";
-  
-    ResponseHeader header = 1;
-    // if prev_kv is set in the request, the previous key-value pair will be returned.
-    KeyValue prev_kv = 2;// [(versionpb.etcd_version_field)="3.1"]; // TODO: Move to new file
+message RangeResponse
+{
+  // option (versionpb.etcd_version_msg) = "3.0";
+
+  ResponseHeader header = 1;
+  // kvs is the list of key-value pairs matched by the range request.
+  // kvs is empty when count is requested.
+  repeated KeyValue kvs = 2; // TODO: Move to new file
+  // more indicates if there are more keys to return in the requested range.
+  bool more = 3;
+  // count is set to the number of keys within the range when requested.
+  int64 count = 4;
 }
 
-message DeleteRangeRequest {
+
+message PutRequest
+{
+  // option (versionpb.etcd_version_msg) = "3.0";
+
+  // key is the key, in bytes, to put into the key-value store.
+  bytes key = 1;
+  // value is the value, in bytes, to associate with the key in the key-value
+  // store.
+  bytes value = 2;
+  // lease is the lease ID to associate with the key in the key-value store. A
+  // lease value of 0 indicates no lease.
+  int64 lease = 3;
+
+  // If prev_kv is set, etcd gets the previous key-value pair before changing
+  // it. The previous key-value pair will be returned in the put response.
+  bool prev_kv = 4; // [(versionpb.etcd_version_field)="3.1"];
+
+  // // If ignore_value is set, etcd updates the key using its current value.
+  // // Returns an error if the key does not exist.
+  bool ignore_value = 5; // [(versionpb.etcd_version_field)="3.2"];
+
+  // // If ignore_lease is set, etcd updates the key using its current lease.
+  // // Returns an error if the key does not exist.
+  bool ignore_lease = 6; // [(versionpb.etcd_version_field)="3.2"];
+}
+
+message PutResponse
+{
+  // option (versionpb.etcd_version_msg) = "3.0";
+
+  ResponseHeader header = 1;
+  // if prev_kv is set in the request, the previous key-value pair will be
+  // returned.
+  KeyValue prev_kv =
+      2; // [(versionpb.etcd_version_field)="3.1"]; // TODO: Move to new file
+}
+
+message DeleteRangeRequest
+{
   // option (versionpb.etcd_version_msg) = "3.0";
 
   // key is the first key to delete in the range.
   bytes key = 1;
-  // range_end is the key following the last key to delete for the range [key, range_end).
-  // If range_end is not given, the range is defined to contain only the key argument.
-  // If range_end is one bit larger than the given key, then the range is all the keys
-  // with the prefix (the given key).
-  // If range_end is '\0', the range is all keys greater than or equal to the key argument.
+  // range_end is the key following the last key to delete for the range [key,
+  // range_end). If range_end is not given, the range is defined to contain only
+  // the key argument. If range_end is one bit larger than the given key, then
+  // the range is all the keys with the prefix (the given key). If range_end is
+  // '\0', the range is all keys greater than or equal to the key argument.
   bytes range_end = 2;
 
-  // If prev_kv is set, etcd gets the previous key-value pairs before deleting it.
-  // The previous key-value pairs will be returned in the delete response.
+  // If prev_kv is set, etcd gets the previous key-value pairs before deleting
+  // it. The previous key-value pairs will be returned in the delete response.
   bool prev_kv = 3; // [(versionpb.etcd_version_field)="3.1"];
 }
 
-message DeleteRangeResponse {
+message DeleteRangeResponse
+{
   // option (versionpb.etcd_version_msg) = "3.0";
 
   ResponseHeader header = 1;
   // deleted is the number of keys deleted by the delete range request.
   int64 deleted = 2;
-  // if prev_kv is set in the request, the previous key-value pairs will be returned.
+  // if prev_kv is set in the request, the previous key-value pairs will be
+  // returned.
   repeated KeyValue prev_kvs = 3; // [(versionpb.etcd_version_field)="3.1"];
 }
 
-message RequestOp {
+message RequestOp
+{
   // request is a union of request types accepted by a transaction.
-  oneof request {
+  oneof request
+  {
     RangeRequest request_range = 1;
     PutRequest request_put = 2;
     DeleteRangeRequest request_delete_range = 3;
@@ -197,9 +332,11 @@ message RequestOp {
   }
 }
 
-message ResponseOp {
+message ResponseOp
+{
   // response is a union of response types returned by a transaction.
-  oneof response {
+  oneof response
+  {
     RangeResponse response_range = 1;
     PutResponse response_put = 2;
     DeleteRangeResponse response_delete_range = 3;
@@ -207,7 +344,8 @@ message ResponseOp {
   }
 }
 
-message Compare {
+message Compare
+{
   enum CompareResult {
     EQUAL = 0;
     GREATER = 1;
@@ -227,7 +365,8 @@ message Compare {
   CompareTarget target = 2;
   // key is the subject key for the comparison operation.
   bytes key = 3;
-  oneof target_union {
+  oneof target_union
+  {
     // version is the version of the given key
     int64 version = 4;
     // create_revision is the creation revision of the given key
@@ -241,52 +380,62 @@ message Compare {
     // leave room for more target_union field tags, jump to 64
   }
 
-  // range_end compares the given target to all keys in the range [key, range_end).
-  // See RangeRequest for more details on key ranges.
+  // range_end compares the given target to all keys in the range [key,
+  // range_end). See RangeRequest for more details on key ranges.
   bytes range_end = 64;
   // TODO: fill out with most of the rest of RangeRequest fields when needed.
 }
 
 // From google paxosdb paper:
-// Our implementation hinges around a powerful primitive which we call MultiOp. All other database
-// operations except for iteration are implemented as a single call to MultiOp. A MultiOp is applied atomically
-// and consists of three components:
-// 1. A list of tests called guard. Each test in guard checks a single entry in the database. It may check
-// for the absence or presence of a value, or compare with a given value. Two different tests in the guard
-// may apply to the same or different entries in the database. All tests in the guard are applied and
-// MultiOp returns the results. If all tests are true, MultiOp executes t op (see item 2 below), otherwise
-// it executes f op (see item 3 below).
-// 2. A list of database operations called t op. Each operation in the list is either an insert, delete, or
-// lookup operation, and applies to a single database entry. Two different operations in the list may apply
-// to the same or different entries in the database. These operations are executed
-// if guard evaluates to
-// true.
-// 3. A list of database operations called f op. Like t op, but executed if guard evaluates to false.
-message TxnRequest {
+// Our implementation hinges around a powerful primitive which we call MultiOp.
+// All other database operations except for iteration are implemented as a
+// single call to MultiOp. A MultiOp is applied atomically and consists of three
+// components:
+// 1. A list of tests called guard. Each test in guard checks a single entry in
+// the database. It may check for the absence or presence of a value, or compare
+// with a given value. Two different tests in the guard may apply to the same or
+// different entries in the database. All tests in the guard are applied and
+// MultiOp returns the results. If all tests are true, MultiOp executes t op
+// (see item 2 below), otherwise it executes f op (see item 3 below).
+// 2. A list of database operations called t op. Each operation in the list is
+// either an insert, delete, or lookup operation, and applies to a single
+// database entry. Two different operations in the list may apply to the same or
+// different entries in the database. These operations are executed if guard
+// evaluates to true.
+// 3. A list of database operations called f op. Like t op, but executed if
+// guard evaluates to false.
+message TxnRequest
+{
   // compare is a list of predicates representing a conjunction of terms.
-  // If the comparisons succeed, then the success requests will be processed in order,
-  // and the response will contain their respective responses in order.
-  // If the comparisons fail, then the failure requests will be processed in order,
-  // and the response will contain their respective responses in order.
+  // If the comparisons succeed, then the success requests will be processed in
+  // order, and the response will contain their respective responses in order.
+  // If the comparisons fail, then the failure requests will be processed in
+  // order, and the response will contain their respective responses in order.
   repeated Compare compare = 1;
-  // success is a list of requests which will be applied when compare evaluates to true.
+  // success is a list of requests which will be applied when compare evaluates
+  // to true.
   repeated RequestOp success = 2;
-  // failure is a list of requests which will be applied when compare evaluates to false.
+  // failure is a list of requests which will be applied when compare evaluates
+  // to false.
   repeated RequestOp failure = 3;
 }
 
-message TxnResponse {
+message TxnResponse
+{
   ResponseHeader header = 1;
-  // succeeded is set to true if the compare evaluated to true or false otherwise.
+  // succeeded is set to true if the compare evaluated to true or false
+  // otherwise.
   bool succeeded = 2;
   // responses is a list of responses corresponding to the results from applying
   // success if succeeded is true or failure if succeeded is false.
   repeated ResponseOp responses = 3;
 }
 
-// CompactionRequest compacts the key-value store up to a given revision. All superseded keys
-// with a revision less than the compaction revision will be removed.
-message CompactionRequest {
+// CompactionRequest compacts the key-value store up to a given revision. All
+// superseded keys with a revision less than the compaction revision will be
+// removed.
+message CompactionRequest
+{
   // revision is the key-value store revision for the compaction operation.
   int64 revision = 1;
   // physical is set so the RPC will wait until the compaction is physically
@@ -295,18 +444,19 @@ message CompactionRequest {
   bool physical = 2;
 }
 
-message CompactionResponse {
-  ResponseHeader header = 1;
-}
+message CompactionResponse { ResponseHeader header = 1; }
 
-message LeaseGrantRequest {
+message LeaseGrantRequest
+{
   // TTL is the advisory time-to-live in seconds. Expired lease will return -1.
   int64 TTL = 1;
-  // ID is the requested ID for the lease. If ID is set to 0, the lessor chooses an ID.
+  // ID is the requested ID for the lease. If ID is set to 0, the lessor chooses
+  // an ID.
   int64 ID = 2;
 }
 
-message LeaseGrantResponse {
+message LeaseGrantResponse
+{
   ResponseHeader header = 1;
   // ID is the lease ID for the granted lease.
   int64 ID = 2;
@@ -315,21 +465,23 @@ message LeaseGrantResponse {
   string error = 4;
 }
 
-message LeaseRevokeRequest {
-  // ID is the lease ID to revoke. When the ID is revoked, all associated keys will be deleted.
+message LeaseRevokeRequest
+{
+  // ID is the lease ID to revoke. When the ID is revoked, all associated keys
+  // will be deleted.
   int64 ID = 1;
 }
 
-message LeaseRevokeResponse {
-  ResponseHeader header = 1;
-}
+message LeaseRevokeResponse { ResponseHeader header = 1; }
 
-message LeaseKeepAliveRequest {
+message LeaseKeepAliveRequest
+{
   // ID is the lease ID for the lease to keep alive.
   int64 ID = 1;
 }
 
-message LeaseKeepAliveResponse {
+message LeaseKeepAliveResponse
+{
   ResponseHeader header = 1;
   // ID is the lease ID from the keep alive request.
   int64 ID = 2;
@@ -337,56 +489,64 @@ message LeaseKeepAliveResponse {
   int64 TTL = 3;
 }
 
-message LeaseTimeToLiveRequest {
+message LeaseTimeToLiveRequest
+{
   // ID is the lease ID for the lease.
   int64 ID = 1;
   // keys is true to query all the keys attached to this lease.
   bool keys = 2;
 }
 
-message LeaseTimeToLiveResponse {
+message LeaseTimeToLiveResponse
+{
   ResponseHeader header = 1;
   // ID is the lease ID from the keep alive request.
   int64 ID = 2;
-  // TTL is the remaining TTL in seconds for the lease; the lease will expire in under TTL+1 seconds.
+  // TTL is the remaining TTL in seconds for the lease; the lease will expire in
+  // under TTL+1 seconds.
   int64 TTL = 3;
-  // GrantedTTL is the initial granted time in seconds upon lease creation/renewal.
+  // GrantedTTL is the initial granted time in seconds upon lease
+  // creation/renewal.
   int64 grantedTTL = 4;
   // Keys is the list of keys attached to this lease.
   repeated bytes keys = 5;
 }
 
-message LeaseLeasesRequest {
-}
+message LeaseLeasesRequest {}
 
-message LeaseStatus {
+message LeaseStatus
+{
   int64 ID = 1;
   // TODO: int64 TTL = 2;
 }
 
-message LeaseLeasesResponse {
+message LeaseLeasesResponse
+{
   ResponseHeader header = 1;
   repeated LeaseStatus leases = 2;
 }
 
-message Member {
+message Member
+{
   // ID is the member ID for this member.
   uint64 ID = 1;
-  // name is the human-readable name of the member. If the member is not started, the name will be an empty string.
+  // name is the human-readable name of the member. If the member is not
+  // started, the name will be an empty string.
   string name = 2;
-  // peerURLs is the list of URLs the member exposes to the cluster for communication.
+  // peerURLs is the list of URLs the member exposes to the cluster for
+  // communication.
   repeated string peerURLs = 3;
-  // clientURLs is the list of URLs the member exposes to clients for communication. If the member is not started, clientURLs will be empty.
+  // clientURLs is the list of URLs the member exposes to clients for
+  // communication. If the member is not started, clientURLs will be empty.
   repeated string clientURLs = 4;
   // isLearner indicates if the member is raft learner.
   bool isLearner = 5;
 }
 
-message MemberListRequest {
-  bool linearizable = 1;
-}
+message MemberListRequest { bool linearizable = 1; }
 
-message MemberListResponse {
+message MemberListResponse
+{
   ResponseHeader header = 1;
   // members is a list of all members associated with the cluster.
   repeated Member members = 2;

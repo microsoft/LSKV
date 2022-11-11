@@ -1,0 +1,790 @@
+# Generated with protoc-gen-openapi
+# https://github.com/google/gnostic/tree/master/cmd/protoc-gen-openapi
+
+openapi: 3.0.3
+info:
+    title: ""
+    version: 0.0.1
+paths:
+    /v3/kv/compaction:
+        post:
+            tags:
+                - KV
+            description: |-
+                Compact compacts the event history in the etcd key-value store. The key-value
+                 store should be periodically compacted or the event history will continue to grow
+                 indefinitely.
+            operationId: KV_Compact
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CompactionRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CompactionResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v3/kv/deleterange:
+        post:
+            tags:
+                - KV
+            description: |-
+                DeleteRange deletes the given range from the key-value store.
+                 A delete request increments the revision of the key-value store
+                 and generates a delete event in the event history for every deleted key.
+            operationId: KV_DeleteRange
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/DeleteRangeRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteRangeResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v3/kv/put:
+        post:
+            tags:
+                - KV
+            description: |-
+                Put puts the given key into the key-value store.
+                 A put request increments the revision of the key-value store
+                 and generates one event in the event history.
+            operationId: KV_Put
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/PutRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PutResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v3/kv/range:
+        post:
+            tags:
+                - KV
+            description: Range gets the keys in the range from the key-value store.
+            operationId: KV_Range
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RangeRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RangeResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v3/kv/txn:
+        post:
+            tags:
+                - KV
+            description: |-
+                Txn processes multiple requests in a single transaction.
+                 A txn request increments the revision of the key-value store
+                 and generates events with the same revision for every completed request.
+                 It is not allowed to modify the same key several times within one txn.
+            operationId: KV_Txn
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/TxnRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/TxnResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v3/lease/grant:
+        post:
+            tags:
+                - Lease
+            description: |-
+                LeaseGrant creates a lease which expires if the server does not receive a keepAlive
+                 within a given time to live period. All keys attached to the lease will be expired and
+                 deleted if the lease expires. Each expired key generates a delete event in the event history.
+            operationId: Lease_LeaseGrant
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/LeaseGrantRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/LeaseGrantResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v3/lease/keepalive:
+        post:
+            tags:
+                - Lease
+            description: |-
+                LeaseKeepAlive keeps the lease alive by streaming keep alive requests from the client
+                 to the server and streaming keep alive responses from the server to the client.
+            operationId: Lease_LeaseKeepAlive
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/LeaseKeepAliveRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/LeaseKeepAliveResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v3/lease/leases:
+        post:
+            tags:
+                - Lease
+            description: LeaseLeases lists all existing leases.
+            operationId: Lease_LeaseLeases
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/LeaseLeasesRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/LeaseLeasesResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v3/lease/revoke:
+        post:
+            tags:
+                - Lease
+            description: LeaseRevoke revokes a lease. All keys attached to the lease will expire and be deleted.
+            operationId: Lease_LeaseRevoke
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/LeaseRevokeRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/LeaseRevokeResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v3/lease/timetolive:
+        post:
+            tags:
+                - Lease
+            description: LeaseTimeToLive retrieves lease information.
+            operationId: Lease_LeaseTimeToLive
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/LeaseTimeToLiveRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/LeaseTimeToLiveResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v3/receipt/get_receipt:
+        post:
+            tags:
+                - Receipt
+            operationId: Receipt_GetReceipt
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/GetReceiptRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetReceiptResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+components:
+    schemas:
+        CompactionRequest:
+            type: object
+            properties:
+                revision:
+                    type: integer
+                    description: revision is the key-value store revision for the compaction operation.
+                    format: int64
+                physical:
+                    type: boolean
+                    description: physical is set so the RPC will wait until the compaction is physically applied to the local database such that compacted entries are totally removed from the backend database.
+            description: CompactionRequest compacts the key-value store up to a given revision. All superseded keys with a revision less than the compaction revision will be removed.
+        CompactionResponse:
+            type: object
+            properties:
+                header:
+                    $ref: '#/components/schemas/ResponseHeader'
+        Compare:
+            type: object
+            properties:
+                result:
+                    type: integer
+                    description: result is logical comparison operation for this comparison.
+                    format: enum
+                target:
+                    type: integer
+                    description: target is the key-value field to inspect for the comparison.
+                    format: enum
+                key:
+                    type: string
+                    description: key is the subject key for the comparison operation.
+                    format: bytes
+                version:
+                    type: integer
+                    description: version is the version of the given key
+                    format: int64
+                createRevision:
+                    type: integer
+                    description: create_revision is the creation revision of the given key
+                    format: int64
+                modRevision:
+                    type: integer
+                    description: mod_revision is the last modified revision of the given key.
+                    format: int64
+                value:
+                    type: string
+                    description: value is the value of the given key, in bytes.
+                    format: bytes
+                lease:
+                    type: integer
+                    description: lease is the lease id of the given key.
+                    format: int64
+                rangeEnd:
+                    type: string
+                    description: range_end compares the given target to all keys in the range [key, range_end). See RangeRequest for more details on key ranges.
+                    format: bytes
+        DeleteRangeRequest:
+            type: object
+            properties:
+                key:
+                    type: string
+                    description: key is the first key to delete in the range.
+                    format: bytes
+                rangeEnd:
+                    type: string
+                    description: range_end is the key following the last key to delete for the range [key, range_end). If range_end is not given, the range is defined to contain only the key argument. If range_end is one bit larger than the given key, then the range is all the keys with the prefix (the given key). If range_end is '\0', the range is all keys greater than or equal to the key argument.
+                    format: bytes
+                prevKv:
+                    type: boolean
+                    description: If prev_kv is set, etcd gets the previous key-value pairs before deleting it. The previous key-value pairs will be returned in the delete response.
+        DeleteRangeResponse:
+            type: object
+            properties:
+                header:
+                    $ref: '#/components/schemas/ResponseHeader'
+                deleted:
+                    type: integer
+                    description: deleted is the number of keys deleted by the delete range request.
+                    format: int64
+                prevKvs:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/KeyValue'
+                    description: if prev_kv is set in the request, the previous key-value pairs will be returned.
+        GetReceiptRequest:
+            type: object
+            properties:
+                revision:
+                    type: integer
+                    format: int64
+                raftTerm:
+                    type: integer
+                    format: uint64
+        GetReceiptResponse:
+            type: object
+            properties:
+                header:
+                    $ref: '#/components/schemas/ResponseHeader'
+                receipt:
+                    $ref: '#/components/schemas/OverallReceipt'
+        GoogleProtobufAny:
+            type: object
+            properties:
+                '@type':
+                    type: string
+                    description: The type of the serialized message.
+            additionalProperties: true
+            description: Contains an arbitrary serialized message along with a @type that describes the type of the serialized message.
+        KeyValue:
+            type: object
+            properties:
+                key:
+                    type: string
+                    description: key is the key in bytes. An empty key is not allowed.
+                    format: bytes
+                createRevision:
+                    type: integer
+                    description: create_revision is the revision of last creation on this key.
+                    format: int64
+                modRevision:
+                    type: integer
+                    description: mod_revision is the revision of last modification on this key.
+                    format: int64
+                version:
+                    type: integer
+                    description: version is the version of the key. A deletion resets the version to zero and any modification of the key increases its version.
+                    format: int64
+                value:
+                    type: string
+                    description: value is the value held by the key, in bytes.
+                    format: bytes
+                lease:
+                    type: integer
+                    description: lease is the ID of the lease that attached to key. When the attached lease expires, the key will be deleted. If lease is 0, then no lease is attached to the key.
+                    format: int64
+        LeafComponents:
+            type: object
+            properties:
+                claimsDigest:
+                    type: string
+                commitEvidence:
+                    type: string
+                writeSetDigest:
+                    type: string
+        LeaseGrantRequest:
+            type: object
+            properties:
+                TTL:
+                    type: integer
+                    description: TTL is the advisory time-to-live in seconds. Expired lease will return -1.
+                    format: int64
+                ID:
+                    type: integer
+                    description: ID is the requested ID for the lease. If ID is set to 0, the lessor chooses an ID.
+                    format: int64
+        LeaseGrantResponse:
+            type: object
+            properties:
+                header:
+                    $ref: '#/components/schemas/ResponseHeader'
+                ID:
+                    type: integer
+                    description: ID is the lease ID for the granted lease.
+                    format: int64
+                TTL:
+                    type: integer
+                    description: TTL is the server chosen lease time-to-live in seconds.
+                    format: int64
+                error:
+                    type: string
+        LeaseKeepAliveRequest:
+            type: object
+            properties:
+                ID:
+                    type: integer
+                    description: ID is the lease ID for the lease to keep alive.
+                    format: int64
+        LeaseKeepAliveResponse:
+            type: object
+            properties:
+                header:
+                    $ref: '#/components/schemas/ResponseHeader'
+                ID:
+                    type: integer
+                    description: ID is the lease ID from the keep alive request.
+                    format: int64
+                TTL:
+                    type: integer
+                    description: TTL is the new time-to-live for the lease.
+                    format: int64
+        LeaseLeasesRequest:
+            type: object
+            properties: {}
+        LeaseLeasesResponse:
+            type: object
+            properties:
+                header:
+                    $ref: '#/components/schemas/ResponseHeader'
+                leases:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/LeaseStatus'
+        LeaseRevokeRequest:
+            type: object
+            properties:
+                ID:
+                    type: integer
+                    description: ID is the lease ID to revoke. When the ID is revoked, all associated keys will be deleted.
+                    format: int64
+        LeaseRevokeResponse:
+            type: object
+            properties:
+                header:
+                    $ref: '#/components/schemas/ResponseHeader'
+        LeaseStatus:
+            type: object
+            properties:
+                ID:
+                    type: integer
+                    format: int64
+        LeaseTimeToLiveRequest:
+            type: object
+            properties:
+                ID:
+                    type: integer
+                    description: ID is the lease ID for the lease.
+                    format: int64
+                keys:
+                    type: boolean
+                    description: keys is true to query all the keys attached to this lease.
+        LeaseTimeToLiveResponse:
+            type: object
+            properties:
+                header:
+                    $ref: '#/components/schemas/ResponseHeader'
+                ID:
+                    type: integer
+                    description: ID is the lease ID from the keep alive request.
+                    format: int64
+                TTL:
+                    type: integer
+                    description: TTL is the remaining TTL in seconds for the lease; the lease will expire in under TTL+1 seconds.
+                    format: int64
+                grantedTTL:
+                    type: integer
+                    description: GrantedTTL is the initial granted time in seconds upon lease creation/renewal.
+                    format: int64
+                keys:
+                    type: array
+                    items:
+                        type: string
+                        format: bytes
+                    description: Keys is the list of keys attached to this lease.
+        OverallReceipt:
+            type: object
+            properties:
+                cert:
+                    type: string
+                signature:
+                    type: string
+                    format: bytes
+                nodeId:
+                    type: string
+                txReceipt:
+                    $ref: '#/components/schemas/TxReceipt'
+                signatureReceipt:
+                    $ref: '#/components/schemas/SignatureReceipt'
+        Proof:
+            type: object
+            properties:
+                left:
+                    type: string
+                right:
+                    type: string
+        PutRequest:
+            type: object
+            properties:
+                key:
+                    type: string
+                    description: key is the key, in bytes, to put into the key-value store.
+                    format: bytes
+                value:
+                    type: string
+                    description: value is the value, in bytes, to associate with the key in the key-value store.
+                    format: bytes
+                lease:
+                    type: integer
+                    description: lease is the lease ID to associate with the key in the key-value store. A lease value of 0 indicates no lease.
+                    format: int64
+                prevKv:
+                    type: boolean
+                    description: If prev_kv is set, etcd gets the previous key-value pair before changing it. The previous key-value pair will be returned in the put response.
+                ignoreValue:
+                    type: boolean
+                    description: // If ignore_value is set, etcd updates the key using its current value. // Returns an error if the key does not exist.
+                ignoreLease:
+                    type: boolean
+                    description: // If ignore_lease is set, etcd updates the key using its current lease. // Returns an error if the key does not exist.
+        PutResponse:
+            type: object
+            properties:
+                header:
+                    $ref: '#/components/schemas/ResponseHeader'
+                prevKv:
+                    $ref: '#/components/schemas/KeyValue'
+        RangeRequest:
+            type: object
+            properties:
+                key:
+                    type: string
+                    description: key is the first key for the range. If range_end is not given, the request only looks up key.
+                    format: bytes
+                rangeEnd:
+                    type: string
+                    description: range_end is the upper bound on the requested range [key, range_end). If range_end is '\0', the range is all keys >= key. If range_end is key plus one (e.g., "aa"+1 == "ab", "a\xff"+1 == "b"), then the range request gets all keys prefixed with key. If both key and range_end are '\0', then the range request returns all keys.
+                    format: bytes
+                limit:
+                    type: integer
+                    description: limit is a limit on the number of keys returned for the request. When limit is set to 0, it is treated as no limit.
+                    format: int64
+                revision:
+                    type: integer
+                    description: revision is the point-in-time of the key-value store to use for the range. If revision is less or equal to zero, the range is over the newest key-value store. If the revision has been compacted, ErrCompacted is returned as a response.
+                    format: int64
+                sortOrder:
+                    type: integer
+                    description: sort_order is the order for returned sorted results.
+                    format: enum
+                sortTarget:
+                    type: integer
+                    description: sort_target is the key-value field to use for sorting.
+                    format: enum
+                serializable:
+                    type: boolean
+                    description: serializable sets the range request to use serializable member-local reads. Range requests are linearizable by default; linearizable requests have higher latency and lower throughput than serializable requests but reflect the current consensus of the cluster. For better performance, in exchange for possible stale reads, a serializable range request is served locally without needing to reach consensus with other nodes in the cluster.
+                keysOnly:
+                    type: boolean
+                    description: keys_only when set returns only the keys and not the values.
+                countOnly:
+                    type: boolean
+                    description: count_only when set returns only the count of the keys in the range.
+                minModRevision:
+                    type: integer
+                    description: min_mod_revision is the lower bound for returned key mod revisions; all keys with lesser mod revisions will be filtered away.
+                    format: int64
+                maxModRevision:
+                    type: integer
+                    description: // max_mod_revision is the upper bound for returned key mod revisions; all keys with // greater mod revisions will be filtered away.
+                    format: int64
+                minCreateRevision:
+                    type: integer
+                    description: // min_create_revision is the lower bound for returned key create revisions; all keys with // lesser create revisions will be filtered away.
+                    format: int64
+                maxCreateRevision:
+                    type: integer
+                    description: // max_create_revision is the upper bound for returned key create revisions; all keys with // greater create revisions will be filtered away.
+                    format: int64
+        RangeResponse:
+            type: object
+            properties:
+                header:
+                    $ref: '#/components/schemas/ResponseHeader'
+                kvs:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/KeyValue'
+                    description: kvs is the list of key-value pairs matched by the range request. kvs is empty when count is requested.
+                more:
+                    type: boolean
+                    description: more indicates if there are more keys to return in the requested range.
+                count:
+                    type: integer
+                    description: count is set to the number of keys within the range when requested.
+                    format: int64
+        RequestOp:
+            type: object
+            properties:
+                requestRange:
+                    $ref: '#/components/schemas/RangeRequest'
+                requestPut:
+                    $ref: '#/components/schemas/PutRequest'
+                requestDeleteRange:
+                    $ref: '#/components/schemas/DeleteRangeRequest'
+                requestTxn:
+                    $ref: '#/components/schemas/TxnRequest'
+        ResponseHeader:
+            type: object
+            properties:
+                clusterId:
+                    type: integer
+                    description: cluster_id is the ID of the cluster which sent the response.
+                    format: uint64
+                memberId:
+                    type: integer
+                    description: member_id is the ID of the member which sent the response.
+                    format: uint64
+                revision:
+                    type: integer
+                    description: revision is the key-value store revision when the request was applied, and it's unset (so 0) in case of calls not interacting with key-value store. For watch progress responses, the header.revision indicates progress. All future events received in this stream are guaranteed to have a higher revision number than the header.revision number.
+                    format: int64
+                raftTerm:
+                    type: integer
+                    description: raft_term is the raft term when the request was applied.
+                    format: uint64
+                committedRevision:
+                    type: integer
+                    description: revision of the store that has most recently been committed (been through consensus).
+                    format: int64
+                committedRaftTerm:
+                    type: integer
+                    description: raft term that the last committed item was committed in.
+                    format: uint64
+        ResponseOp:
+            type: object
+            properties:
+                responseRange:
+                    $ref: '#/components/schemas/RangeResponse'
+                responsePut:
+                    $ref: '#/components/schemas/PutResponse'
+                responseDeleteRange:
+                    $ref: '#/components/schemas/DeleteRangeResponse'
+                responseTxn:
+                    $ref: '#/components/schemas/TxnResponse'
+        SignatureReceipt:
+            type: object
+            properties:
+                leaf:
+                    type: string
+        Status:
+            type: object
+            properties:
+                code:
+                    type: integer
+                    description: The status code, which should be an enum value of [google.rpc.Code][google.rpc.Code].
+                    format: int32
+                message:
+                    type: string
+                    description: A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the [google.rpc.Status.details][google.rpc.Status.details] field, or localized by the client.
+                details:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/GoogleProtobufAny'
+                    description: A list of messages that carry the error details.  There is a common set of message types for APIs to use.
+            description: 'The `Status` type defines a logical error model that is suitable for different programming environments, including REST APIs and RPC APIs. It is used by [gRPC](https://github.com/grpc). Each `Status` message contains three pieces of data: error code, error message, and error details. You can find out more about this error model and how to work with it in the [API Design Guide](https://cloud.google.com/apis/design/errors).'
+        TxReceipt:
+            type: object
+            properties:
+                leafComponents:
+                    $ref: '#/components/schemas/LeafComponents'
+                proof:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Proof'
+        TxnRequest:
+            type: object
+            properties:
+                compare:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Compare'
+                    description: compare is a list of predicates representing a conjunction of terms. If the comparisons succeed, then the success requests will be processed in order, and the response will contain their respective responses in order. If the comparisons fail, then the failure requests will be processed in order, and the response will contain their respective responses in order.
+                success:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/RequestOp'
+                    description: success is a list of requests which will be applied when compare evaluates to true.
+                failure:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/RequestOp'
+                    description: failure is a list of requests which will be applied when compare evaluates to false.
+            description: 'From google paxosdb paper: Our implementation hinges around a powerful primitive which we call MultiOp. All other database operations except for iteration are implemented as a single call to MultiOp. A MultiOp is applied atomically and consists of three components: 1. A list of tests called guard. Each test in guard checks a single entry in the database. It may check for the absence or presence of a value, or compare with a given value. Two different tests in the guard may apply to the same or different entries in the database. All tests in the guard are applied and MultiOp returns the results. If all tests are true, MultiOp executes t op (see item 2 below), otherwise it executes f op (see item 3 below). 2. A list of database operations called t op. Each operation in the list is either an insert, delete, or lookup operation, and applies to a single database entry. Two different operations in the list may apply to the same or different entries in the database. These operations are executed if guard evaluates to true. 3. A list of database operations called f op. Like t op, but executed if guard evaluates to false.'
+        TxnResponse:
+            type: object
+            properties:
+                header:
+                    $ref: '#/components/schemas/ResponseHeader'
+                succeeded:
+                    type: boolean
+                    description: succeeded is set to true if the compare evaluated to true or false otherwise.
+                responses:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ResponseOp'
+                    description: responses is a list of responses corresponding to the results from applying success if succeeded is true or failure if succeeded is false.
+tags:
+    - name: KV
+    - name: Lease
+    - name: Receipt
