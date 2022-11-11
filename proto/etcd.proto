@@ -4,6 +4,8 @@ package etcdserverpb;
 
 import "google/api/annotations.proto";
 
+option go_package = "github.com/microsoft/lskv/proto/etcd;etcd";
+
 service KV
 {
   // Range gets the keys in the range from the key-value store.
@@ -249,6 +251,7 @@ message RangeResponse
   // count is set to the number of keys within the range when requested.
   int64 count = 4;
 }
+
 
 message PutRequest
 {
