@@ -13,14 +13,15 @@ import time
 from subprocess import PIPE, Popen
 from typing import List
 
+import ccf.receipt
 # pylint: disable=import-error
 import etcd_pb2  # type: ignore
 import httpx
-
 # pylint: disable=import-error
 import lskvserver_pb2  # type: ignore
 import pytest
 import typing_extensions
+from cryptography.x509 import load_pem_x509_certificate
 from google.protobuf.json_format import MessageToDict, ParseDict
 from loguru import logger
 
@@ -366,18 +367,28 @@ class HttpClient:
         rev, term = extract_rev_term_pb(response)
         res = self.get_receipt(rev, term)
         check_response(res)
-        body = res.json()
-        assert "receipt" in body
-        receipt = body["receipt"]
-        assert "txReceipt" in receipt
+        receipt = res.json()["receipt"]
         tx_receipt = receipt["txReceipt"]
-        assert "leafComponents" in tx_receipt
         leaf_components = tx_receipt["leafComponents"]
-        assert "claimsDigest" in leaf_components
-        claims_digest = leaf_components["claimsDigest"]
+        claims_digest:str = leaf_components["claimsDigest"]
+        write_set_digest:str = leaf_components["writeSetDigest"]
+        commit_evidence = leaf_components["commitEvidence"]
 
         response.ClearField("header")
 
+        commit_evidence_digest = hashlib.sha256(commit_evidence.encode("utf-8")).hexdigest()
+        leaf_parts = [write_set_digest, commit_evidence_digest, claims_digest]
+        leaf = hashlib.sha256("".join(leaf_parts).encode("utf-8")).hexdigest()
+
+        proof = tx_receipt["proof"]
+        signature = receipt["signature"]
+        cert = receipt["cert"]
+        node_cert = load_pem_x509_certificate(cert.encode())
+
+        root = ccf.receipt.root(leaf, proof)
+        ccf.receipt.verify(root, signature, node_cert)
+
+        # receipt is valid, check if it matches our claims too
         claims = lskvserver_pb2.ReceiptClaims()
         getattr(claims, f"request_{req_type}").CopyFrom(request)
         getattr(claims, f"response_{req_type}").CopyFrom(response)
