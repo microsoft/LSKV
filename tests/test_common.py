@@ -418,6 +418,13 @@ class HttpClient:
             proto = ParseDict(res.json(), etcd_pb2.LeaseKeepAliveResponse())
         return (res, proto)
 
+    def status(self):
+        """
+        Get the status of LSKV.
+        """
+        logger.info("Status")
+        return self.client.post("/v3/maintenance/status", json={})
+
     def raw(self) -> httpx.Client:
         """
         Get the raw client.

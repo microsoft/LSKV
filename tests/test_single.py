@@ -5,6 +5,7 @@
 Test a single node
 """
 
+import re
 from http import HTTPStatus
 
 from loguru import logger
@@ -86,6 +87,17 @@ def test_kv_historical(http1_client):
         res = http1_client.get("fooh", rev=rev)
         assert b64decode(res.json()["kvs"][0]["key"]) == "fooh"
         assert b64decode(res.json()["kvs"][0]["value"]) == f"bar{i}"
+
+
+def test_status_version(http1_client):
+    """
+    Test that the status endpoint returns the version.
+    """
+    res = http1_client.status()
+    check_response(res)
+    version = res.json()["version"]
+    version_re = r"^\d+\.\d+\.\d+(-.*)?$"
+    assert re.match(version_re, version)
 
 
 # pylint: disable=redefined-outer-name

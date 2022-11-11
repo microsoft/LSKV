@@ -175,6 +175,27 @@ namespace app::json_grpc
   }
 
   template <typename In, typename Out>
+  ccf::endpoints::CommandEndpointFunction json_grpc_command_adapter(
+    const ccf::GrpcCommandEndpoint<In, Out>& f)
+  {
+    return [f](ccf::endpoints::CommandEndpointContext& ctx) {
+      try
+      {
+        set_json_grpc_response<Out>(
+          f(ctx, get_json_grpc_payload<In>(ctx.rpc_ctx)), ctx.rpc_ctx);
+      }
+      catch (app::exceptions::BadRequest& e)
+      {
+        ctx.rpc_ctx->set_error(std::move(e.error));
+      }
+      catch (app::exceptions::WrongMediaType& e)
+      {
+        ctx.rpc_ctx->set_error(std::move(e.error));
+      }
+    };
+  }
+
+  template <typename In, typename Out>
   ccf::historical::HandleReadOnlyHistoricalQuery historical_json_grpc_adapter(
     const app::grpc::HistoricalGrpcReadOnlyEndpoint<In, Out>& f)
   {
