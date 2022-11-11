@@ -329,6 +329,13 @@ class HttpClient:
         j = {"ID": lease_id}
         return self.client.post("/v3/lease/keepalive", json=j)
 
+    def status(self):
+        """
+        Get the status of LSKV.
+        """
+        logger.info("Status")
+        return self.client.post("/v3/maintenance/status", json={})
+
     def raw(self) -> httpx.Client:
         """
         Get the raw client.

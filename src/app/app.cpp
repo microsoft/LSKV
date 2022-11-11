@@ -65,6 +65,7 @@ namespace app
       const auto lease = "Lease";
       const auto cluster = "Cluster";
       const auto receipt = "Receipt";
+      const auto maintenance = "Maintenance";
 
       auto range = [this](
                      ccf::endpoints::ReadOnlyEndpointContext& ctx,
@@ -284,6 +285,17 @@ namespace app
         "/v3/receipt/get_receipt",
         get_receipt,
         context);
+
+      auto status = [this](
+                      ccf::endpoints::CommandEndpointContext& ctx,
+                      etcdserverpb::StatusRequest&& payload) {
+        return this->status(ctx, std::move(payload));
+      };
+
+      install_command_endpoint<
+        etcdserverpb::StatusRequest,
+        etcdserverpb::StatusResponse>(
+        etcdserverpb, maintenance, "Status", "/v3/maintenance/status", status);
     }
 
     template <typename Out>
@@ -309,6 +321,42 @@ namespace app
       ccf::AuthnPolicies policies;
       policies.push_back(ccf::user_cert_auth_policy);
       return policies;
+    }
+
+    template <typename In, typename Out>
+    void install_command_endpoint(
+      const std::string& package,
+      const std::string& service,
+      const std::string& rpc,
+      const std::string& path,
+      const ccf::GrpcCommandEndpoint<In, Out>& f)
+    {
+      auto g = [this,
+                f](ccf::endpoints::CommandEndpointContext& ctx, In&& payload) {
+        auto res = f(ctx, std::move(payload));
+        if (auto success = std::get_if<ccf::grpc::SuccessResponse<Out>>(&res))
+        {
+          auto* header = success->body.mutable_header();
+          // command endpoints don't have a transaction so return the last
+          // committed one so etcd clients can use it still
+          auto committed = last_committed_txid();
+          fill_header(*header, committed);
+        } // else just leave the response
+        return res;
+      };
+      auto grpc_path = fmt::format("/{}.{}/{}", package, service, rpc);
+      make_command_endpoint(
+        grpc_path,
+        HTTP_POST,
+        ccf::grpc_command_adapter<In, Out>(g),
+        ccf::no_auth_required)
+        .install();
+      make_command_endpoint(
+        path,
+        HTTP_POST,
+        app::json_grpc::json_grpc_command_adapter<In, Out>(g),
+        ccf::no_auth_required)
+        .install();
     }
 
     template <typename In, typename Out>
@@ -1171,6 +1219,19 @@ namespace app
       return ccf::grpc::make_success(response);
     }
 
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::StatusResponse> status(
+      ccf::endpoints::CommandEndpointContext& ctx,
+      etcdserverpb::StatusRequest&& payload)
+    {
+      etcdserverpb::StatusResponse response;
+      CCF_APP_DEBUG("MAINTENANCE STATUS");
+
+      response.set_leader(0);
+      response.set_version(LSKV_VERSION);
+
+      return ccf::grpc::make_success(response);
+    }
+
     void revoke_expired_leases(kv::Tx& tx)
     {
       CCF_APP_DEBUG("revoking any expired leases");
@@ -1222,18 +1283,22 @@ namespace app
       header.set_member_id(member_id());
       header.set_revision(tx_id.seqno);
       header.set_raft_term(tx_id.view);
+
+      auto committed = last_committed_txid();
+      header.set_committed_revision(committed.seqno);
+      header.set_committed_raft_term(committed.view);
+    }
+
+    ccf::TxID last_committed_txid()
+    {
       ccf::View committed_view;
       ccf::SeqNo committed_seqno;
       auto res = get_last_committed_txid_v1(committed_view, committed_seqno);
-      if (res == ccf::ApiResult::OK)
-      {
-        header.set_committed_revision(committed_seqno);
-        header.set_committed_raft_term(committed_view);
-      }
-      else
+      if (res != ccf::ApiResult::OK)
       {
         CCF_APP_FAIL("failed to get last committed txid: {}", res);
       }
+      return {committed_view, committed_seqno};
     }
 
     void populate_cluster_id(kv::ReadOnlyTx& tx)
