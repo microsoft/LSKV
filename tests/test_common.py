@@ -8,6 +8,7 @@ Common utils for testing.
 import base64
 import os
 import time
+from http import HTTPStatus
 from subprocess import PIPE, Popen
 from typing import Any, Dict, List
 
@@ -202,6 +203,18 @@ def fixture_http1_client(sandbox):
         yield HttpClient(client)
 
 
+@pytest.fixture(name="http1_client_unauthenticated", scope="module")
+def fixture_http1_client_unauthenticated(sandbox):
+    """
+    Make an unauthenticated http1 client for the sandbox.
+    """
+    cacert = sandbox.cacert()
+    with httpx.Client(
+        http2=False, verify=cacert, base_url="https://127.0.0.1:8000"
+    ) as client:
+        yield HttpClient(client)
+
+
 def b64encode(in_str: str) -> str:
     """
     Base64 encode a string.
@@ -237,7 +250,7 @@ class HttpClient:
             i += 1
             tx_status = self.tx_status(txid)
             logger.debug("tx_status: {}", tx_status)
-            if tx_status.status_code == 200:
+            if tx_status.status_code == HTTPStatus.OK:
                 body = tx_status.json()
                 if "status" in body:
                     status = body["status"]
@@ -272,14 +285,15 @@ class HttpClient:
             j["revision"] = rev
         return self.client.post("/v3/kv/range", json=j)
 
-    def put(self, key: str, value: str):
+    def put(self, key: str, value: str, lease_id: int = 0):
         """
         Perform a put operation on lskv.
         """
-        logger.info("Put: {} {}", key, value)
-        return self.client.post(
-            "/v3/kv/put", json={"key": b64encode(key), "value": b64encode(value)}
-        )
+        logger.info("Put: {} {} {}", key, value, lease_id)
+        j: Dict[str, Any] = {"key": b64encode(key), "value": b64encode(value)}
+        if lease_id:
+            j["lease"] = lease_id
+        return self.client.post("/v3/kv/put", json=j)
 
     def delete(self, key: str, range_end: str = ""):
         """
@@ -290,6 +304,30 @@ class HttpClient:
         if range_end:
             j["range_end"] = b64encode(range_end)
         return self.client.post("/v3/kv/delete_range", json=j)
+
+    def lease_grant(self, ttl: int = 60):
+        """
+        Perform a lease grant operation.
+        """
+        logger.info("LeaseGrant: {}", ttl)
+        j = {"TTL": ttl}
+        return self.client.post("/v3/lease/grant", json=j)
+
+    def lease_revoke(self, lease_id: str):
+        """
+        Perform a lease revoke operation.
+        """
+        logger.info("LeaseRevoke: {}", lease_id)
+        j = {"ID": lease_id}
+        return self.client.post("/v3/lease/revoke", json=j)
+
+    def lease_keep_alive(self, lease_id: str):
+        """
+        Perform a lease keep_alive operation.
+        """
+        logger.info("LeaseKeepAlive: {}", lease_id)
+        j = {"ID": lease_id}
+        return self.client.post("/v3/lease/keepalive", json=j)
 
     def raw(self) -> httpx.Client:
         """
