@@ -8,10 +8,15 @@ Test a single node
 from http import HTTPStatus
 
 from loguru import logger
+
 # pylint: disable=unused-import
 # pylint: disable=no-name-in-module
-from test_common import (b64decode, fixture_http1_client,
-                         fixture_http1_client_unauthenticated, fixture_sandbox)
+from test_common import (
+    b64decode,
+    fixture_http1_client,
+    fixture_http1_client_unauthenticated,
+    fixture_sandbox,
+)
 
 
 # pylint: disable=redefined-outer-name
@@ -28,11 +33,11 @@ def test_unauthenticated(http1_client_unauthenticated):
     """
     Test that the unauthenticated users can't interact.
     """
-    res = http1_client_unauthenticated.put("foo", "bar")
+    res = http1_client_unauthenticated.put("foo", "bar", check=False)
     assert res.status_code == HTTPStatus.UNAUTHORIZED
-    res = http1_client_unauthenticated.get("foo")
+    res = http1_client_unauthenticated.get("foo", check=False)
     assert res.status_code == HTTPStatus.UNAUTHORIZED
-    res = http1_client_unauthenticated.delete("foo")
+    res = http1_client_unauthenticated.delete("foo", check=False)
     assert res.status_code == HTTPStatus.UNAUTHORIZED
 
 
@@ -90,18 +95,18 @@ def test_lease_kv(http1_client):
     """
     key = __name__
     # create a lease
-    res = http1_client.lease_grant()
-    lease_id = res.json()["ID"]
+    _, proto = http1_client.lease_grant()
+    lease_id = proto.ID
 
     # then create a key with it
-    res = http1_client.put(key, "present", lease_id=lease_id)
+    http1_client.put(key, "present", lease_id=lease_id)
 
     # then get the key to check it has the lease id set
     res = http1_client.get(key)
     assert res.json()["kvs"][0]["lease"] == lease_id
 
     # revoke the lease
-    res = http1_client.lease_revoke(lease_id)
+    http1_client.lease_revoke(lease_id)
 
     # get the key again to see if it exists
     res = http1_client.get(key)
@@ -114,20 +119,20 @@ def test_lease(http1_client):
     Test lease creation, revocation and keep-alive.
     """
     # creating a lease works
-    res = http1_client.lease_grant()
-    lease_id = res.json()["ID"]
+    _, proto = http1_client.lease_grant()
+    lease_id = proto.ID
 
     # then we can keep that lease alive (extending the ttl)
-    res = http1_client.lease_keep_alive(lease_id)
+    http1_client.lease_keep_alive(lease_id)
 
     # and explicitly revoke the lease
-    res = http1_client.lease_revoke(lease_id)
+    http1_client.lease_revoke(lease_id)
 
     # but we can't keep a revoked lease alive
-    res = http1_client.lease_keep_alive(lease_id)
+    res, proto = http1_client.lease_keep_alive(lease_id, check=False)
     logger.info("res: {} {}", res.status_code, res.text)
     assert res.status_code == 400
 
     # and we can't revoke lease that wasn't active (or known)
     missing_id = "002"
-    res = http1_client.lease_revoke(missing_id)
+    http1_client.lease_revoke(missing_id)

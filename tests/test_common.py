@@ -282,7 +282,7 @@ class HttpClient:
         """
         return self.client.get(f"/app/tx?transaction_id={txid}")
 
-    def get(self, key: str, range_end: str = "", rev: int = 0):
+    def get(self, key: str, range_end: str = "", rev: int = 0, check=True):
         """
         Perform a get operation on lskv.
         """
@@ -295,11 +295,19 @@ class HttpClient:
             req.revision = rev
         j = MessageToDict(req)
         res = self.client.post("/v3/kv/range", json=j)
-        check_response(res)
+        if check:
+            check_response(res)
         return res
 
+    # pylint: disable=too-many-arguments
     def put(
-        self, key: str, value: str, lease_id:int=0, wait_for_commit: bool = True, check_receipt=True
+        self,
+        key: str,
+        value: str,
+        lease_id: int = 0,
+        wait_for_commit: bool = True,
+        check_receipt=True,
+        check=True,
     ):
         """
         Perform a put operation on lskv.
@@ -312,21 +320,24 @@ class HttpClient:
             req.lease = lease_id
         j = MessageToDict(req)
         res = self.client.post("/v3/kv/put", json=j)
-        check_response(res)
-        if wait_for_commit:
-            rev, term = extract_rev_term(res)
-            self.wait_for_commit(term, rev)
-        if check_receipt:
-            res_pb = ParseDict(res.json(), etcd_pb2.PutResponse())
-            self.check_receipt("put", req, res_pb)
+        if check:
+            check_response(res)
+            if wait_for_commit:
+                rev, term = extract_rev_term(res)
+                self.wait_for_commit(term, rev)
+            if check_receipt:
+                res_pb = ParseDict(res.json(), etcd_pb2.PutResponse())
+                self.check_receipt("put", req, res_pb)
         return res
 
+    # pylint: disable=too-many-arguments
     def delete(
         self,
         key: str,
         range_end: str = "",
         wait_for_commit: bool = True,
         check_receipt=True,
+        check=True,
     ):
         """
         Perform a delete operation on lskv.
@@ -338,13 +349,14 @@ class HttpClient:
             req.range_end = range_end.encode("utf-8")
         j = MessageToDict(req)
         res = self.client.post("/v3/kv/delete_range", json=j)
-        check_response(res)
-        if wait_for_commit:
-            rev, term = extract_rev_term(res)
-            self.wait_for_commit(term, rev)
-        if check_receipt:
-            res_pb = ParseDict(res.json(), etcd_pb2.DeleteRangeResponse())
-            self.check_receipt("delete_range", req, res_pb)
+        if check:
+            check_response(res)
+            if wait_for_commit:
+                rev, term = extract_rev_term(res)
+                self.wait_for_commit(term, rev)
+            if check_receipt:
+                res_pb = ParseDict(res.json(), etcd_pb2.DeleteRangeResponse())
+                self.check_receipt("delete_range", req, res_pb)
         return res
 
     def get_receipt(self, rev: int, term: int):
@@ -375,9 +387,10 @@ class HttpClient:
         """
         logger.info("LeaseGrant: {}", ttl)
         j = {"TTL": ttl}
-        res =  self.client.post("/v3/lease/grant", json=j)
+        res = self.client.post("/v3/lease/grant", json=j)
         check_response(res)
-        return res
+        proto = ParseDict(res.json(), etcd_pb2.LeaseGrantResponse())
+        return (res, proto)
 
     def lease_revoke(self, lease_id: str):
         """
@@ -385,19 +398,23 @@ class HttpClient:
         """
         logger.info("LeaseRevoke: {}", lease_id)
         j = {"ID": lease_id}
-        res =  self.client.post("/v3/lease/revoke", json=j)
+        res = self.client.post("/v3/lease/revoke", json=j)
         check_response(res)
-        return res
+        proto = ParseDict(res.json(), etcd_pb2.LeaseRevokeResponse())
+        return (res, proto)
 
-    def lease_keep_alive(self, lease_id: str):
+    def lease_keep_alive(self, lease_id: str, check=True):
         """
         Perform a lease keep_alive operation.
         """
         logger.info("LeaseKeepAlive: {}", lease_id)
         j = {"ID": lease_id}
-        res =  self.client.post("/v3/lease/keepalive", json=j)
-        check_response(res)
-        return res
+        res = self.client.post("/v3/lease/keepalive", json=j)
+        proto = None
+        if check:
+            check_response(res)
+            proto = ParseDict(res.json(), etcd_pb2.LeaseKeepAliveResponse())
+        return (res, proto)
 
     def raw(self) -> httpx.Client:
         """
@@ -405,6 +422,7 @@ class HttpClient:
         """
         return self.client
 
+    # pylint: disable=too-many-locals
     def check_receipt(self, req_type: str, request, response):
         """
         Check a receipt for a request and response.
@@ -415,13 +433,15 @@ class HttpClient:
         receipt = res.json()["receipt"]
         tx_receipt = receipt["txReceipt"]
         leaf_components = tx_receipt["leafComponents"]
-        claims_digest:str = leaf_components["claimsDigest"]
-        write_set_digest:str = leaf_components["writeSetDigest"]
+        claims_digest: str = leaf_components["claimsDigest"]
+        write_set_digest: str = leaf_components["writeSetDigest"]
         commit_evidence = leaf_components["commitEvidence"]
 
         response.ClearField("header")
 
-        commit_evidence_digest = hashlib.sha256(commit_evidence.encode("utf-8")).hexdigest()
+        commit_evidence_digest = hashlib.sha256(
+            commit_evidence.encode("utf-8")
+        ).hexdigest()
         leaf_parts = [write_set_digest, commit_evidence_digest, claims_digest]
         leaf = hashlib.sha256("".join(leaf_parts).encode("utf-8")).hexdigest()
 
