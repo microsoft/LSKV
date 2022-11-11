@@ -117,6 +117,10 @@ patched-k6:
 	cp -r 3rdparty/k6 $(BUILD)/3rdparty/.
 	git apply --directory=$(BUILD)/3rdparty/k6 patches/k6-micro.diff
 
+.PHONY: protoc-gen-openapi
+protoc-gen-openapi:
+	go install github.com/google/gnostic/cmd/protoc-gen-openapi@v0.6.9
+
 $(BIN_DIR)/benchmark: patched-etcd
 	cd $(BUILD)/3rdparty/etcd && go build -buildvcs=false ./tools/benchmark
 	mkdir -p $(BIN_DIR)
