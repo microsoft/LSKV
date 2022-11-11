@@ -47,10 +47,10 @@ build-virtual:
 	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -GNinja ..
 	cd $(BUILD) && ninja
 
-.PHONY: build-virtual-unsafe
-build-virtual-unsafe:
+.PHONY: build-virtual-verbose
+build-virtual-verbose:
 	mkdir -p $(BUILD)
-	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=ON -DCCF_UNSAFE=ON -GNinja ..
+	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=ON -DCCF_UNSAFE=OFF -GNinja ..
 	cd $(BUILD) && ninja
 
 .PHONY: build-sgx
@@ -79,16 +79,16 @@ debug-dockerignore:
 run-virtual: build-virtual
 	VENV_DIR=.venv $(CCF_PREFIX_VIRTUAL)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2
 
-.PHONY: run-virtual-unsafe
-run-virtual-unsafe: build-virtual-unsafe
+.PHONY: run-virtual-verbose
+run-virtual-verbose: build-virtual-verbose
 	VENV_DIR=.venv $(CCF_PREFIX_VIRTUAL)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2
 
 .PHONY: run-virtual-http1
 run-virtual-http1: build-virtual
 	VENV_DIR=.venv $(CCF_PREFIX_VIRTUAL)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so
 
-.PHONY: run-virtual-unsafe-http1
-run-virtual-unsafe-http1: build-virtual-unsafe
+.PHONY: run-virtual-verbose-http1
+run-virtual-verbose-http1: build-virtual-verbose
 	VENV_DIR=.venv $(CCF_PREFIX_VIRTUAL)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so
 
 .PHONY: run-sgx

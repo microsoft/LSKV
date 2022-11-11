@@ -19,6 +19,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Make sure github workspace is git safe
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Build app
         run: make build-virtual
@@ -39,6 +44,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Build container
         run: docker build -t $ACR_REGISTRY/public/lskv:latest-virtual -f Dockerfile.virtual .
@@ -57,6 +64,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Build container
         run: docker build -t $ACR_REGISTRY/public/lskv:latest-sgx -f Dockerfile.sgx .
@@ -79,6 +88,8 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Run checks
         run: ./scripts/ci-checks.sh
@@ -89,6 +100,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Check issues
         run: ./scripts/check-issues.sh

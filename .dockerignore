@@ -8,7 +8,6 @@
 /.cache/
 /.clang-format
 /.dockerignore
-/.git/
 /.github/
 /.gitignore
 /.gitmodules
