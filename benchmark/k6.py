@@ -8,13 +8,13 @@ Run benchmarks in various configurations for each defined datastore.
 
 import argparse
 import os
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from typing import List
 
 import common
 from common import Store
-from stores import LSKVStore
 from loguru import logger
+from stores import LSKVStore
 
 BENCH_DIR = os.path.join(common.BENCH_DIR, "k6")
 
@@ -28,6 +28,7 @@ class K6Config(common.Config):
 
     rate: int
     vus: int
+    func: str
 
     def bench_name(self) -> str:
         """
@@ -60,6 +61,8 @@ class K6Benchmark(common.Benchmark):
             f"RATE={self.config.rate}",
             "--env",
             f"WORKSPACE={workspace}",
+            "--env",
+            f"FUNC={self.config.func}",
             "--env",
             f"PRE_ALLOCATED_VUS={self.config.vus}",
             "--env",
@@ -122,6 +125,14 @@ def get_arguments():
         default=[],
         help="VUs to use",
     )
+    parser.add_argument(
+        "--func",
+        action="extend",
+        nargs="+",
+        type=int,
+        default=[],
+        help="Functions to run",
+    )
 
     args = parser.parse_args()
 
@@ -129,6 +140,8 @@ def get_arguments():
         args.rate = [1000]
     if not args.vus:
         args.vus = [100]
+    if not args.func:
+        args.func = ["put_single"]
 
     return args
 
@@ -167,12 +180,15 @@ def make_configurations(args: argparse.Namespace) -> List[K6Config]:
             logger.debug("adding rate: {}", rate)
             for vus in args.vus:
                 logger.debug("adding vus: {}", vus)
-                conf = K6Config(
-                    **asdict(common_config),
-                    rate=rate,
-                    vus=vus,
-                )
-                configs.append(conf)
+                for func in args.func:
+                    logger.debug("adding func: {}", func)
+                    conf = K6Config(
+                        **asdict(common_config),
+                        rate=rate,
+                        vus=vus,
+                        func=func,
+                    )
+                    configs.append(conf)
 
     return configs
 
