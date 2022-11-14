@@ -27,19 +27,19 @@ CCF_SGX_UNSAFE_VER_LOWER=ccf_sgx_unsafe_3.0.0_rc1
 install-ccf-virtual:
 	wget -c https://github.com/microsoft/CCF/releases/download/$(CCF_VER)/$(CCF_VER_LOWER)_amd64.deb # download deb
 	sudo apt install ./$(CCF_VER_LOWER)_amd64.deb # Installs CCF under /opt/ccf_virtual
-	/opt/ccf_virtual/getting_started/setup_vm/run.sh /opt/ccf_virtual/getting_started/setup_vm/app-dev.yml  # Install dependencies
+	/opt/ccf_virtual/getting_started/setup_vm/run.sh /opt/ccf_virtual/getting_started/setup_vm/app-dev.yml --extra-vars "platform=virtual"  # Install dependencies
 
 .PHONY: install-ccf-sgx
 install-ccf-sgx:
 	wget -c https://github.com/microsoft/CCF/releases/download/$(CCF_VER)/$(CCF_SGX_VER_LOWER)_amd64.deb # download deb
 	sudo apt install ./$(CCF_SGX_VER_LOWER)_amd64.deb # Installs CCF under /opt/ccf_sgx
-	/opt/ccf_sgx/getting_started/setup_vm/run.sh /opt/ccf_sgx/getting_started/setup_vm/app-dev.yml  # Install dependencies
+	/opt/ccf_sgx/getting_started/setup_vm/run.sh /opt/ccf_sgx/getting_started/setup_vm/app-dev.yml --extra-vars "platform=sgx" # Install dependencies
 
 .PHONY: install-ccf-sgx-unsafe
 install-ccf-sgx-unsafe:
 	wget -c https://github.com/microsoft/CCF/releases/download/$(CCF_VER)/$(CCF_SGX_UNSAFE_VER_LOWER)_amd64.deb # download deb
 	sudo apt install ./$(CCF_SGX_UNSAFE_VER_LOWER)_amd64.deb # Installs CCF under /opt/ccf_sgx_unsafe
-	/opt/ccf_sgx_unsafe/getting_started/setup_vm/run.sh /opt/ccf_sgx_unsafe/getting_started/setup_vm/app-dev.yml  # Install dependencies
+	/opt/ccf_sgx_unsafe/getting_started/setup_vm/run.sh /opt/ccf_sgx_unsafe/getting_started/setup_vm/app-dev.yml --extra-vars "platform=sgx" # Install dependencies
 
 .PHONY: build-virtual
 build-virtual:
