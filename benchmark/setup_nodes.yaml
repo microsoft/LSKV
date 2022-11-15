@@ -55,3 +55,25 @@
       community.general.make:
         target: install-ccf-virtual
         chdir: /tmp/lskv
+
+- hosts: all[0]
+  remote_user: lskv
+  tasks:
+    - name: Install deps for sandbox
+      ansible.builtin.pip:
+        name: pip
+        virtualenv: /home/lskv/.venv_ccf_sandbox
+        virtualenv_command: python3 -m venv
+
+    - name: Install deps for sandbox
+      ansible.builtin.pip:
+        name: ccf==3.0.0rc1
+        virtualenv: /home/lskv/.venv_ccf_sandbox
+        virtualenv_command: python3 -m venv
+
+    - name: Install deps for sandbox
+      ansible.builtin.pip:
+        requirements: /opt/ccf_virtual/bin/requirements.txt
+        virtualenv: /home/lskv/.venv_ccf_sandbox
+        virtualenv_command: python3 -m venv
+
