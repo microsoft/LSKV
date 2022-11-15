@@ -90,6 +90,8 @@ class Curl:
             term = header["raftTerm"]
         elif "raft_term" in header:
             term = header["raft_term"]
+        else:
+            raise ValueError(f"missing raft term in header: {header}")
 
         return (term, rev)
 
@@ -97,7 +99,7 @@ class Curl:
         data = {
             "key": key,
         }
-        run(
+        res = run(
             self.base_cmd()
             + [
                 "-X",
@@ -109,12 +111,23 @@ class Curl:
                 "content-type: application/json",
             ]
         )
+        header = json.loads(res.stdout.decode("utf-8"))["header"]
+        rev = header["revision"]
+        if "raftTerm" in header:
+            term = header["raftTerm"]
+        elif "raft_term" in header:
+            term = header["raft_term"]
+        else:
+            raise ValueError(f"missing raft term in header: {header}")
+
+        return (term, rev)
 
     def tx_status(self, term: int, rev: int, wait=True):
         txid = f"{term}.{rev}"
         run(
             self.base_cmd()
-            + ["-X", "GET", f"{self.address}/app/tx?transaction_id={txid}"],wait=wait
+            + ["-X", "GET", f"{self.address}/app/tx?transaction_id={txid}"],
+            wait=wait,
         )
 
     def get_receipt(self, term: int, rev: int):
@@ -191,18 +204,31 @@ class Etcdctl:
             term = header["raftTerm"]
         elif "raft_term" in header:
             term = header["raft_term"]
+        else:
+            raise ValueError(f"missing raft term in header: {header}")
 
         return (term, rev)
 
     def delete(self, key: str):
         cmd = self.base_cmd() + ["del", key]
-        run(cmd)
+        res = run(cmd)
+        header = json.loads(res.stdout.decode("utf-8"))["header"]
+        rev = header["revision"]
+        if "raftTerm" in header:
+            term = header["raftTerm"]
+        elif "raft_term" in header:
+            term = header["raft_term"]
+        else:
+            raise ValueError(f"missing raft term in header: {header}")
+
+        return (term, rev)
 
     def tx_status(self, term: int, rev: int, wait=True):
         txid = f"{term}.{rev}"
         run(
             self.curl.base_cmd()
-            + ["-X", "GET", f"{self.address}/app/tx?transaction_id={txid}"],wait=wait
+            + ["-X", "GET", f"{self.address}/app/tx?transaction_id={txid}"],
+            wait=wait,
         )
 
     def get_receipt(self, term: int, rev: int):
@@ -290,7 +316,12 @@ def main(port: int, common_dir: str, client_type: str):
     # delete the value
     print()
     print("But we don't need it any more so delete it")
-    client.delete(key)
+    del_term, del_rev= client.delete(key)
+    client.tx_status(del_term, del_rev, wait=False)
+
+    print()
+    print("Check the status of the commit")
+    client.tx_status(del_term, del_rev)
 
     # read the value
     print()
