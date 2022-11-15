@@ -83,3 +83,9 @@
         virtualenv: /tmp/lskv/.venv_ccf_sandbox
         virtualenv_command: python3 -m venv
 
+    - name: Install deps for benchmarking
+      ansible.builtin.pip:
+        requirements: /tmp/lskv/requirements.txt
+        virtualenv: /tmp/lskv/.venv
+        virtualenv_command: python3 -m venv
+
