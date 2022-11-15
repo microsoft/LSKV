@@ -13,13 +13,17 @@ from loguru import logger
 
 
 def run(
-    cmd: List[str], json_resp=True, silent=False, **kwargs
+    cmd: List[str], json_resp=True, silent=False, wait=True, **kwargs
 ) -> subprocess.CompletedProcess:
     """
     Run a command.
     """
     cmd_str = subprocess.list2cmdline(cmd)
-    input(f"Run: {cmd_str}")
+    if wait:
+        input(f"Run: {cmd_str}")
+    else:
+        print(f"Run: {cmd_str}")
+
     # pylint: disable=subprocess-run-check
     proc = subprocess.run(cmd, capture_output=True, **kwargs)
     if proc.returncode != 0:
@@ -106,11 +110,11 @@ class Curl:
             ]
         )
 
-    def tx_status(self, term: int, rev: int):
+    def tx_status(self, term: int, rev: int, wait=True):
         txid = f"{term}.{rev}"
         run(
             self.base_cmd()
-            + ["-X", "GET", f"{self.address}/app/tx?transaction_id={txid}"]
+            + ["-X", "GET", f"{self.address}/app/tx?transaction_id={txid}"],wait=wait
         )
 
     def get_receipt(self, term: int, rev: int):
@@ -194,11 +198,11 @@ class Etcdctl:
         cmd = self.base_cmd() + ["del", key]
         run(cmd)
 
-    def tx_status(self, term: int, rev: int):
+    def tx_status(self, term: int, rev: int, wait=True):
         txid = f"{term}.{rev}"
         run(
             self.curl.base_cmd()
-            + ["-X", "GET", f"{self.address}/app/tx?transaction_id={txid}"]
+            + ["-X", "GET", f"{self.address}/app/tx?transaction_id={txid}"],wait=wait
         )
 
     def get_receipt(self, term: int, rev: int):
@@ -247,15 +251,19 @@ def to_b64(s: str) -> str:
 
 
 def main(port: int, common_dir: str, client_type: str):
-    user_key = "test"
-    user_value = "arsotine"
-    key = to_b64(user_key)
-    value = to_b64(user_value)
+    user_key = "hello"
+    user_value = "ccf"
 
     if client_type == "curl":
         client = Curl(port, common_dir)
+        key = to_b64(user_key)
+        value = to_b64(user_value)
     elif client_type == "etcd":
         client = Etcdctl(port, common_dir)
+        key = user_key
+        value = user_value
+    else:
+        raise ValueError(f"incorrect client type: {client_type}")
 
     client.list_endpoints()
 
@@ -268,6 +276,7 @@ def main(port: int, common_dir: str, client_type: str):
     print()
     print("Add a value for the key")
     put_term, put_rev = client.put(key, value)
+    client.tx_status(put_term, put_rev, wait=False)
 
     print()
     print("Check the status of the commit")
