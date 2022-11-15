@@ -37,6 +37,7 @@ class Config:
     """
 
     store: str
+    distributed: bool
     port: int
     tls: bool
     enclave: str
@@ -261,6 +262,16 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--sig-ms-intervals", action="extend", nargs="+", type=int)
     parser.add_argument("--ledger-chunk-bytes", action="extend", nargs="+", type=str)
     parser.add_argument("--snapshot-tx-intervals", action="extend", nargs="+", type=int)
+    parser.add_argument(
+        "--distributed",
+        action="store_true",
+        help="Whether to run in distributed mode",
+    )
+    parser.add_argument(
+        "--converged",
+        action="store_true",
+        help="Whether to run in converged mode",
+    )
     return parser
 
 
@@ -333,6 +344,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                 logger.debug("adding insecure etcd")
                 etcd_config = Config(
                     store="etcd",
+                    distributed=False,
                     port=port,
                     tls=False,
                     enclave="virtual",
@@ -350,6 +362,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
             logger.debug("adding tls etcd")
             etcd_config = Config(
                 store="etcd",
+                distributed=False,
                 port=port,
                 tls=True,
                 enclave="virtual",
@@ -400,12 +413,30 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                                     lskv_config = copy.deepcopy(lskv_config)
                                     lskv_config.http_version = 1
                                     logger.debug("adding http1 lskv")
-                                    configs.append(lskv_config)
+                                    if args.distributed:
+                                        lskv_config = copy.deepcopy(lskv_config)
+                                        lskv_config.distributed = True
+                                        logger.debug("adding distributed lskv")
+                                        configs.append(lskv_config)
+                                    if args.converged:
+                                        lskv_config = copy.deepcopy(lskv_config)
+                                        lskv_config.distributed = False
+                                        logger.debug("adding converged lskv")
+                                        configs.append(lskv_config)
                                 if args.http2:
                                     lskv_config = copy.deepcopy(lskv_config)
                                     lskv_config.http_version = 2
                                     logger.debug("adding http2 lskv")
-                                    configs.append(lskv_config)
+                                    if args.distributed:
+                                        lskv_config = copy.deepcopy(lskv_config)
+                                        lskv_config.distributed = True
+                                        logger.debug("adding distributed lskv")
+                                        configs.append(lskv_config)
+                                    if args.converged:
+                                        lskv_config = copy.deepcopy(lskv_config)
+                                        lskv_config.distributed = False
+                                        logger.debug("adding converged lskv")
+                                        configs.append(lskv_config)
 
                             # sgx
                             if "sgx" in args.enclave:
@@ -416,12 +447,30 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                                     lskv_config = copy.deepcopy(lskv_config)
                                     lskv_config.http_version = 1
                                     logger.debug("adding http1 lskv")
-                                    configs.append(lskv_config)
+                                    if args.distributed:
+                                        lskv_config = copy.deepcopy(lskv_config)
+                                        lskv_config.distributed = True
+                                        logger.debug("adding distributed lskv")
+                                        configs.append(lskv_config)
+                                    if args.converged:
+                                        lskv_config = copy.deepcopy(lskv_config)
+                                        lskv_config.distributed = False
+                                        logger.debug("adding converged lskv")
+                                        configs.append(lskv_config)
                                 if args.http2:
                                     lskv_config = copy.deepcopy(lskv_config)
                                     lskv_config.http_version = 2
                                     logger.debug("adding http2 lskv")
-                                    configs.append(lskv_config)
+                                    if args.distributed:
+                                        lskv_config = copy.deepcopy(lskv_config)
+                                        lskv_config.distributed = True
+                                        logger.debug("adding distributed lskv")
+                                        configs.append(lskv_config)
+                                    if args.converged:
+                                        lskv_config = copy.deepcopy(lskv_config)
+                                        lskv_config.distributed = False
+                                        logger.debug("adding converged lskv")
+                                        configs.append(lskv_config)
 
     return configs
 

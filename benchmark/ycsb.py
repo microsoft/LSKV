@@ -14,7 +14,7 @@ from typing import List
 import common
 from common import Store
 from loguru import logger
-from stores import EtcdStore, LSKVStore
+from stores import DistributedLSKVStore, EtcdStore, LSKVStore
 
 BENCH_DIR = os.path.join(common.BENCH_DIR, "ycsb")
 
@@ -186,7 +186,13 @@ def execute_config(config: YCSBConfig):
     """
     Execute the given configuration.
     """
-    store = EtcdStore(config) if config.store == "etcd" else LSKVStore(config)
+    if config.store == "etcd":
+        store = EtcdStore(config)
+    else:
+        if config.distributed:
+            store = DistributedLSKVStore(config)
+        else:
+            store = LSKVStore(config)
     benchmark = YCSBenchmark(config)
 
     timings_file = run_benchmark(

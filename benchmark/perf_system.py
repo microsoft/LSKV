@@ -16,7 +16,7 @@ from typing import List
 import common
 from common import Store
 from loguru import logger
-from stores import LSKVStore
+from stores import DistributedLSKVStore, LSKVStore
 
 BENCH_DIR = os.path.join(common.BENCH_DIR, "perf")
 
@@ -133,7 +133,10 @@ def execute_config(config: PerfConfig):
         # doesn't work with the etcd API
         logger.info("skipping test with etcd store")
         return
-    store = LSKVStore(config)
+    if config.distributed:
+        store = DistributedLSKVStore(config)
+    else:
+        store = LSKVStore(config)
     benchmark = PerfBenchmark(config)
 
     timings_file = run_benchmark(
