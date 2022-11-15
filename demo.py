@@ -29,7 +29,7 @@ def run(
     if proc.returncode != 0:
         logger.warning("Command failed, returned {}", proc.returncode)
     if not silent and proc.stdout:
-        data = proc.stdout.decode("utf-8")
+        data = proc.stdout
         if json_resp:
             data = json.loads(data)
             pprint(data)
