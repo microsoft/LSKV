@@ -2,7 +2,7 @@
   gather_facts: false
   tasks:
     - name: Accept new ssh fingerprints
-      shell: ssh-keyscan -H {{ inventory_hostname }}
+      shell: ssh-keyscan {{ inventory_hostname }} >> ~/.ssh/known_hosts
       delegate_to: localhost
 
 - hosts: all
