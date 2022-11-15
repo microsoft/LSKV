@@ -63,6 +63,7 @@
       ansible.builtin.apt:
         deb: "{{ ccf_deb }}"
         update_cache: true
+        force: true
       become: true
 
     - name: Install app dev deps
