@@ -12,8 +12,37 @@ from typing import Any, Dict, List, Tuple
 from loguru import logger
 
 
+def to_nice_json(j: Any) -> Any:
+    """
+    Convert etcd json output base64 strings to nice strings.
+    """
+    if isinstance(j, dict):
+        for k, v in j.items():
+            j[k] = to_nice_json(v)
+    if isinstance(j, list):
+        for i, v in enumerate(j):
+            j[i] = to_nice_json(v)
+    if isinstance(j, str):
+        try:
+            return from_b64(j)
+        except Exception:
+            return j
+    return j
+
+
+def load_pretty_json(j: str) -> Any:
+    data = json.loads(j)
+    return to_nice_json(data)
+
+
 def run(
-    cmd: List[str], json_resp=True, silent=False, wait=True, **kwargs
+    cmd: List[str],
+    load_json=json.loads,
+    json_resp=True,
+    silent=False,
+    cmd_silent=False,
+    wait=True,
+    **kwargs,
 ) -> subprocess.CompletedProcess:
     """
     Run a command.
@@ -21,7 +50,7 @@ def run(
     cmd_str = subprocess.list2cmdline(cmd)
     if wait:
         input(f"Run: {cmd_str}")
-    else:
+    elif not cmd_silent:
         print(f"Run: {cmd_str}")
 
     # pylint: disable=subprocess-run-check
@@ -31,7 +60,7 @@ def run(
     if not silent and proc.stdout:
         data = proc.stdout
         if json_resp:
-            data = json.loads(data)
+            data = load_json(data)
             pprint(data)
         else:
             print(data)
@@ -49,10 +78,12 @@ class Curl:
     def base_cmd(self) -> List[str]:
         return ["curl", "-s", "--cacert", f"{self.common_dir}/service_cert.pem"]
 
-    def get(self, key: str, rev: int = 0):
+    def get(self, key: str, end: str = "", rev: int = 0):
         data: Dict[str, Any] = {"key": key}
         if rev:
             data["revision"] = rev
+        if end:
+            data["range_end"] = end
         run(
             self.base_cmd()
             + [
@@ -63,10 +94,11 @@ class Curl:
                 json.dumps(data),
                 "-H",
                 "content-type: application/json",
-            ]
+            ],
+            load_json=load_pretty_json,
         )
 
-    def put(self, key: str, value: str) -> Tuple[int, int]:
+    def put(self, key: str, value: str, **kwargs) -> Tuple[int, int]:
         data = {
             "key": key,
             "value": value,
@@ -81,7 +113,9 @@ class Curl:
                 json.dumps(data),
                 "-H",
                 "content-type: application/json",
-            ]
+            ],
+            load_json=load_pretty_json,
+            **kwargs,
         )
 
         header = json.loads(res.stdout.decode("utf-8"))["header"]
@@ -95,10 +129,12 @@ class Curl:
 
         return (term, rev)
 
-    def delete(self, key: str):
+    def delete(self, key: str, end: str = ""):
         data = {
             "key": key,
         }
+        if end:
+            data["range_end"] = end
         res = run(
             self.base_cmd()
             + [
@@ -109,7 +145,8 @@ class Curl:
                 json.dumps(data),
                 "-H",
                 "content-type: application/json",
-            ]
+            ],
+            load_json=load_pretty_json,
         )
         header = json.loads(res.stdout.decode("utf-8"))["header"]
         rev = header["revision"]
@@ -122,12 +159,12 @@ class Curl:
 
         return (term, rev)
 
-    def tx_status(self, term: int, rev: int, wait=True):
+    def tx_status(self, term: int, rev: int, **kwargs):
         txid = f"{term}.{rev}"
         run(
             self.base_cmd()
             + ["-X", "GET", f"{self.address}/app/tx?transaction_id={txid}"],
-            wait=wait,
+            **kwargs,
         )
 
     def get_receipt(self, term: int, rev: int):
@@ -165,7 +202,9 @@ class Curl:
 
     def list_endpoints(self):
         res = run(
-            self.base_cmd() + ["-X", "GET", f"{self.address}/app/api"], silent=True
+            self.base_cmd() + ["-X", "GET", f"{self.address}/app/api"],
+            silent=True,
+            load_json=load_pretty_json,
         )
         data = res.stdout.decode("utf-8")
         pprint(list(json.loads(data)["paths"].keys()))
@@ -188,15 +227,20 @@ class Etcdctl:
             "json",
         ]
 
-    def get(self, key: str, rev: int = 0):
+    def get(self, key: str, end: str = "", rev: int = 0):
         cmd = self.base_cmd() + ["get", key]
+        if end:
+            cmd += [end]
         if rev:
             cmd += ["--rev", str(rev)]
-        run(cmd)
+        run(
+            cmd,
+            load_json=load_pretty_json,
+        )
 
-    def put(self, key: str, value: str) -> Tuple[int, int]:
+    def put(self, key: str, value: str, **kwargs) -> Tuple[int, int]:
         cmd = self.base_cmd() + ["put", key, value]
-        res = run(cmd)
+        res = run(cmd, load_json=load_pretty_json, **kwargs)
 
         header = json.loads(res.stdout.decode("utf-8"))["header"]
         rev = header["revision"]
@@ -209,9 +253,14 @@ class Etcdctl:
 
         return (term, rev)
 
-    def delete(self, key: str):
+    def delete(self, key: str, end: str = ""):
         cmd = self.base_cmd() + ["del", key]
-        res = run(cmd)
+        if end:
+            cmd += [end]
+        res = run(
+            cmd,
+            load_json=load_pretty_json,
+        )
         header = json.loads(res.stdout.decode("utf-8"))["header"]
         rev = header["revision"]
         if "raftTerm" in header:
@@ -223,12 +272,12 @@ class Etcdctl:
 
         return (term, rev)
 
-    def tx_status(self, term: int, rev: int, wait=True):
+    def tx_status(self, term: int, rev: int, **kwargs):
         txid = f"{term}.{rev}"
         run(
             self.curl.base_cmd()
             + ["-X", "GET", f"{self.address}/app/tx?transaction_id={txid}"],
-            wait=wait,
+            **kwargs,
         )
 
     def get_receipt(self, term: int, rev: int):
@@ -276,9 +325,32 @@ def to_b64(s: str) -> str:
     return base64.b64encode(s.encode("utf-8")).decode("utf-8")
 
 
+def from_b64(s: str) -> str:
+    return base64.b64decode(s.encode("utf-8")).decode("utf-8")
+
+
+def make_key(i: int, s: str = "hello") -> str:
+    return f"{s}{i}"
+
+
+def make_value(i: int) -> str:
+    return f"ccf{i}"
+
+
+def prefill(client, i: int):
+    for i in range(i):
+        client.put(
+            make_key(i, s="_prefill"),
+            make_value(i),
+            wait=False,
+            silent=True,
+            cmd_silent=True,
+        )
+
+
 def main(port: int, common_dir: str, client_type: str):
-    user_key = "hello"
-    user_value = "ccf"
+    user_key = make_key(0)
+    user_value = make_value(0)
 
     if client_type == "curl":
         client = Curl(port, common_dir)
@@ -290,6 +362,10 @@ def main(port: int, common_dir: str, client_type: str):
         value = user_value
     else:
         raise ValueError(f"incorrect client type: {client_type}")
+
+    prefill_size = 100
+    print(f"Prefilling {prefill_size} keys")
+    prefill(client, prefill_size)
 
     client.list_endpoints()
 
@@ -313,10 +389,27 @@ def main(port: int, common_dir: str, client_type: str):
     print("And get the value we just wrote")
     client.get(key)
 
+    print()
+    input("Add some more values")
+    for i in range(10):
+        keyi = make_key(i)
+        vali = make_value(i)
+        put_term, put_rev = client.put(keyi, vali, wait=False, silent=True)
+
+    # read the value
+    print()
+    print("And get the value we just wrote")
+    client.get(make_key(1), make_key(5))
+
+    # read all the values
+    print()
+    print("And get the value we just wrote")
+    client.get("a", "z")
+
     # delete the value
     print()
-    print("But we don't need it any more so delete it")
-    del_term, del_rev= client.delete(key)
+    print("But we don't need those any more so delete them all")
+    del_term, del_rev = client.delete("a", end="z")
     client.tx_status(del_term, del_rev, wait=False)
 
     print()
