@@ -1,0 +1,57 @@
+- hosts: all
+  remote_user: lskv
+  gather_facts: false
+  tasks:
+    - name: Wait for ssh to be up on the nodes
+      ansible.builtin.wait_for_connection:
+
+    - name: ping
+      ping:
+
+- hosts: all[0]
+  remote_user: lskv
+  tasks:
+    - name: Generate an OpenSSH keypair with the default values (4096 bits, rsa)
+      community.crypto.openssh_keypair:
+        path: /home/lskv/.ssh/id_rsa
+
+    - name: Get pub key for the first node
+      fetch:
+        src: /home/lskv/.ssh/id_rsa.pub
+        dest: bench_id_rsa.pub
+        flat: true
+
+- hosts: all
+  remote_user: lskv
+  tasks:
+    - name: Set authorized pub key
+      authorized_key:
+        state: present
+        user: lskv
+        key: "{{ lookup('file', 'bench_id_rsa.pub') }}"
+
+    - name: Copy lskv repo over
+      ansible.posix.synchronize:
+        src: "{{ playbook_dir }}/../"
+        dest: /tmp/lskv
+
+    - name: Install apt packages
+      ansible.builtin.apt:
+        name:
+          - make
+          - python3.8
+          - python3.8-venv
+        update_cache: true
+      become: true
+
+    - name: Install oe host verify
+      ansible.builtin.apt:
+        deb: "https://github.com/openenclave/openenclave/releases/download/v0.18.4/Ubuntu_2004_open-enclave-hostverify_0.18.4_amd64.deb"
+        update_cache: true
+      become: true
+
+
+    - name: Install ccf
+      community.general.make:
+        target: install-ccf-virtual
+        chdir: /tmp/lskv
