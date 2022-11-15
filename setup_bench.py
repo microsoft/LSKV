@@ -26,6 +26,20 @@ def get_args()->argparse.Namespace:
     parser.add_argument("--user", type=str,  required=True,help="username for the vms")
     return parser.parse_args()
 
+def setup_node(user:str,ip:str):
+    run(f"ssh {user}@{ip} \"sudo apt update && sudo apt install make python3.8 python3.8-venv && cd /tmp/lskv && make install-ccf-virtual .venv\"")
+
+
+def wait_for_ssh(user:str,ip:str, tries=60):
+    for _ in range(tries):
+        try:
+            run(f"ssh-keyscan {ip}")
+            logger.info("ssh is ready")
+            break
+        except:
+            continue
+
+
 def main():
     args = get_args()
 
@@ -33,7 +47,11 @@ def main():
     run(f"az vmss list-instance-public-ips --name {args.vmss_name} --resource-group {args.resource_group} | jq -r '.[].ipAddress' | tee {args.hosts_file}")
 
     hosts = get_hosts(args.hosts_file)
-    run(f"rsync -rv --filter='dir-merge,- .gitignore' --exclude='/.git' {args.user}@{hosts[0]}:/tmp/lskv")
+
+    for host in hosts:
+        wait_for_ssh(args.user,host)
+        run(f"ssh-keyscan {host} >> ~/.ssh/known_hosts")
+
 
     # get the key for the first node
     run(f"ssh {args.user}@{hosts[0]} \"ssh-keygen -t rsa -N '' -f /home/{args.user}/.ssh/id_rsa <<< y\"")
@@ -43,8 +61,11 @@ def main():
     bench_ssh_key = open(args.ssh_key_file, "r", encoding="utf-8").read()
 
     for host in hosts:
-        run(f"ssh-keyscan {host} >> ~/.ssh/known_hosts")
+        # allow leader node to ssh to this node
         run(f"ssh {args.user}@{host} \"echo '{bench_ssh_key}' >> /home/{args.user}/.ssh/authorized_keys\"")
+
+        run(f"rsync -rv --exclude='/.git' --exclude=bench --include=build . {args.user}@{host}:/tmp/lskv")
+        setup_node(args.user, host)
 
 if __name__ == "__main__":
     main()
