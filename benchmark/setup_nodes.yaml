@@ -17,6 +17,7 @@
 
 - hosts: all[0]
   remote_user: "{{ vm_user }}"
+  gather_facts: false
   tasks:
     - name: Generate an OpenSSH keypair with the default values (4096 bits, rsa)
       community.crypto.openssh_keypair:
@@ -30,6 +31,7 @@
 
 - hosts: all
   remote_user: "{{ vm_user }}"
+  gather_facts: false
   tasks:
     - name: Set authorized pub key
       authorized_key:
@@ -69,6 +71,7 @@
 
 - hosts: all[0]
   remote_user: "{{ vm_user }}"
+  gather_facts: false
   tasks:
     - name: Install deps for sandbox
       ansible.builtin.pip:
