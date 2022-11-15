@@ -1,5 +1,12 @@
 - hosts: all
-  remote_user: lskv
+  gather_facts: false
+  tasks:
+    - name: Accept new ssh fingerprints
+      shell: ssh-keyscan -H {{ inventory_hostname }}
+      delegate_to: localhost
+
+- hosts: all
+  remote_user: "{{ vm_user }}"
   gather_facts: false
   tasks:
     - name: Wait for ssh to be up on the nodes
@@ -9,25 +16,25 @@
       ping:
 
 - hosts: all[0]
-  remote_user: lskv
+  remote_user: "{{ vm_user }}"
   tasks:
     - name: Generate an OpenSSH keypair with the default values (4096 bits, rsa)
       community.crypto.openssh_keypair:
-        path: /home/lskv/.ssh/id_rsa
+        path: /home/{{ vm_user }}/.ssh/id_rsa
 
     - name: Get pub key for the first node
-      fetch:
-        src: /home/lskv/.ssh/id_rsa.pub
+      ansible.builtin.fetch:
+        src: /home/{{ vm_user }}/.ssh/id_rsa.pub
         dest: bench_id_rsa.pub
         flat: true
 
 - hosts: all
-  remote_user: lskv
+  remote_user: "{{ vm_user }}"
   tasks:
     - name: Set authorized pub key
       authorized_key:
         state: present
-        user: lskv
+        user: "{{ vm_user }}"
         key: "{{ lookup('file', 'bench_id_rsa.pub') }}"
 
     - name: Copy lskv repo over
@@ -46,10 +53,9 @@
 
     - name: Install oe host verify
       ansible.builtin.apt:
-        deb: "https://github.com/openenclave/openenclave/releases/download/v0.18.4/Ubuntu_2004_open-enclave-hostverify_0.18.4_amd64.deb"
+        deb: "{{ oe_host_verify_deb }}"
         update_cache: true
       become: true
-
 
     - name: Install ccf
       community.general.make:
@@ -57,7 +63,7 @@
         chdir: /tmp/lskv
 
 - hosts: all[0]
-  remote_user: lskv
+  remote_user: "{{ vm_user }}"
   tasks:
     - name: Install deps for sandbox
       ansible.builtin.pip:
@@ -67,7 +73,7 @@
 
     - name: Install deps for sandbox
       ansible.builtin.pip:
-        name: ccf==3.0.0rc1
+        name: ccf=={{ py_ccf_ver }}
         virtualenv: /tmp/lskv/.venv_ccf_sandbox
         virtualenv_command: python3 -m venv
 
