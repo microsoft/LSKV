@@ -132,3 +132,76 @@ class LSKVStore(Store):
         Return the path to the key for the client certificate.
         """
         return f"{self.workspace()}/sandbox_common/user0_privk.pem"
+
+
+class DistributedLSKVStore(Store):
+    """
+    A store based on LSKV, distributed over many nodes.
+    """
+
+    def spawn(self) -> Popen:
+        with open(
+            os.path.join(self.config.output_dir(), "node.out"), "w", encoding="utf-8"
+        ) as out:
+            with open(
+                os.path.join(self.config.output_dir(), "node.err"),
+                "w",
+                encoding="utf-8",
+            ) as err:
+                nodes = []
+                port = 8000
+                for i, ip in enumerate(self.config.node_ips):
+                    nodes.append(f"ssh://{ip}:{port + i}")
+                package = "build/liblskv"
+                if self.config.enclave == "sgx":
+                    package += ".enclave.signed.so"
+                else:
+                    package += ".virtual.so"
+                lskv_cmd = [
+                    "/opt/ccf_virtual/bin/sandbox.sh",
+                    "--enclave-type",
+                    "virtual" if self.config.enclave == "virtual" else "release",
+                    "--worker-threads",
+                    str(self.config.worker_threads),
+                    "--sig-tx-interval",
+                    str(self.config.sig_tx_interval),
+                    "--sig-ms-interval",
+                    str(self.config.sig_ms_interval),
+                    "--ledger-chunk-bytes",
+                    self.config.ledger_chunk_bytes,
+                    "--snapshot-tx-interval",
+                    str(self.config.snapshot_tx_interval),
+                    "--http-version",
+                    str(self.config.http_version),
+                    "--workspace",
+                    self.workspace(),
+                ]
+                for node in nodes:
+                    lskv_cmd += ["--node", node]
+
+                logger.info("spawning lskv: {}", lskv_cmd)
+                return Popen(lskv_cmd, stdout=out, stderr=err)
+
+    def workspace(self):
+        """
+        Return the workspace directory for this store.
+        """
+        return os.path.join(os.getcwd(), self.config.output_dir(), "workspace")
+
+    def cacert(self) -> str:
+        """
+        Return the path to the CA certificate.
+        """
+        return f"{self.workspace()}/sandbox_common/service_cert.pem"
+
+    def cert(self) -> str:
+        """
+        Return the path to the client certificate.
+        """
+        return f"{self.workspace()}/sandbox_common/user0_cert.pem"
+
+    def key(self) -> str:
+        """
+        Return the path to the key for the client certificate.
+        """
+        return f"{self.workspace()}/sandbox_common/user0_privk.pem"

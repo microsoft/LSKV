@@ -14,7 +14,7 @@ from typing import List
 import common
 from common import Store
 from loguru import logger
-from stores import LSKVStore
+from stores import DistributedLSKVStore, LSKVStore
 
 BENCH_DIR = os.path.join(common.BENCH_DIR, "k6")
 
@@ -30,6 +30,7 @@ class K6Config(common.Config):
     vus: int
     func: str
     content_type: str
+    distributed: bool
 
     def bench_name(self) -> str:
         """
@@ -145,6 +146,16 @@ def get_arguments():
         default=[],
         help="content type payload to use",
     )
+    parser.add_argument(
+        "--distributed",
+        action="store_true",
+        help="Whether to run in distributed mode",
+    )
+    parser.add_argument(
+        "--converged",
+        action="store_true",
+        help="Whether to run in converged mode",
+    )
 
     args = parser.parse_args()
 
@@ -168,7 +179,11 @@ def execute_config(config: K6Config):
     if config.store == "etcd":
         logger.warning("skipping etcd for k6 benchmark")
         return
-    store = LSKVStore(config)
+    if config.distributed:
+        store = DistributedLSKVStore(config)
+    else:
+        store = LSKVStore(config)
+
     benchmark = K6Benchmark(config)
 
     timings_file = run_benchmark(
@@ -198,14 +213,26 @@ def make_configurations(args: argparse.Namespace) -> List[K6Config]:
                     logger.debug("adding func: {}", func)
                     for content_type in args.content_type:
                         logger.debug("adding content_type: {}", content_type)
-                        conf = K6Config(
-                            **asdict(common_config),
-                            rate=rate,
-                            vus=vus,
-                            func=func,
-                            content_type=content_type,
-                        )
-                        configs.append(conf)
+                        if args.converged:
+                            conf = K6Config(
+                                **asdict(common_config),
+                                rate=rate,
+                                vus=vus,
+                                func=func,
+                                content_type=content_type,
+                                distributed=False,
+                            )
+                            configs.append(conf)
+                        if args.distributed:
+                            conf = K6Config(
+                                **asdict(common_config),
+                                rate=rate,
+                                vus=vus,
+                                func=func,
+                                content_type=content_type,
+                                distributed=True,
+                            )
+                            configs.append(conf)
 
     return configs
 

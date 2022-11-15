@@ -11,12 +11,12 @@ import argparse
 import copy
 import json
 import os
+import subprocess
 import sys
 import time
 from dataclasses import asdict, dataclass
 from hashlib import sha256
 from subprocess import Popen
-import subprocess
 from typing import Callable, List, TypeVar
 
 import cimetrics.upload  # type: ignore
@@ -41,6 +41,7 @@ class Config:
     tls: bool
     enclave: str
     nodes: int
+    node_ips: List[str]
     worker_threads: int
     sig_tx_interval: int
     sig_ms_interval: int
@@ -254,6 +255,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--http2", action="store_true")
     parser.add_argument("--insecure", action="store_true")
     parser.add_argument("--nodes", action="extend", nargs="+", type=int)
+    parser.add_argument("--node-ips", action="extend", nargs="+", type=str)
     parser.add_argument("--worker-threads", action="extend", nargs="+", type=int)
     parser.add_argument("--sig-tx-intervals", action="extend", nargs="+", type=int)
     parser.add_argument("--sig-ms-intervals", action="extend", nargs="+", type=int)
@@ -267,8 +269,10 @@ def set_default_args(args: argparse.Namespace):
     Set the default arguments for common args.
     """
     # set default if not set
-    if not args.nodes:
+    if not args.nodes and not args.node_ips:
         args.nodes = [1]
+    if args.node_ips:
+        args.nodes = [len(args.node_ips)]
     if not args.worker_threads:
         args.worker_threads = [0]
     if not args.sig_tx_intervals:
@@ -333,6 +337,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                     tls=False,
                     enclave="virtual",
                     nodes=nodes,
+                                node_ips=args.node_ips,
                     http_version=2,
                     worker_threads=0,
                     sig_tx_interval=0,
@@ -349,6 +354,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                 tls=True,
                 enclave="virtual",
                 nodes=nodes,
+                                node_ips=args.node_ips,
                 http_version=2,
                 worker_threads=0,
                 sig_tx_interval=0,
@@ -379,6 +385,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                                 tls=True,
                                 enclave="virtual",
                                 nodes=nodes,
+                                node_ips=args.node_ips,
                                 http_version=1,
                                 worker_threads=worker_threads,
                                 sig_tx_interval=sig_tx_interval,
