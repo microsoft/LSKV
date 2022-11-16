@@ -186,9 +186,9 @@ def test_tx_status(http1_client):
     res = http1_client.tx_status(term, 100000)
     check_response(res)
     # a tx far in the future may have been submitted by another node
-    assert "status" not in res.json() # missing status means Unknown
+    assert "status" not in res.json()  # missing status means Unknown
 
-    res = http1_client.tx_status(int(term)+1, int(rev)-1)
+    res = http1_client.tx_status(int(term) + 1, int(rev) - 1)
     check_response(res)
     status = res.json()["status"]
     assert status == "Invalid"
