@@ -82,8 +82,8 @@ export function put_single(i = 0, tag = "put_single") {
     },
     tags: {
       caller: tag,
-    }
-  }
+    },
+  };
 
   let response = http.post(`${host}/v3/kv/put`, payload, params);
 
@@ -132,8 +132,8 @@ export function get_single(i = 0, tag = "get_single") {
     },
     tags: {
       caller: tag,
-    }
-  }
+    },
+  };
 
   let response = http.post(`${host}/v3/kv/range`, payload, params);
 
@@ -152,8 +152,8 @@ export function get_range(i = 0, tag = "get_range") {
     },
     tags: {
       caller: tag,
-    }
-  }
+    },
+  };
 
   let response = http.post(`${host}/v3/kv/range`, payload, params);
 
@@ -171,14 +171,10 @@ export function delete_single(i = 0, tag = "delete_single") {
     },
     tags: {
       caller: tag,
-    }
-  }
+    },
+  };
 
-  let response = http.post(
-    `${host}/v3/kv/delete_range`,
-    payload,
-    params
-  );
+  let response = http.post(`${host}/v3/kv/delete_range`, payload, params);
 
   check_success(response);
 }
@@ -231,7 +227,6 @@ export function mixed_single_wait() {
   }
 }
 
-
 export function get_receipt(receipt_txids, tag = "get_receipt") {
   const txid =
     receipt_txids[exec.scenario.iterationInTest % receipt_txids.length];
@@ -247,13 +242,9 @@ export function get_receipt(receipt_txids, tag = "get_receipt") {
     },
     tags: {
       caller: tag,
-    }
-  }
+    },
+  };
 
-  const response = http.post(
-    `${host}/v3/receipt/get_receipt`,
-    payload,
-    params
-  );
+  const response = http.post(`${host}/v3/receipt/get_receipt`, payload, params);
   check_success(response);
 }
