@@ -2,7 +2,10 @@
 
 # Helper to obtain the version of glibc.
 macro(get_glibc_version)
-  set(GLIBC_VERSION "2.35")
+  execute_process(
+    COMMAND bash "-c" "ldd --version | awk '/ldd/{print $NF}'"
+    OUTPUT_VARIABLE GLIBC_VERSION
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
 endmacro()
 
 function(apply_lvi_mitigation NAME)
