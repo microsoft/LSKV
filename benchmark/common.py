@@ -241,7 +241,14 @@ def get_argument_parser() -> argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(description="Benchmark")
     parser.add_argument("-v", "--verbose", action="store_true", help="verbose output")
-    parser.add_argument("--enclave", type=str, choices=["virtual", "sgx"], action="extend", nargs="+", help="enclave to use")
+    parser.add_argument(
+        "--enclave",
+        type=str,
+        choices=["virtual", "sgx"],
+        action="extend",
+        nargs="+",
+        help="enclave to use",
+    )
     parser.add_argument("--etcd", action="store_true")
     parser.add_argument("--http1", action="store_true")
     parser.add_argument("--http2", action="store_true")
