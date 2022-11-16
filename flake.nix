@@ -48,6 +48,8 @@
       nix.ci-checks
       // {
         inherit ci-checks-all ci-checks-all-fix;
+        lskv-sandbox-virtual = self.packages.${system}.lskv-sandbox-virtual;
+        lskv-sandbox-sgx = self.packages.${system}.lskv-sandbox-sgx;
       };
 
     formatter.${system} = pkgs.alejandra;
