@@ -115,11 +115,16 @@ def test_kv_historical(http1_client):
     rev, term = revisions[-1]
     http1_client.wait_for_commit(term, rev)
 
+    create_rev = revisions[0][0]
     for i, (rev, term) in enumerate(revisions):
         res = http1_client.get("fooh", rev=rev)
         check_response(res)
-        assert b64decode(res.json()["kvs"][0]["key"]) == "fooh"
-        assert b64decode(res.json()["kvs"][0]["value"]) == f"bar{i}"
+        kvs = res.json()["kvs"]
+        assert b64decode(kvs[0]["key"]) == "fooh"
+        assert b64decode(kvs[0]["value"]) == f"bar{i}"
+        assert kvs[0]["createRevision"] == str(create_rev)
+        assert kvs[0]["modRevision"] == str(rev)
+        assert kvs[0]["version"] == str(i+1)
 
     res = http1_client.delete("fooh")
     check_response(res)
@@ -128,8 +133,12 @@ def test_kv_historical(http1_client):
         # still there
         res = http1_client.get("fooh", rev=rev)
         check_response(res)
-        assert b64decode(res.json()["kvs"][0]["key"]) == "fooh"
-        assert b64decode(res.json()["kvs"][0]["value"]) == f"bar{i}"
+        kvs = res.json()["kvs"]
+        assert b64decode(kvs[0]["key"]) == "fooh"
+        assert b64decode(kvs[0]["value"]) == f"bar{i}"
+        assert kvs[0]["createRevision"] == str(create_rev)
+        assert kvs[0]["modRevision"] == str(rev)
+        assert kvs[0]["version"] == str(i+1)
 
 
 def test_status_version(http1_client):
