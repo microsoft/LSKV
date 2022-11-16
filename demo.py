@@ -3,6 +3,7 @@
 # Licensed under the MIT License.
 
 import argparse
+import os
 import base64
 import json
 import subprocess
@@ -37,7 +38,6 @@ def load_pretty_json(j: str) -> Any:
 
 def run(
     cmd: List[str],
-    pretty_cmd : List[str]=[],
     load_json=json.loads,
     json_resp=True,
     silent=False,
@@ -58,8 +58,10 @@ def run(
     elif not cmd_silent:
         print(f"Run: {cmd_str}")
 
+    cmd = [unbold(c) for c in cmd]
+
     # pylint: disable=subprocess-run-check
-    proc = subprocess.run(cmd, capture_output=True, **kwargs)
+    proc = subprocess.run(cmd, capture_output=True,  **kwargs)
     if proc.returncode != 0:
         logger.warning("Command failed, returned {}", proc.returncode)
     if not silent and proc.stdout:
@@ -77,13 +79,26 @@ def run(
 def bold(s: str) -> str:
     return f"\033[1m{s}\033[0m"
 
+def unbold(s:str)->str:
+    return s.replace("\033[1m", "").replace("\033[0m", "")
+
 class Curl:
     def __init__(self, port: int, common_dir: str):
         self.address = f"https://127.0.0.1:{port}"
         self.common_dir = common_dir
 
+    def run(self, method:str,  path:str, cmd: List[str], **kwargs):
+        cmd = list(map(bold, cmd))
+        headers =[]
+        if method == "POST":
+            headers.append("-H")
+            headers.append("content-type: application/json")
+        return run(
+            self.base_cmd() + ["-X", method] + headers + [ f"{self.address}{bold(path)}" ] + cmd, cwd=self.common_dir, **kwargs
+        )
+
     def base_cmd(self) -> List[str]:
-        return ["curl", "-s", "--cacert", f"{self.common_dir}/service_cert.pem"]
+        return ["curl", "-s", "--cacert", "service_cert.pem"]
 
     def get(self, key: str, end: str = "", rev: int = 0):
         data: Dict[str, Any] = {"key": key}
@@ -91,16 +106,12 @@ class Curl:
             data["revision"] = rev
         if end:
             data["range_end"] = end
-        run(
-            self.base_cmd()
-            + [
-                "-X",
+        self.run(
                 "POST",
-                f"{self.address}/v3/kv/range",
+                "/v3/kv/range",
+             [
                 "-d",
                 json.dumps(data),
-                "-H",
-                "content-type: application/json",
             ],
             load_json=load_pretty_json,
         )
@@ -110,16 +121,12 @@ class Curl:
             "key": key,
             "value": value,
         }
-        res = run(
-            self.base_cmd()
-            + [
-                "-X",
+        res = self.run(
                 "POST",
-                f"{self.address}/v3/kv/put",
+                "/v3/kv/put",
+            [
                 "-d",
                 json.dumps(data),
-                "-H",
-                "content-type: application/json",
             ],
             load_json=load_pretty_json,
             **kwargs,
@@ -142,16 +149,12 @@ class Curl:
         }
         if end:
             data["range_end"] = end
-        res = run(
-            self.base_cmd()
-            + [
-                "-X",
+        res = self.run(
                 "POST",
-                f"{self.address}/v3/kv/delete_range",
+                "/v3/kv/delete_range",
+             [
                 "-d",
                 json.dumps(data),
-                "-H",
-                "content-type: application/json",
             ],
             load_json=load_pretty_json,
         )
@@ -168,9 +171,10 @@ class Curl:
 
     def tx_status(self, term: int, rev: int, **kwargs):
         txid = f"{term}.{rev}"
-        run(
-            self.base_cmd()
-            + ["-X", "GET", f"{self.address}/app/tx?transaction_id={txid}"],
+        self.run(
+ "GET",
+             f"/app/tx?transaction_id={txid}",
+             [],
             **kwargs,
         )
 
@@ -180,36 +184,29 @@ class Curl:
             "revision": rev,
         }
         # trigger it
-        run(
-            self.base_cmd()
-            + [
-                "-X",
+        self.run(
                 "POST",
-                f"{self.address}/v3/receipt/get_receipt",
+                "/v3/receipt/get_receipt",
+             [
                 "-d",
-                json.dumps(data),
-                "-H",
-                "content-type: application/json",
+                json.dumps(data).replace('"', "'"),
             ],
             json_resp=False,
         )
         # actually get the receipt
-        run(
-            self.base_cmd()
-            + [
-                "-X",
+        self.run(
                 "POST",
-                f"{self.address}/v3/receipt/get_receipt",
+                "/v3/receipt/get_receipt",
+             [
                 "-d",
-                json.dumps(data),
-                "-H",
-                "content-type: application/json",
-            ]
+                json.dumps(data).replace('"', "'"),
+            ],
         )
 
     def list_endpoints(self):
-        res = run(
-            self.base_cmd() + ["-X", "GET", f"{self.address}/app/api"],
+        res = self.run(
+            "GET", "/app/api",
+            [],
             silent=True,
             load_json=load_pretty_json,
         )
@@ -223,31 +220,32 @@ class Etcdctl:
         self.common_dir = common_dir
         self.curl = Curl(port, common_dir)
 
-    def base_cmd(self) -> List[str]:
-        return [
-            "bin/etcdctl",
-            "--endpoints",
-            self.address,
-            "--cacert",
-            f"{self.common_dir}/service_cert.pem",
-            "-w",
-            "json",
-        ]
+    def run(self, cmd: List[str], **kwargs):
+        cmd = list(map(bold, cmd))
+        bin_dir = os.path.abspath("bin")
+        return run(
+            ["etcdctl", "--endpoints", self.address, "--cacert", "service_cert.pem", "-w", "json"]
+            + cmd,
+            cwd=self.common_dir,
+            env={"PATH": bin_dir},
+            **kwargs,
+        )
 
     def get(self, key: str, end: str = "", rev: int = 0):
-        cmd = self.base_cmd() + ["get", key]
+        cmd =  ["get", key]
         if end:
             cmd += [end]
         if rev:
             cmd += ["--rev", str(rev)]
-        run(
+        self.run(
             cmd,
             load_json=load_pretty_json,
         )
 
     def put(self, key: str, value: str, **kwargs) -> Tuple[int, int]:
-        cmd = self.base_cmd() + ["put", key, value]
-        res = run(cmd, load_json=load_pretty_json, **kwargs)
+        cmd = ["put", key, value]
+        res = self.run(cmd, load_json=load_pretty_json, 
+        **kwargs)
 
         header = json.loads(res.stdout.decode("utf-8"))["header"]
         rev = header["revision"]
@@ -261,10 +259,10 @@ class Etcdctl:
         return (term, rev)
 
     def delete(self, key: str, end: str = ""):
-        cmd = self.base_cmd() + ["del", key]
+        cmd =  ["del", key]
         if end:
             cmd += [end]
-        res = run(
+        res = self.run(
             cmd,
             load_json=load_pretty_json,
         )
@@ -280,52 +278,13 @@ class Etcdctl:
         return (term, rev)
 
     def tx_status(self, term: int, rev: int, **kwargs):
-        txid = f"{term}.{rev}"
-        run(
-            self.curl.base_cmd()
-            + ["-X", "GET", f"{self.address}/app/tx?transaction_id={txid}"],
-            **kwargs,
-        )
+        self.curl.tx_status(term, rev, **kwargs)
 
     def get_receipt(self, term: int, rev: int):
-        data = {
-            "raft_term": term,
-            "revision": rev,
-        }
-        # trigger it
-        run(
-            self.curl.base_cmd()
-            + [
-                "-X",
-                "POST",
-                f"{self.address}/v3/receipt/get_receipt",
-                "-d",
-                json.dumps(data),
-                "-H",
-                "content-type: application/json",
-            ],
-            json_resp=False,
-        )
-        # actually get the receipt
-        run(
-            self.curl.base_cmd()
-            + [
-                "-X",
-                "POST",
-                f"{self.address}/v3/receipt/get_receipt",
-                "-d",
-                json.dumps(data),
-                "-H",
-                "content-type: application/json",
-            ]
-        )
+        self.curl.get_receipt(term, rev)
 
     def list_endpoints(self):
-        res = run(
-            self.curl.base_cmd() + ["-X", "GET", f"{self.address}/app/api"], silent=True
-        )
-        data = res.stdout.decode("utf-8")
-        pprint(list(json.loads(data)["paths"].keys()))
+        self.curl.list_endpoints()
 
 
 def to_b64(s: str) -> str:
@@ -372,7 +331,7 @@ def main(port: int, common_dir: str, client_type: str):
 
     prefill_size = 100
     print(f"Prefilling {prefill_size} keys")
-    prefill(client, prefill_size)
+    # prefill(client, prefill_size)
 
     client.list_endpoints()
 
