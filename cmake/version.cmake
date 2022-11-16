@@ -10,7 +10,11 @@ execute_process(
   OUTPUT_STRIP_TRAILING_WHITESPACE
   RESULT_VARIABLE RETURN_CODE)
 if(NOT RETURN_CODE STREQUAL "0")
-  message(FATAL_ERROR "Error calling git describe")
+  message(
+    WARNING
+      "Error calling git describe, getting version from LSKV_VERSION environment variable"
+  )
+  set(LSKV_VERSION $ENV{LSKV_VERSION})
 endif()
 
 # strip 'v' prefix from version
