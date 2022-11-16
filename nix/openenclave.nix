@@ -43,12 +43,11 @@
     pname = "lvi-mitigation-bin";
     version = oe-version;
     src = oe-src;
+    patches = [patches/openenclave.diff];
 
     buildInputs = [clang_10 gcc];
 
     preConfigure = ''
-      cp ${./install_lvi_mitigation_bindir} scripts/lvi-mitigation/install_lvi_mitigation_bindir
-      cp ${./invoke_compiler} scripts/lvi-mitigation/invoke_compiler
       patchShebangs scripts/lvi-mitigation/*
 
       ln -s ${intel-tarball} intel-tarball
@@ -100,8 +99,6 @@ in
 
       substituteInPlace pkgconfig/*.pc --replace \''${prefix}/@CMAKE_INSTALL_LIBDIR@ @CMAKE_INSTALL_LIBDIR@
       substituteInPlace pkgconfig/*.pc --replace \''${prefix}/@CMAKE_INSTALL_INCLUDEDIR@ @CMAKE_INSTALL_INCLUDEDIR@
-
-      cp ${./apply_lvi_mitigation.cmake} cmake/apply_lvi_mitigation.cmake
     '';
 
     nativeBuildInputs = [cmake ninja perl];
