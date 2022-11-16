@@ -28,12 +28,12 @@
 in
   stdenv.mkDerivation rec {
     pname = "openenclave";
-    version = "0.18.2";
+    version = "0.18.4";
     src = fetchFromGitHub {
       owner = "openenclave";
       repo = "openenclave";
       rev = "v${version}";
-      hash = "sha256-VjKrP9dKbCzKZKwypyq+iro2szm1iH8RAynYe5CP0Bc=";
+      hash = "sha256-65LHXKfDWUvLCMupJkF7o7d6ljsO7nwcmQxRU8H2Xls=";
       fetchSubmodules = true;
     };
     patches = [patches/openenclave.diff];
