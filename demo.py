@@ -37,6 +37,7 @@ def load_pretty_json(j: str) -> Any:
 
 def run(
     cmd: List[str],
+    pretty_cmd : List[str]=[],
     load_json=json.loads,
     json_resp=True,
     silent=False,
@@ -47,7 +48,11 @@ def run(
     """
     Run a command.
     """
-    cmd_str = subprocess.list2cmdline(cmd)
+    exe = cmd[0]
+    exe_str = bold(exe)
+    cmd_to_print = [exe_str] + cmd[1:]
+
+    cmd_str = subprocess.list2cmdline(cmd_to_print)
     if wait:
         input(f"Run: {cmd_str}")
     elif not cmd_silent:
@@ -69,6 +74,8 @@ def run(
     proc.check_returncode()
     return proc
 
+def bold(s: str) -> str:
+    return f"\033[1m{s}\033[0m"
 
 class Curl:
     def __init__(self, port: int, common_dir: str):
