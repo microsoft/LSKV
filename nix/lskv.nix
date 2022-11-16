@@ -36,7 +36,7 @@ stdenv.mkDerivation rec {
     "-DLVI_MITIGATIONS=OFF"
   ];
 
-  LSKV_VERSION=version;
+  LSKV_VERSION = version;
 
   NIX_CFLAGS_COMPILE = "-Wno-unused-command-line-argument";
   NIX_NO_SELF_RPATH = "1";
