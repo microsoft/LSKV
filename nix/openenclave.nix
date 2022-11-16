@@ -7,6 +7,7 @@
   ninja,
   perl,
   openssl_1_1,
+  clang_10,
 }: let
   sgx-h = fetchurl {
     url = "https://raw.githubusercontent.com/torvalds/linux/v5.13/arch/x86/include/uapi/asm/sgx.h";
@@ -25,17 +26,47 @@
     sha256 = "sha256-diA653HZ4Mn4JbeT6+U0anhP3ySVWZWjcXH7KVVkqkY=";
     stripRoot = false;
   };
+  oe-version = "0.18.4";
+  oe-src = fetchFromGitHub {
+    owner = "openenclave";
+    repo = "openenclave";
+    rev = "v${oe-version}";
+    hash = "sha256-65LHXKfDWUvLCMupJkF7o7d6ljsO7nwcmQxRU8H2Xls=";
+    fetchSubmodules = true;
+  };
+  intel-tarball = fetchzip {
+    url = "https://download.01.org/intel-sgx/sgx-linux/2.13/as.ld.objdump.gold.r3.tar.gz";
+    sha256 = "sha256-gD0LOLebDHZHrV7MW/ApqzdPxazidmDUDqBEnm1JmdQ=";
+  };
+  lvi-mitigation-bin = stdenv.mkDerivation {
+    pname = "lvi-mitigation-bin";
+    version = oe-version;
+    src = oe-src;
+
+    preConfigure = ''
+      patchShebangs scripts/lvi-mitigation/*
+      substituteInPlace scripts/lvi-mitigation/install_lvi_mitigation_bindir --replace 'read -rp "Do you want to install in current directory? [yes/no]: " ans' 'ans=yes'
+      mkdir -p $out/bin
+
+      ln -s ${intel-tarball} intel-tarball
+      ls -lah intel-tarball
+      cp intel-tarball/toolset/ubuntu18.04/as $out/bin/as
+      cp intel-tarball/toolset/ubuntu18.04/ld $out/bin/ld
+
+      ln -s ${clang_10}/bin/clang $out/bin/clang
+      ln -s ${clang_10}/bin/clang++ $out/bin/clang++
+
+      ls -lah $out/bin
+    '';
+
+    dontBuild = true;
+    dontInstall = true;
+  };
 in
   stdenv.mkDerivation rec {
     pname = "openenclave";
-    version = "0.18.4";
-    src = fetchFromGitHub {
-      owner = "openenclave";
-      repo = "openenclave";
-      rev = "v${version}";
-      hash = "sha256-65LHXKfDWUvLCMupJkF7o7d6ljsO7nwcmQxRU8H2Xls=";
-      fetchSubmodules = true;
-    };
+    version = oe-version;
+    src = oe-src;
     patches = [patches/openenclave.diff];
     cmakeFlags = [
       "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
@@ -52,6 +83,9 @@ in
 
       "-DCMAKE_BUILD_WITH_INSTALL_RPATH:BOOL=ON"
       "-DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=ON"
+
+      "-DLVI_MITIGATION=ControlFlow"
+      "-DLVI_MITIGATION_BINDIR=/build/source/build/lvi_mitigation_bin"
     ];
 
     preConfigure = ''
@@ -60,6 +94,8 @@ in
       ln -s ${compiler-rt} 3rdparty/compiler-rt/compiler-rt
       ln -s ${libcxx} 3rdparty/libcxx/libcxx
       ln -s ${symcrypt} build/3rdparty/symcrypt_engine/SymCrypt
+      ln -s ${lvi-mitigation-bin}/bin build/lvi_mitigation_bin
+
       patchShebangs tools/oeutil/gen_pubkey_header.sh
       patchShebangs tools/oeapkman/oeapkman
       patchShebangs 3rdparty/openssl/append-unsupported
