@@ -68,7 +68,9 @@ class Analyser:
             return data, 0
         if self.benchmark == "k6":
             starts = data["timestamp"]
-            start = starts.min()
+            reqs = data[data["metric_name"] == "http_req_duration"]
+            reqs = reqs[reqs["group"] != "::setup"]
+            start = reqs["timestamp"].min()
             starts -= start
             data["start_ms"] = starts / 1000
             data.drop(["timestamp"], axis=1, inplace=True)
