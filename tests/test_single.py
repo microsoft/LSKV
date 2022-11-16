@@ -124,7 +124,7 @@ def test_kv_historical(http1_client):
         assert b64decode(kvs[0]["value"]) == f"bar{i}"
         assert kvs[0]["createRevision"] == str(create_rev)
         assert kvs[0]["modRevision"] == str(rev)
-        assert kvs[0]["version"] == str(i+1)
+        assert kvs[0]["version"] == str(i + 1)
 
     res = http1_client.delete("fooh")
     check_response(res)
@@ -138,7 +138,7 @@ def test_kv_historical(http1_client):
         assert b64decode(kvs[0]["value"]) == f"bar{i}"
         assert kvs[0]["createRevision"] == str(create_rev)
         assert kvs[0]["modRevision"] == str(rev)
-        assert kvs[0]["version"] == str(i+1)
+        assert kvs[0]["version"] == str(i + 1)
 
 
 def test_status_version(http1_client):
