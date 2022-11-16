@@ -15,6 +15,7 @@ stdenv.mkDerivation rec {
     root = ./..;
     include = [
       "CMakeLists.txt"
+      "cmake"
       "oe_sign.conf"
       "src"
       "proto"
@@ -33,6 +34,8 @@ stdenv.mkDerivation rec {
   cmakeFlags = [
     "-DCOMPILE_TARGET=${enclave}"
   ];
+
+  LSKV_VERSION=version;
 
   NIX_CFLAGS_COMPILE = "-Wno-unused-command-line-argument";
   NIX_NO_SELF_RPATH = "1";

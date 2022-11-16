@@ -11,11 +11,19 @@ execute_process(
   RESULT_VARIABLE RETURN_CODE)
 
 if(NOT RETURN_CODE STREQUAL "0")
-  set(LSKV_VERSION "0.0.0")
-  message(
-    WARNING
-      "Could not find any tag in repository. Defaulting LSKV version to ${LSKV_VERSION}"
-  )
+  if(DEFINED ENV{LSKV_VERSION})
+    set(LSKV_VERSION $ENV{LSKV_VERSION})
+    message(
+      WARNING
+        "Could not find any tag in repository. Using LSKV_VERSION environment variable: ${LSKV_VERSION}"
+    )
+  else()
+    set(LSKV_VERSION "0.0.0")
+    message(
+      WARNING
+        "Could not find any tag in repository. Defaulting LSKV version to ${LSKV_VERSION}"
+    )
+  endif()
 endif()
 
 # strip 'v' prefix from version
