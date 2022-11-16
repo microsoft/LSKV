@@ -167,6 +167,33 @@ def test_lease(http1_client):
     check_response(res)
 
 
+def test_tx_status(http1_client):
+    """
+    Test custom tx_status endpoint.
+    """
+    res = http1_client.put("footx", "bar")
+    check_response(res)
+    j = res.json()
+    term = j["header"]["raftTerm"]
+    rev = j["header"]["revision"]
+
+    res = http1_client.tx_status(term, rev)
+    check_response(res)
+    status = res.json()["status"]
+    # the node needs time to commit, but that may have happened already
+    assert status in ["Pending", "Committed"]
+
+    res = http1_client.tx_status(term, 100000)
+    check_response(res)
+    # a tx far in the future may have been submitted by another node
+    assert "status" not in res.json() # missing status means Unknown
+
+    res = http1_client.tx_status(int(term)+1, int(rev)-1)
+    check_response(res)
+    status = res.json()["status"]
+    assert status == "Invalid"
+
+
 def check_response(res):
     """
     Check a response to be success.

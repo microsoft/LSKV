@@ -244,11 +244,10 @@ class HttpClient:
         """
         Wait for a commit to be successful.
         """
-        txid = f"{term}.{rev}"
         i = 0
         while True:
             i += 1
-            tx_status = self.tx_status(txid)
+            tx_status = self.tx_status(term, rev)
             logger.debug("tx_status: {}", tx_status)
             if tx_status.status_code == HTTPStatus.OK:
                 body = tx_status.json()
@@ -266,12 +265,6 @@ class HttpClient:
             if i > tries:
                 raise Exception("failed to wait for commit")
             time.sleep(0.1)
-
-    def tx_status(self, txid: str):
-        """
-        Get the status of a transaction id.
-        """
-        return self.client.get(f"/app/tx?transaction_id={txid}")
 
     def get(self, key: str, range_end: str = "", rev: int = 0):
         """
@@ -328,6 +321,14 @@ class HttpClient:
         logger.info("LeaseKeepAlive: {}", lease_id)
         j = {"ID": lease_id}
         return self.client.post("/v3/lease/keepalive", json=j)
+
+    def tx_status(self, term: int, rev: int):
+        """
+        Check the status of a transaction.
+        """
+        logger.info("TxStatus: {} {}", term, rev)
+        j: Dict[str, Any] = {"raftTerm": term, "revision": rev}
+        return self.client.post("/v3/maintenance/tx_status", json=j)
 
     def status(self):
         """
