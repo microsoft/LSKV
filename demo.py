@@ -36,6 +36,19 @@ def load_pretty_json(j: str) -> Any:
     return to_nice_json(data)
 
 
+def load_receipt_json(request, response) -> Any:
+    def load_json(j: str) -> Any:
+        data = json.loads(j)
+        del data["receipt"]["txReceipt"]["leafComponents"]["claimsDigest"]
+        data["receipt"]["txReceipt"]["leafComponents"]["claims"] = {
+            "request": request,
+            "response": response,
+        }
+        return data
+
+    return load_json
+
+
 def run(
     cmd: List[str],
     load_json=json.loads,
@@ -61,7 +74,7 @@ def run(
     cmd = [unbold(c) for c in cmd]
 
     # pylint: disable=subprocess-run-check
-    proc = subprocess.run(cmd, capture_output=True,  **kwargs)
+    proc = subprocess.run(cmd, capture_output=True, **kwargs)
     if proc.returncode != 0:
         logger.warning("Command failed, returned {}", proc.returncode)
     if not silent and proc.stdout:
@@ -76,25 +89,34 @@ def run(
     proc.check_returncode()
     return proc
 
+
 def bold(s: str) -> str:
     return f"\033[1m{s}\033[0m"
 
-def unbold(s:str)->str:
+
+def unbold(s: str) -> str:
     return s.replace("\033[1m", "").replace("\033[0m", "")
+
 
 class Curl:
     def __init__(self, port: int, common_dir: str):
         self.address = f"https://127.0.0.1:{port}"
         self.common_dir = common_dir
 
-    def run(self, method:str,  path:str, cmd: List[str], **kwargs):
+    def run(self, method: str, path: str, cmd: List[str], **kwargs):
         cmd = list(map(bold, cmd))
-        headers =[]
+        headers = []
         if method == "POST":
             headers.append("-H")
             headers.append("content-type: application/json")
         return run(
-            self.base_cmd() + ["-X", method] + headers + [ f"{self.address}{bold(path)}" ] + cmd, cwd=self.common_dir, **kwargs
+            self.base_cmd()
+            + ["-X", method]
+            + headers
+            + [f"{self.address}{bold(path)}"]
+            + cmd,
+            cwd=self.common_dir,
+            **kwargs,
         )
 
     def base_cmd(self) -> List[str]:
@@ -107,9 +129,9 @@ class Curl:
         if end:
             data["range_end"] = end
         self.run(
-                "POST",
-                "/v3/kv/range",
-             [
+            "POST",
+            "/v3/kv/range",
+            [
                 "-d",
                 json.dumps(data),
             ],
@@ -122,8 +144,8 @@ class Curl:
             "value": value,
         }
         res = self.run(
-                "POST",
-                "/v3/kv/put",
+            "POST",
+            "/v3/kv/put",
             [
                 "-d",
                 json.dumps(data),
@@ -150,9 +172,9 @@ class Curl:
         if end:
             data["range_end"] = end
         res = self.run(
-                "POST",
-                "/v3/kv/delete_range",
-             [
+            "POST",
+            "/v3/kv/delete_range",
+            [
                 "-d",
                 json.dumps(data),
             ],
@@ -172,22 +194,22 @@ class Curl:
     def tx_status(self, term: int, rev: int, **kwargs):
         txid = f"{term}.{rev}"
         self.run(
- "GET",
-             f"/app/tx?transaction_id={txid}",
-             [],
+            "GET",
+            f"/app/tx?transaction_id={txid}",
+            [],
             **kwargs,
         )
 
-    def get_receipt(self, term: int, rev: int):
+    def get_receipt(self, term: int, rev: int, request: Any, response: Any):
         data = {
             "raft_term": term,
             "revision": rev,
         }
         # trigger it
         self.run(
-                "POST",
-                "/v3/receipt/get_receipt",
-             [
+            "POST",
+            "/v3/receipt/get_receipt",
+            [
                 "-d",
                 json.dumps(data).replace('"', "'"),
             ],
@@ -195,17 +217,19 @@ class Curl:
         )
         # actually get the receipt
         self.run(
-                "POST",
-                "/v3/receipt/get_receipt",
-             [
+            "POST",
+            "/v3/receipt/get_receipt",
+            [
                 "-d",
                 json.dumps(data).replace('"', "'"),
             ],
+            load_json=load_receipt_json(request, response),
         )
 
     def list_endpoints(self):
         res = self.run(
-            "GET", "/app/api",
+            "GET",
+            "/app/api",
             [],
             silent=True,
             load_json=load_pretty_json,
@@ -224,7 +248,15 @@ class Etcdctl:
         cmd = list(map(bold, cmd))
         bin_dir = os.path.abspath("bin")
         return run(
-            ["etcdctl", "--endpoints", self.address, "--cacert", "service_cert.pem", "-w", "json"]
+            [
+                "etcdctl",
+                "--endpoints",
+                self.address,
+                "--cacert",
+                "service_cert.pem",
+                "-w",
+                "json",
+            ]
             + cmd,
             cwd=self.common_dir,
             env={"PATH": bin_dir},
@@ -232,7 +264,7 @@ class Etcdctl:
         )
 
     def get(self, key: str, end: str = "", rev: int = 0):
-        cmd =  ["get", key]
+        cmd = ["get", key]
         if end:
             cmd += [end]
         if rev:
@@ -244,8 +276,7 @@ class Etcdctl:
 
     def put(self, key: str, value: str, **kwargs) -> Tuple[int, int]:
         cmd = ["put", key, value]
-        res = self.run(cmd, load_json=load_pretty_json, 
-        **kwargs)
+        res = self.run(cmd, load_json=load_pretty_json, **kwargs)
 
         header = json.loads(res.stdout.decode("utf-8"))["header"]
         rev = header["revision"]
@@ -259,7 +290,7 @@ class Etcdctl:
         return (term, rev)
 
     def delete(self, key: str, end: str = ""):
-        cmd =  ["del", key]
+        cmd = ["del", key]
         if end:
             cmd += [end]
         res = self.run(
@@ -280,8 +311,8 @@ class Etcdctl:
     def tx_status(self, term: int, rev: int, **kwargs):
         self.curl.tx_status(term, rev, **kwargs)
 
-    def get_receipt(self, term: int, rev: int):
-        self.curl.get_receipt(term, rev)
+    def get_receipt(self, term: int, rev: int, request, response):
+        self.curl.get_receipt(term, rev, request, response)
 
     def list_endpoints(self):
         self.curl.list_endpoints()
@@ -360,7 +391,7 @@ def main(port: int, common_dir: str, client_type: str):
     for i in range(10):
         keyi = make_key(i)
         vali = make_value(i)
-        put_term, put_rev = client.put(keyi, vali, wait=False, silent=True)
+        _, _ = client.put(keyi, vali, wait=False, silent=True)
 
     # read the value
     print()
@@ -395,7 +426,7 @@ def main(port: int, common_dir: str, client_type: str):
     # now get a receipt for the write we did
     print()
     print("Now what if we want to verify that what we wrote is in the ledger?")
-    client.get_receipt(put_term, put_rev)
+    client.get_receipt(put_term, put_rev, {"key": key, "value": value}, {})
 
 
 if __name__ == "__main__":
