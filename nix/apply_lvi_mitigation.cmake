@@ -6,6 +6,9 @@ macro(get_glibc_version)
     COMMAND bash "-c" "ldd --version | awk '/ldd/{print $NF}'"
     OUTPUT_VARIABLE GLIBC_VERSION
     OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(NOT GLIBC_VERSION MATCHES "^[0-9]+\.[0-9]+$")
+    message(FATAL_ERROR "Glibc version is unknown: ${GLIBC_VERSION}")
+  endif()
 endmacro()
 
 function(apply_lvi_mitigation NAME)
