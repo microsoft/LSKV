@@ -75,14 +75,14 @@ class LSKVStore(Store):
                 encoding="utf-8",
             ) as err:
                 package = "build/liblskv"
-                if self.config.sgx:
+                if self.config.enclave == "sgx":
                     package += ".enclave.signed.so"
                 else:
                     package += ".virtual.so"
                 lskv_cmd = [
                     "/opt/ccf_virtual/bin/sandbox.sh",
-                    "--enclave",
-                    "sgx" if self.config.sgx else "virtual",
+                    "--enclave-type",
+                    "virtual" if self.config.enclave == "virtual" else "release",
                     "--package",
                     package,
                     "--verbose",
