@@ -39,12 +39,6 @@ function key(i) {
 }
 const val0 = encoding.b64encode("value0");
 
-const json_header_params = {
-  headers: {
-    "Content-Type": "application/json",
-  },
-};
-
 const host = "https://127.0.0.1:8000";
 const total_requests = rate * duration_s;
 const prefill_keys = total_requests / 2;
@@ -57,7 +51,7 @@ export function setup() {
   // trigger getting some cached ones too (maybe)
   for (let i = 0; i < prefill_keys; i++) {
     // issue some writes so we have things to get receipts for
-    txid = put_single(i);
+    txid = put_single(i, "setup");
     receipt_txids.push(txid);
   }
   return receipt_txids;
@@ -77,13 +71,21 @@ function check_committed(status) {
 }
 
 // perform a single put request at a preset key
-export function put_single(i = 0) {
+export function put_single(i = 0, tag = "put_single") {
   let payload = JSON.stringify({
     key: key(i),
     value: val0,
   });
+  let params = {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    tags: {
+      caller: tag,
+    }
+  }
 
-  let response = http.post(`${host}/v3/kv/put`, payload, json_header_params);
+  let response = http.post(`${host}/v3/kv/put`, payload, params);
 
   check_success(response);
 
@@ -115,56 +117,101 @@ function wait_for_committed(txid) {
 
 // perform a single put request but poll until it is committed
 export function put_single_wait(i = 0) {
-  const txid = put_single(i);
+  const txid = put_single(i, "put_single_wait");
   wait_for_committed(txid);
 }
 
 // perform a single get request at a preset key
-export function get_single(i = 0) {
+export function get_single(i = 0, tag = "get_single") {
   let payload = JSON.stringify({
     key: key(i),
   });
+  let params = {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    tags: {
+      caller: tag,
+    }
+  }
 
-  let response = http.post("${host}/v3/kv/range", payload, json_header_params);
+  let response = http.post(`${host}/v3/kv/range`, payload, params);
 
   check_success(response);
 }
 
 // perform a single get request at a preset key
-export function get_range(i = 0) {
+export function get_range(i = 0, tag = "get_range") {
   let payload = JSON.stringify({
     key: key(i),
     range_end: key(i + 1000),
   });
+  let params = {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    tags: {
+      caller: tag,
+    }
+  }
 
-  let response = http.post("${host}/v3/kv/range", payload, json_header_params);
+  let response = http.post(`${host}/v3/kv/range`, payload, params);
 
   check_success(response);
 }
 
 // perform a single delete request at a preset key
-export function delete_single(i = 0) {
+export function delete_single(i = 0, tag = "delete_single") {
   let payload = JSON.stringify({
     key: key(i),
   });
+  let params = {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    tags: {
+      caller: tag,
+    }
+  }
 
   let response = http.post(
     `${host}/v3/kv/delete_range`,
     payload,
-    json_header_params
+    params
   );
 
   check_success(response);
 }
 
+export function put_get_delete(i = 0) {
+  put_single(i);
+  get_single(i);
+  delete_single(i);
+}
+
 // perform a single delete request but poll until it is committed
 export function delete_single_wait(i = 0) {
-  const txid = delete_single(i);
+  const txid = delete_single(i, "delete_single_wait");
   wait_for_committed(txid);
 }
 
 // Randomly select a request type to run
 export function mixed_single() {
+  const rnd = Math.random();
+  if (rnd >= 0 && rnd < 0.6) {
+    // 60% reads
+    get_single();
+  } else if (rnd >= 0.5 && rnd < 0.9) {
+    // 40% writes
+    put_single();
+  } else {
+    // 10% deletes
+    delete_single();
+  }
+}
+
+// Randomly select a request type to run
+export function mixed_single_wait() {
   const rnd = Math.random();
   if (rnd >= 0 && rnd < 0.6) {
     // 60% reads
@@ -184,7 +231,8 @@ export function mixed_single() {
   }
 }
 
-export function get_receipt(receipt_txids) {
+
+export function get_receipt(receipt_txids, tag = "get_receipt") {
   const txid =
     receipt_txids[exec.scenario.iterationInTest % receipt_txids.length];
 
@@ -193,11 +241,19 @@ export function get_receipt(receipt_txids) {
     revision: revision,
     raftTerm: raftTerm,
   });
+  let params = {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    tags: {
+      caller: tag,
+    }
+  }
 
   const response = http.post(
     `${host}/v3/receipt/get_receipt`,
     payload,
-    json_header_params
+    params
   );
   check_success(response);
 }
