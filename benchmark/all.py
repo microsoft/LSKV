@@ -22,8 +22,7 @@ def all_common_configurations(args: argparse.Namespace):
     """
     args.nodes = [1, 3, 5]
     args.worker_threads = [1, 2, 4]
-    args.virtual = True
-    args.sgx = True
+    args.enclave = ["virtual", "sgx"]
     args.http2 = True
     args.etcd = True
 
