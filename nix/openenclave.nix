@@ -8,6 +8,7 @@
   perl,
   openssl_1_1,
   clang_10,
+  gcc,
 }: let
   sgx-h = fetchurl {
     url = "https://raw.githubusercontent.com/torvalds/linux/v5.13/arch/x86/include/uapi/asm/sgx.h";
@@ -43,20 +44,16 @@
     version = oe-version;
     src = oe-src;
 
+    buildInputs = [clang_10 gcc];
+
     preConfigure = ''
+      cp ${./install_lvi_mitigation_bindir} scripts/lvi-mitigation/install_lvi_mitigation_bindir
+      cp ${./invoke_compiler} scripts/lvi-mitigation/invoke_compiler
       patchShebangs scripts/lvi-mitigation/*
-      substituteInPlace scripts/lvi-mitigation/install_lvi_mitigation_bindir --replace 'read -rp "Do you want to install in current directory? [yes/no]: " ans' 'ans=yes'
-      mkdir -p $out/bin
 
       ln -s ${intel-tarball} intel-tarball
-      ls -lah intel-tarball
-      cp intel-tarball/toolset/ubuntu18.04/as $out/bin/as
-      cp intel-tarball/toolset/ubuntu18.04/ld $out/bin/ld
 
-      ln -s ${clang_10}/bin/clang $out/bin/clang
-      ln -s ${clang_10}/bin/clang++ $out/bin/clang++
-
-      ls -lah $out/bin
+      ./scripts/lvi-mitigation/install_lvi_mitigation_bindir
     '';
 
     dontBuild = true;
@@ -103,6 +100,8 @@ in
 
       substituteInPlace pkgconfig/*.pc --replace \''${prefix}/@CMAKE_INSTALL_LIBDIR@ @CMAKE_INSTALL_LIBDIR@
       substituteInPlace pkgconfig/*.pc --replace \''${prefix}/@CMAKE_INSTALL_INCLUDEDIR@ @CMAKE_INSTALL_INCLUDEDIR@
+
+      cp ${./apply_lvi_mitigation.cmake} cmake/apply_lvi_mitigation.cmake
     '';
 
     nativeBuildInputs = [cmake ninja perl];
