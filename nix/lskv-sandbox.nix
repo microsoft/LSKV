@@ -11,5 +11,5 @@
   sandbox = ccf-sandbox {inherit enclave;};
 in
   writeShellScriptBin "lskv-sandbox.sh" ''
-    ${sandbox}/bin/sandbox.sh -p ${l}/lib/liblskv --enclave-type ${enclave_type} $@
+    ${sandbox}/bin/sandbox.sh --package ${l}/lib/liblskv --enclave-type ${enclave_type} $@
   ''
