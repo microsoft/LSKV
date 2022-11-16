@@ -49,18 +49,53 @@ def test_kv_latest(http1_client):
     """
     res = http1_client.put("foo", "bar")
     check_response(res)
+    put_rev = res.json()["header"]["revision"]
 
     res = http1_client.get("foo")
     check_response(res)
-    assert b64decode(res.json()["kvs"][0]["key"]) == "foo"
-    assert b64decode(res.json()["kvs"][0]["value"]) == "bar"
+    kvs = res.json()["kvs"]
+    assert b64decode(kvs[0]["key"]) == "foo"
+    assert b64decode(kvs[0]["value"]) == "bar"
+    assert kvs[0]["createRevision"] == str(put_rev)
+    assert kvs[0]["modRevision"] == str(put_rev)
+    assert kvs[0]["version"] == "1"
 
+    # writing to it again updates the revision and version
+    res = http1_client.put("foo", "bar")
+    check_response(res)
+    update_rev = res.json()["header"]["revision"]
+
+    res = http1_client.get("foo")
+    check_response(res)
+    kvs = res.json()["kvs"]
+    assert b64decode(kvs[0]["key"]) == "foo"
+    assert b64decode(kvs[0]["value"]) == "bar"
+    assert kvs[0]["createRevision"] == str(put_rev)
+    assert kvs[0]["modRevision"] == str(update_rev)
+    assert kvs[0]["version"] == "2"
+
+    # then we can delete it
     res = http1_client.delete("foo")
     check_response(res)
 
+    # and not see it any more
     res = http1_client.get("foo")
     check_response(res)
     assert "kvs" not in res.json()
+
+    # then create it again and it should have a new version and create_revision
+    res = http1_client.put("foo", "bar")
+    check_response(res)
+    put_rev = res.json()["header"]["revision"]
+
+    res = http1_client.get("foo")
+    check_response(res)
+    kvs = res.json()["kvs"]
+    assert b64decode(kvs[0]["key"]) == "foo"
+    assert b64decode(kvs[0]["value"]) == "bar"
+    assert kvs[0]["createRevision"] == str(put_rev)
+    assert kvs[0]["modRevision"] == str(put_rev)
+    assert kvs[0]["version"] == "1"
 
 
 # pylint: disable=redefined-outer-name
