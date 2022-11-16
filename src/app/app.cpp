@@ -1060,7 +1060,12 @@ namespace app
       ccf::View view = payload.raft_term();
       ccf::SeqNo seqno = payload.revision();
       ccf::TxStatus status;
-      get_status_for_txid_v1(view, seqno, status);
+      auto res = get_status_for_txid_v1(view, seqno, status);
+      if (res != ccf::ApiResult::OK)
+      {
+        CCF_APP_FAIL(
+          "failed to get status for txid {}.{}: {}", view, seqno, res);
+      }
 
       switch (status)
       {
@@ -1076,6 +1081,8 @@ namespace app
         case ccf::TxStatus::Invalid:
           response.set_status(lskvserverpb::TxStatusResponse_Status_Invalid);
           break;
+        default:
+          CCF_APP_FAIL("unknown txstatus {}", status);
       }
 
       return ccf::grpc::make_success(response);
