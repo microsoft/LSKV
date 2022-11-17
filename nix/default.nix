@@ -8,6 +8,15 @@ pkgs.lib.makeScope pkgs.newScope (
       az-dcap = self.callPackage ./az-dcap.nix {};
       sgx-dcap = self.callPackage ./sgx-dcap.nix {};
 
+      openenclave-version = "0.18.4";
+      openenclave-src = pkgs.fetchFromGitHub {
+        owner = "openenclave";
+        repo = "openenclave";
+        rev = "v${openenclave-version}";
+        hash = "sha256-65LHXKfDWUvLCMupJkF7o7d6ljsO7nwcmQxRU8H2Xls=";
+        fetchSubmodules = true;
+      };
+      lvi-mitigation = self.callPackage ./lvi-mitigation.nix {};
       openenclave = self.callPackage ./openenclave.nix {
         # Openenclave doesn't build with libcxx, for some reason.
         stdenv = pkgs.llvmPackages_10.stdenv;

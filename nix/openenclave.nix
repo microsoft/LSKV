@@ -3,6 +3,9 @@
   fetchurl,
   fetchzip,
   fetchFromGitHub,
+  openenclave-version,
+  openenclave-src,
+  lvi-mitigation,
   cmake,
   ninja,
   perl,
@@ -27,42 +30,11 @@
     sha256 = "sha256-diA653HZ4Mn4JbeT6+U0anhP3ySVWZWjcXH7KVVkqkY=";
     stripRoot = false;
   };
-  oe-version = "0.18.4";
-  oe-src = fetchFromGitHub {
-    owner = "openenclave";
-    repo = "openenclave";
-    rev = "v${oe-version}";
-    hash = "sha256-65LHXKfDWUvLCMupJkF7o7d6ljsO7nwcmQxRU8H2Xls=";
-    fetchSubmodules = true;
-  };
-  intel-tarball = fetchzip {
-    url = "https://download.01.org/intel-sgx/sgx-linux/2.13/as.ld.objdump.gold.r3.tar.gz";
-    sha256 = "sha256-gD0LOLebDHZHrV7MW/ApqzdPxazidmDUDqBEnm1JmdQ=";
-  };
-  lvi-mitigation-bin = stdenv.mkDerivation {
-    pname = "lvi-mitigation-bin";
-    version = oe-version;
-    src = oe-src;
-    patches = [patches/openenclave.diff];
-
-    buildInputs = [clang gcc];
-
-    preConfigure = ''
-      patchShebangs scripts/lvi-mitigation/*
-
-      ln -s ${intel-tarball} intel-tarball
-
-      ./scripts/lvi-mitigation/install_lvi_mitigation_bindir
-    '';
-
-    dontBuild = true;
-    dontInstall = true;
-  };
 in
   stdenv.mkDerivation rec {
     pname = "openenclave";
-    version = oe-version;
-    src = oe-src;
+    version = openenclave-version;
+    src = openenclave-src;
     patches = [patches/openenclave.diff];
     cmakeFlags = [
       "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
@@ -90,7 +62,7 @@ in
       ln -s ${compiler-rt} 3rdparty/compiler-rt/compiler-rt
       ln -s ${libcxx} 3rdparty/libcxx/libcxx
       ln -s ${symcrypt} build/3rdparty/symcrypt_engine/SymCrypt
-      ln -s ${lvi-mitigation-bin}/bin build/lvi_mitigation_bin
+      ln -s ${lvi-mitigation}/bin build/lvi_mitigation_bin
 
       patchShebangs tools/oeutil/gen_pubkey_header.sh
       patchShebangs tools/oeapkman/oeapkman
