@@ -15,7 +15,8 @@ import pandas as pd  # type: ignore
 import seaborn as sns  # type: ignore
 import textwrap
 
-def make_title(invariant_vars:List[str]) -> str:
+
+def make_title(invariant_vars: List[str]) -> str:
     """
     Make a title for the plot.
     """
