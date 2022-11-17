@@ -5,19 +5,15 @@
 Test a single node
 """
 
+import json
 import re
 from http import HTTPStatus
 
 from loguru import logger
-
 # pylint: disable=unused-import
 # pylint: disable=no-name-in-module
-from test_common import (
-    b64decode,
-    fixture_http1_client,
-    fixture_http1_client_unauthenticated,
-    fixture_sandbox,
-)
+from test_common import (b64decode, fixture_http1_client,
+                         fixture_http1_client_unauthenticated, fixture_sandbox)
 
 
 # pylint: disable=redefined-outer-name
@@ -236,6 +232,27 @@ def test_tx_status(http1_client):
     check_response(res)
     status = res.json()["status"]
     assert status == "Invalid"
+
+
+# pylint: disable=redefined-outer-name
+def test_openapi(http1_client):
+    """
+    Test that the openapi file is correct.
+    """
+    res = http1_client.raw().get("api")
+    assert res.status_code == HTTPStatus.OK
+    store_api = res.json()
+    print(store_api)
+
+    openapi_filename = "openapi.json"
+    logger.info("reading openapi.json")
+    with open(openapi_filename, "r", encoding="utf-8") as openapi_file:
+        file_openapi = json.load(openapi_file)
+    print(file_openapi)
+    with open(openapi_filename, "w", encoding="utf-8") as openapi_file:
+        logger.info("saving openapi.json file")
+        json.dump(store_api, openapi_file, indent=2, sort_keys=True)
+    assert store_api == file_openapi
 
 
 def check_response(res):

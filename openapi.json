@@ -1,0 +1,860 @@
+{
+  "components": {
+    "responses": {
+      "default": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CCFError"
+            }
+          }
+        },
+        "description": "An error occurred"
+      }
+    },
+    "schemas": {
+      "CCFError": {
+        "properties": {
+          "error": {
+            "properties": {
+              "code": {
+                "description": "Response error code. CCF error codes: https://microsoft.github.io/CCF/main/operations/troubleshooting.html#error-codes",
+                "type": "string"
+              },
+              "message": {
+                "description": "Response error message",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "CodeStatus": {
+        "enum": ["AllowedToJoin"],
+        "type": "string"
+      },
+      "EndpointMetrics": {
+        "properties": {
+          "metrics": {
+            "$ref": "#/components/schemas/EndpointMetricsEntry_array"
+          }
+        },
+        "required": ["metrics"],
+        "type": "object"
+      },
+      "EndpointMetricsEntry": {
+        "properties": {
+          "calls": {
+            "$ref": "#/components/schemas/uint64"
+          },
+          "errors": {
+            "$ref": "#/components/schemas/uint64"
+          },
+          "failures": {
+            "$ref": "#/components/schemas/uint64"
+          },
+          "method": {
+            "$ref": "#/components/schemas/string"
+          },
+          "path": {
+            "$ref": "#/components/schemas/string"
+          },
+          "retries": {
+            "$ref": "#/components/schemas/uint64"
+          }
+        },
+        "required": [
+          "path",
+          "method",
+          "calls",
+          "errors",
+          "failures",
+          "retries"
+        ],
+        "type": "object"
+      },
+      "EndpointMetricsEntry_array": {
+        "items": {
+          "$ref": "#/components/schemas/EndpointMetricsEntry"
+        },
+        "type": "array"
+      },
+      "GetCode__Out": {
+        "properties": {
+          "versions": {
+            "$ref": "#/components/schemas/GetCode__Version_array"
+          }
+        },
+        "required": ["versions"],
+        "type": "object"
+      },
+      "GetCode__Version": {
+        "properties": {
+          "digest": {
+            "$ref": "#/components/schemas/string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CodeStatus"
+          }
+        },
+        "required": ["digest", "status"],
+        "type": "object"
+      },
+      "GetCode__Version_array": {
+        "items": {
+          "$ref": "#/components/schemas/GetCode__Version"
+        },
+        "type": "array"
+      },
+      "GetCommit__Out": {
+        "properties": {
+          "transaction_id": {
+            "$ref": "#/components/schemas/TransactionId"
+          }
+        },
+        "required": ["transaction_id"],
+        "type": "object"
+      },
+      "GetSnpHostDataMap__HostData": {
+        "properties": {
+          "metadata": {
+            "$ref": "#/components/schemas/string"
+          },
+          "raw": {
+            "$ref": "#/components/schemas/string"
+          }
+        },
+        "required": ["raw", "metadata"],
+        "type": "object"
+      },
+      "GetSnpHostDataMap__HostData_array": {
+        "items": {
+          "$ref": "#/components/schemas/GetSnpHostDataMap__HostData"
+        },
+        "type": "array"
+      },
+      "GetSnpHostDataMap__Out": {
+        "properties": {
+          "host_data": {
+            "$ref": "#/components/schemas/GetSnpHostDataMap__HostData_array"
+          }
+        },
+        "required": ["host_data"],
+        "type": "object"
+      },
+      "GetTxStatus__Out": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/TxStatus"
+          },
+          "transaction_id": {
+            "$ref": "#/components/schemas/TransactionId"
+          }
+        },
+        "required": ["transaction_id", "status"],
+        "type": "object"
+      },
+      "TransactionId": {
+        "pattern": "^[0-9]+\\.[0-9]+$",
+        "type": "string"
+      },
+      "TxStatus": {
+        "enum": ["Unknown", "Pending", "Committed", "Invalid"],
+        "type": "string"
+      },
+      "json": {},
+      "string": {
+        "type": "string"
+      },
+      "uint64": {
+        "maximum": 18446744073709552000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "x-ccf-forwarding": {
+      "always": {
+        "description": "If this request is made to a backup node, it will be forwarded to the primary node for execution.",
+        "value": "always"
+      },
+      "never": {
+        "description": "This call will never be forwarded, and is always executed on the receiving node, potentially breaking session consistency. If this attempts to write on a backup, this will fail.",
+        "value": "never"
+      },
+      "sometimes": {
+        "description": "If this request is made to a backup node, it may be forwarded to the primary node for execution. Specifically, if this request is sent as part of a session which was already forwarded, then it will also be forwarded.",
+        "value": "sometimes"
+      }
+    }
+  },
+  "info": {
+    "description": "Sample Key-Value store built on CCF",
+    "title": "CCF Sample C++ Key-Value Store",
+    "version": "0.0.1-14-gc28a977-dirty"
+  },
+  "openapi": "3.0.0",
+  "paths": {
+    "/app/api": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/json"
+                }
+              }
+            },
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/api/metrics": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EndpointMetrics"
+                }
+              }
+            },
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/code": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetCode__Out"
+                }
+              }
+            },
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/commit": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetCommit__Out"
+                }
+              }
+            },
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/etcdserverpb.Cluster/MemberList": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/etcdserverpb.KV/Compact": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/always"
+        }
+      }
+    },
+    "/app/etcdserverpb.KV/DeleteRange": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/always"
+        }
+      }
+    },
+    "/app/etcdserverpb.KV/Put": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/always"
+        }
+      }
+    },
+    "/app/etcdserverpb.KV/Range": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/etcdserverpb.KV/Txn": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/always"
+        }
+      }
+    },
+    "/app/etcdserverpb.Lease/LeaseGrant": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/always"
+        }
+      }
+    },
+    "/app/etcdserverpb.Lease/LeaseKeepAlive": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/always"
+        }
+      }
+    },
+    "/app/etcdserverpb.Lease/LeaseLeases": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/etcdserverpb.Lease/LeaseRevoke": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/always"
+        }
+      }
+    },
+    "/app/etcdserverpb.Lease/LeaseTimeToLive": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/etcdserverpb.Maintenance/Status": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/etcdserverpb.Maintenance/TxStatus": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/etcdserverpb.Receipt/GetReceipt": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/never"
+        }
+      }
+    },
+    "/app/local_tx": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "transaction_id",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/TransactionId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetTxStatus__Out"
+                }
+              }
+            },
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/receipt": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "transaction_id",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/TransactionId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/json"
+                }
+              }
+            },
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/snp/host_data": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "key",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetSnpHostDataMap__Out"
+                }
+              }
+            },
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/snp/measurements": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetCode__Out"
+                }
+              }
+            },
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/tx": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "transaction_id",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/TransactionId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetTxStatus__Out"
+                }
+              }
+            },
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/v3/cluster/member/list": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/v3/kv/compact": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/always"
+        }
+      }
+    },
+    "/app/v3/kv/delete_range": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/always"
+        }
+      }
+    },
+    "/app/v3/kv/put": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/always"
+        }
+      }
+    },
+    "/app/v3/kv/range": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/v3/kv/txn": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/always"
+        }
+      }
+    },
+    "/app/v3/lease/grant": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/always"
+        }
+      }
+    },
+    "/app/v3/lease/keepalive": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/always"
+        }
+      }
+    },
+    "/app/v3/lease/leases": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/v3/lease/revoke": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/always"
+        }
+      }
+    },
+    "/app/v3/lease/timetolive": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/v3/maintenance/status": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/v3/maintenance/tx_status": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/sometimes"
+        }
+      }
+    },
+    "/app/v3/receipt/get_receipt": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default response description"
+          },
+          "default": {
+            "$ref": "#/components/responses/default"
+          }
+        },
+        "x-ccf-forwarding": {
+          "$ref": "#/components/x-ccf-forwarding/never"
+        }
+      }
+    }
+  },
+  "servers": []
+}
+
