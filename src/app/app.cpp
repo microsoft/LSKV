@@ -54,7 +54,7 @@ namespace app
     {
       openapi_info.title = "CCF Sample C++ Key-Value Store";
       openapi_info.description = "Sample Key-Value store built on CCF";
-      openapi_info.document_version = "0.0.1";
+      openapi_info.document_version = LSKV_VERSION;
 
       kvindex = std::make_shared<IndexStrategy>(app::kvstore::RECORDS);
       context.get_indexing_strategies().install_strategy(kvindex);
