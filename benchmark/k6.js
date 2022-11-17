@@ -11,7 +11,7 @@ const workspace = __ENV.WORKSPACE;
 const preAllocatedVUs = __ENV.PRE_ALLOCATED_VUS;
 const maxVUs = __ENV.MAX_VUS;
 const func = __ENV.FUNC;
-const proto = __ENV.PROTO;
+const content_type = __ENV.CONTENT_TYPE;
 
 const duration_s = 10;
 
@@ -80,7 +80,7 @@ function check_committed(status) {
 
 // perform a single put request at a preset key
 export function put_single(i = 0, tag = "put_single") {
-  if (proto == "grpc") {
+  if (content_type == "grpc") {
     if (tag != "setup" && exec.vu.iterationInInstance == 0) {
       grpc_client.connect(addr, {})
     }
@@ -153,7 +153,7 @@ export function put_single_wait(i = 0) {
 
 // perform a single get request at a preset key
 export function get_single(i = 0, tag = "get_single") {
-  if (proto == "grpc") {
+  if (content_type == "grpc") {
     if (tag != "setup" && exec.vu.iterationInInstance == 0) {
       grpc_client.connect(addr, {})
     }
@@ -206,7 +206,7 @@ export function get_range(i = 0, tag = "get_range") {
 
 // perform a single delete request at a preset key
 export function delete_single(i = 0, tag = "delete_single") {
-  if (proto == "grpc") {
+  if (content_type == "grpc") {
     if (tag != "setup" && exec.vu.iterationInInstance == 0) {
       grpc_client.connect(addr, {})
     }

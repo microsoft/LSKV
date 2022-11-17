@@ -29,7 +29,7 @@ class K6Config(common.Config):
     rate: int
     vus: int
     func: str
-    proto: str
+    content_type: str
 
     def bench_name(self) -> str:
         """
@@ -65,7 +65,7 @@ class K6Benchmark(common.Benchmark):
             "--env",
             f"FUNC={self.config.func}",
             "--env",
-            f"PROTO={self.config.proto}",
+            f"CONTENT_TYPE={self.config.content_type}",
             "--env",
             f"PRE_ALLOCATED_VUS={self.config.vus}",
             "--env",
@@ -137,13 +137,13 @@ def get_arguments():
         help="Functions to run",
     )
     parser.add_argument(
-        "--proto",
+        "--content-type",
         action="extend",
         nargs="+",
         type=int,
         choices=["json", "grpc"],
         default=[],
-        help="Proto payload to use",
+        help="content type payload to use",
     )
 
     args = parser.parse_args()
@@ -154,8 +154,8 @@ def get_arguments():
         args.vus = [100]
     if not args.func:
         args.func = ["put_single"]
-    if not args.proto:
-        args.proto = ["json"]
+    if not args.content_type:
+        args.content_type = ["json"]
 
     return args
 
@@ -196,14 +196,14 @@ def make_configurations(args: argparse.Namespace) -> List[K6Config]:
                 logger.debug("adding vus: {}", vus)
                 for func in args.func:
                     logger.debug("adding func: {}", func)
-                    for proto in args.proto:
-                        logger.debug("adding proto: {}", proto)
+                    for content_type in args.content_type:
+                        logger.debug("adding content_type: {}", content_type)
                         conf = K6Config(
                             **asdict(common_config),
                             rate=rate,
                             vus=vus,
                             func=func,
-                            proto=proto,
+                            content_type=content_type,
                         )
                         configs.append(conf)
 
