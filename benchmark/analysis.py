@@ -13,6 +13,14 @@ from typing import List, Tuple
 import common
 import pandas as pd  # type: ignore
 import seaborn as sns  # type: ignore
+import textwrap
+
+def make_title(invariant_vars:List[str]) -> str:
+    """
+    Make a title for the plot.
+    """
+    alltogether = " ".join(invariant_vars)
+    return textwrap.fill(alltogether, 80)
 
 
 class Analyser:
@@ -188,7 +196,7 @@ class Analyser:
         )
 
         plot.figure.subplots_adjust(top=0.9)
-        plot.figure.suptitle(",".join(invariant_vars))
+        plot.figure.suptitle(make_title(invariant_vars))
 
         # add tick labels to each x axis
         for axes in plot.axes.flatten():
@@ -236,7 +244,7 @@ class Analyser:
         )
 
         plot.figure.subplots_adjust(top=0.9)
-        plot.figure.suptitle(",".join(invariant_vars))
+        plot.figure.suptitle(make_title(invariant_vars))
 
         # add tick labels to each x axis
         for axes in plot.axes.flatten():
@@ -305,7 +313,7 @@ class Analyser:
         )
 
         plot.figure.subplots_adjust(top=0.9)
-        plot.figure.suptitle(",".join(invariant_vars))
+        plot.figure.suptitle(make_title(invariant_vars))
 
         # add tick labels to each x axis
         for axes in plot.axes.flatten():
@@ -366,7 +374,7 @@ class Analyser:
         )
 
         plot.figure.subplots_adjust(top=0.9)
-        plot.figure.suptitle(",".join(invariant_vars))
+        plot.figure.suptitle(make_title(invariant_vars))
 
         # add tick labels to each x axis
         for axes in plot.axes.flatten():
@@ -409,7 +417,7 @@ class Analyser:
         )
 
         plot.figure.subplots_adjust(top=0.9)
-        plot.figure.suptitle(",".join(invariant_vars))
+        plot.figure.suptitle(make_title(invariant_vars))
 
         # add tick labels to each x axis
         for axes in plot.axes.flatten():
