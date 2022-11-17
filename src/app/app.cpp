@@ -127,6 +127,21 @@ namespace app
         etcdserverpb::CompactionResponse>(
         etcdserverpb, kv, "Compact", "/v3/kv/compact", compact);
 
+      auto txstatus = [this](
+                        ccf::endpoints::CommandEndpointContext& ctx,
+                        lskvserverpb::TxStatusRequest&& payload) {
+        return this->tx_status(ctx, std::move(payload));
+      };
+
+      install_command_endpoint<
+        lskvserverpb::TxStatusRequest,
+        lskvserverpb::TxStatusResponse>(
+        etcdserverpb,
+        maintenance,
+        "TxStatus",
+        "/v3/maintenance/tx_status",
+        txstatus);
+
       auto lease_grant = [this](
                            ccf::endpoints::EndpointContext& ctx,
                            etcdserverpb::LeaseGrantRequest&& payload) {
@@ -1027,6 +1042,48 @@ namespace app
 
       revoke_expired_leases(ctx.tx);
       kvindex->compact(payload.revision());
+
+      return ccf::grpc::make_success(response);
+    }
+
+    ccf::grpc::GrpcAdapterResponse<lskvserverpb::TxStatusResponse> tx_status(
+      ccf::endpoints::CommandEndpointContext& ctx,
+      lskvserverpb::TxStatusRequest&& payload)
+    {
+      CCF_APP_DEBUG(
+        "TxStatus = term:{} revision:{}",
+        payload.raft_term(),
+        payload.revision());
+
+      lskvserverpb::TxStatusResponse response;
+
+      ccf::View view = payload.raft_term();
+      ccf::SeqNo seqno = payload.revision();
+      ccf::TxStatus status;
+      auto res = get_status_for_txid_v1(view, seqno, status);
+      if (res != ccf::ApiResult::OK)
+      {
+        CCF_APP_FAIL(
+          "failed to get status for txid {}.{}: {}", view, seqno, res);
+      }
+
+      switch (status)
+      {
+        case ccf::TxStatus::Unknown:
+          response.set_status(lskvserverpb::TxStatusResponse_Status_Unknown);
+          break;
+        case ccf::TxStatus::Pending:
+          response.set_status(lskvserverpb::TxStatusResponse_Status_Pending);
+          break;
+        case ccf::TxStatus::Committed:
+          response.set_status(lskvserverpb::TxStatusResponse_Status_Committed);
+          break;
+        case ccf::TxStatus::Invalid:
+          response.set_status(lskvserverpb::TxStatusResponse_Status_Invalid);
+          break;
+        default:
+          CCF_APP_FAIL("unknown txstatus {}", status);
+      }
 
       return ccf::grpc::make_success(response);
     }
