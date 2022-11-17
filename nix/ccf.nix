@@ -52,7 +52,7 @@ stdenv.mkDerivation rec {
       --suffix LD_LIBRARY_PATH ':' "${az-dcap}/lib:${sgx-psw}/lib:${sgx-dcap}/lib"
 
     # These are signed with a randomly generated key, which makes the build non-reproducible
-    # rm $out/lib/libjs_generic.enclave.so.debuggable \
-    #    $out/lib/libjs_generic.enclave.so.signed
+    rm $out/lib/libjs_generic.enclave.so.debuggable \
+       $out/lib/libjs_generic.enclave.so.signed
   '';
 }
