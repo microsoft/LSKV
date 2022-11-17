@@ -67,6 +67,7 @@ message GetReceiptResponse
   Receipt receipt = 2;
 }
 
+// https://microsoft.github.io/CCF/main/use_apps/verify_tx.html#checking-for-commit
 message TxStatusRequest
 {
   int64 revision = 1;
