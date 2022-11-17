@@ -29,6 +29,7 @@ class K6Config(common.Config):
     rate: int
     vus: int
     func: str
+    proto: str
 
     def bench_name(self) -> str:
         """
@@ -63,6 +64,8 @@ class K6Benchmark(common.Benchmark):
             f"WORKSPACE={workspace}",
             "--env",
             f"FUNC={self.config.func}",
+            "--env",
+            f"PROTO={self.config.proto}",
             "--env",
             f"PRE_ALLOCATED_VUS={self.config.vus}",
             "--env",
@@ -133,6 +136,15 @@ def get_arguments():
         default=[],
         help="Functions to run",
     )
+    parser.add_argument(
+        "--proto",
+        action="extend",
+        nargs="+",
+        type=int,
+        choices=["json", "grpc"],
+        default=[],
+        help="Proto payload to use",
+    )
 
     args = parser.parse_args()
 
@@ -142,6 +154,8 @@ def get_arguments():
         args.vus = [100]
     if not args.func:
         args.func = ["put_single"]
+    if not args.proto:
+        args.proto = ["json"]
 
     return args
 
@@ -182,13 +196,16 @@ def make_configurations(args: argparse.Namespace) -> List[K6Config]:
                 logger.debug("adding vus: {}", vus)
                 for func in args.func:
                     logger.debug("adding func: {}", func)
-                    conf = K6Config(
-                        **asdict(common_config),
-                        rate=rate,
-                        vus=vus,
-                        func=func,
-                    )
-                    configs.append(conf)
+                    for proto in args.proto:
+                        logger.debug("adding proto: {}", proto)
+                        conf = K6Config(
+                            **asdict(common_config),
+                            rate=rate,
+                            vus=vus,
+                            func=func,
+                            proto=proto,
+                        )
+                        configs.append(conf)
 
     return configs
 
