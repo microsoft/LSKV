@@ -7,7 +7,7 @@
   ninja,
   perl,
   openssl_1_1,
-  clang_10,
+  clang,
   gcc,
 }: let
   sgx-h = fetchurl {
@@ -45,7 +45,7 @@
     src = oe-src;
     patches = [patches/openenclave.diff];
 
-    buildInputs = [clang_10 gcc];
+    buildInputs = [clang gcc];
 
     preConfigure = ''
       patchShebangs scripts/lvi-mitigation/*
