@@ -16,6 +16,7 @@
 #include "grpc.h"
 #include "index.h"
 #include "json_grpc.h"
+#include "openapi.h"
 #include "kvstore.h"
 #include "leases.h"
 #include "lskvserver.pb.h"
@@ -90,7 +91,7 @@ namespace app
 
       install_endpoint_with_header<
         etcdserverpb::PutRequest,
-        etcdserverpb::PutResponse>(etcdserverpb, kv, "Put", "/v3/kv/put", put);
+        etcdserverpb::PutResponse, app::openapi::Put>(etcdserverpb, kv, "Put", "/v3/kv/put", put);
 
       auto delete_range = [this](
                             ccf::endpoints::EndpointContext& ctx,
@@ -101,7 +102,7 @@ namespace app
 
       install_endpoint_with_header<
         etcdserverpb::DeleteRangeRequest,
-        etcdserverpb::DeleteRangeResponse>(
+        etcdserverpb::DeleteRangeResponse, app::openapi::DeleteRange>(
         etcdserverpb, kv, "DeleteRange", "/v3/kv/delete_range", delete_range);
 
       auto txn = [this](
@@ -113,7 +114,7 @@ namespace app
 
       install_endpoint_with_header<
         etcdserverpb::TxnRequest,
-        etcdserverpb::TxnResponse>(etcdserverpb, kv, "Txn", "/v3/kv/txn", txn);
+        etcdserverpb::TxnResponse, app::openapi::Txn>(etcdserverpb, kv, "Txn", "/v3/kv/txn", txn);
 
       auto compact = [this](
                        ccf::endpoints::EndpointContext& ctx,
@@ -124,7 +125,7 @@ namespace app
 
       install_endpoint_with_header<
         etcdserverpb::CompactionRequest,
-        etcdserverpb::CompactionResponse>(
+        etcdserverpb::CompactionResponse, app::openapi::Compaction>(
         etcdserverpb, kv, "Compact", "/v3/kv/compact", compact);
 
       auto txstatus = [this](
@@ -151,7 +152,7 @@ namespace app
 
       install_endpoint_with_header<
         etcdserverpb::LeaseGrantRequest,
-        etcdserverpb::LeaseGrantResponse>(
+        etcdserverpb::LeaseGrantResponse, app::openapi::LeaseGrant>(
         etcdserverpb, lease, "LeaseGrant", "/v3/lease/grant", lease_grant);
 
       auto lease_revoke = [this](
@@ -163,7 +164,7 @@ namespace app
 
       install_endpoint_with_header<
         etcdserverpb::LeaseRevokeRequest,
-        etcdserverpb::LeaseRevokeResponse>(
+        etcdserverpb::LeaseRevokeResponse, app::openapi::LeaseRevoke>(
         etcdserverpb, lease, "LeaseRevoke", "/v3/lease/revoke", lease_revoke);
 
       auto lease_time_to_live =
@@ -204,7 +205,7 @@ namespace app
 
       install_endpoint_with_header<
         etcdserverpb::LeaseKeepAliveRequest,
-        etcdserverpb::LeaseKeepAliveResponse>(
+        etcdserverpb::LeaseKeepAliveResponse, app::openapi::LeaseKeepAlive>(
         etcdserverpb,
         lease,
         "LeaseKeepAlive",
@@ -410,7 +411,7 @@ namespace app
         .install();
     }
 
-    template <typename In, typename Out>
+    template <typename In, typename Out, typename OpenApiType>
     void install_endpoint_with_header(
       const std::string& package,
       const std::string& service,
@@ -433,6 +434,7 @@ namespace app
           ccf::grpc::set_grpc_response(res, ctx.rpc_ctx);
         },
         auth_policies())
+          .template set_auto_schema<OpenApiType>()
         .install();
       make_endpoint_with_local_commit_handler(
         path,
@@ -443,6 +445,7 @@ namespace app
           app::json_grpc::set_json_grpc_response(res, ctx.rpc_ctx);
         },
         auth_policies())
+          .template set_auto_schema<OpenApiType>()
         .install();
     }
 

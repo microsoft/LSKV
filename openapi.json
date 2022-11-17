@@ -32,8 +32,52 @@
         "type": "object"
       },
       "CodeStatus": {
-        "enum": ["AllowedToJoin"],
+        "enum": [
+          "AllowedToJoin"
+        ],
         "type": "string"
+      },
+      "Compaction__In": {
+        "type": "object"
+      },
+      "Compaction__Out": {
+        "type": "object"
+      },
+      "DeleteRange__In": {
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/base64string"
+          },
+          "prev_kv": {
+            "$ref": "#/components/schemas/boolean"
+          },
+          "range_end": {
+            "$ref": "#/components/schemas/base64string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "type": "object"
+      },
+      "DeleteRange__Out": {
+        "properties": {
+          "deleted": {
+            "$ref": "#/components/schemas/int64"
+          },
+          "header": {
+            "$ref": "#/components/schemas/ResponseHeader"
+          },
+          "prev_kvs": {
+            "$ref": "#/components/schemas/KeyValue_array"
+          }
+        },
+        "required": [
+          "header",
+          "deleted",
+          "prev_kvs"
+        ],
+        "type": "object"
       },
       "EndpointMetrics": {
         "properties": {
@@ -41,7 +85,9 @@
             "$ref": "#/components/schemas/EndpointMetricsEntry_array"
           }
         },
-        "required": ["metrics"],
+        "required": [
+          "metrics"
+        ],
         "type": "object"
       },
       "EndpointMetricsEntry": {
@@ -87,7 +133,9 @@
             "$ref": "#/components/schemas/GetCode__Version_array"
           }
         },
-        "required": ["versions"],
+        "required": [
+          "versions"
+        ],
         "type": "object"
       },
       "GetCode__Version": {
@@ -99,7 +147,10 @@
             "$ref": "#/components/schemas/CodeStatus"
           }
         },
-        "required": ["digest", "status"],
+        "required": [
+          "digest",
+          "status"
+        ],
         "type": "object"
       },
       "GetCode__Version_array": {
@@ -114,7 +165,9 @@
             "$ref": "#/components/schemas/TransactionId"
           }
         },
-        "required": ["transaction_id"],
+        "required": [
+          "transaction_id"
+        ],
         "type": "object"
       },
       "GetSnpHostDataMap__HostData": {
@@ -126,7 +179,10 @@
             "$ref": "#/components/schemas/string"
           }
         },
-        "required": ["raw", "metadata"],
+        "required": [
+          "raw",
+          "metadata"
+        ],
         "type": "object"
       },
       "GetSnpHostDataMap__HostData_array": {
@@ -141,7 +197,9 @@
             "$ref": "#/components/schemas/GetSnpHostDataMap__HostData_array"
           }
         },
-        "required": ["host_data"],
+        "required": [
+          "host_data"
+        ],
         "type": "object"
       },
       "GetTxStatus__Out": {
@@ -153,7 +211,137 @@
             "$ref": "#/components/schemas/TransactionId"
           }
         },
-        "required": ["transaction_id", "status"],
+        "required": [
+          "transaction_id",
+          "status"
+        ],
+        "type": "object"
+      },
+      "KeyValue": {
+        "properties": {
+          "create_revision": {
+            "$ref": "#/components/schemas/int64"
+          },
+          "key": {
+            "$ref": "#/components/schemas/base64string"
+          },
+          "lease": {
+            "$ref": "#/components/schemas/int64"
+          },
+          "mod_revision": {
+            "$ref": "#/components/schemas/int64"
+          },
+          "value": {
+            "$ref": "#/components/schemas/base64string"
+          },
+          "version": {
+            "$ref": "#/components/schemas/int64"
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "create_revision",
+          "mod_revision",
+          "version"
+        ],
+        "type": "object"
+      },
+      "KeyValue_array": {
+        "items": {
+          "$ref": "#/components/schemas/KeyValue"
+        },
+        "type": "array"
+      },
+      "LeaseGrant__In": {
+        "type": "object"
+      },
+      "LeaseGrant__Out": {
+        "type": "object"
+      },
+      "LeaseKeepAlive__In": {
+        "type": "object"
+      },
+      "LeaseKeepAlive__Out": {
+        "type": "object"
+      },
+      "LeaseRevoke__In": {
+        "type": "object"
+      },
+      "LeaseRevoke__Out": {
+        "type": "object"
+      },
+      "Put__In": {
+        "properties": {
+          "ignore_lease": {
+            "$ref": "#/components/schemas/boolean"
+          },
+          "ignore_value": {
+            "$ref": "#/components/schemas/boolean"
+          },
+          "key": {
+            "$ref": "#/components/schemas/base64string"
+          },
+          "lease": {
+            "$ref": "#/components/schemas/int64"
+          },
+          "prev_kv": {
+            "$ref": "#/components/schemas/boolean"
+          },
+          "value": {
+            "$ref": "#/components/schemas/base64string"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ],
+        "type": "object"
+      },
+      "Put__Out": {
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/ResponseHeader"
+          },
+          "prev_kv": {
+            "$ref": "#/components/schemas/KeyValue"
+          }
+        },
+        "required": [
+          "header",
+          "prev_kv"
+        ],
+        "type": "object"
+      },
+      "ResponseHeader": {
+        "properties": {
+          "cluster_id": {
+            "$ref": "#/components/schemas/uint64"
+          },
+          "committed_raft_term": {
+            "$ref": "#/components/schemas/uint64"
+          },
+          "committed_revision": {
+            "$ref": "#/components/schemas/int64"
+          },
+          "member_id": {
+            "$ref": "#/components/schemas/uint64"
+          },
+          "raft_term": {
+            "$ref": "#/components/schemas/uint64"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/int64"
+          }
+        },
+        "required": [
+          "cluster_id",
+          "member_id",
+          "revision",
+          "raft_term",
+          "committed_revision",
+          "committed_raft_term"
+        ],
         "type": "object"
       },
       "TransactionId": {
@@ -161,15 +349,38 @@
         "type": "string"
       },
       "TxStatus": {
-        "enum": ["Unknown", "Pending", "Committed", "Invalid"],
+        "enum": [
+          "Unknown",
+          "Pending",
+          "Committed",
+          "Invalid"
+        ],
         "type": "string"
+      },
+      "Txn__In": {
+        "type": "object"
+      },
+      "Txn__Out": {
+        "type": "object"
+      },
+      "base64string": {
+        "format": "base64",
+        "type": "string"
+      },
+      "boolean": {
+        "type": "boolean"
+      },
+      "int64": {
+        "maximum": 9223372036854775807,
+        "minimum": -9223372036854775808,
+        "type": "integer"
       },
       "json": {},
       "string": {
         "type": "string"
       },
       "uint64": {
-        "maximum": 18446744073709552000,
+        "maximum": 18446744073709551615,
         "minimum": 0,
         "type": "integer"
       }
@@ -192,7 +403,7 @@
   "info": {
     "description": "Sample Key-Value store built on CCF",
     "title": "CCF Sample C++ Key-Value Store",
-    "version": "0.0.1-14-gc28a977-dirty"
+    "version": "0.0.1"
   },
   "openapi": "3.0.0",
   "paths": {
@@ -301,8 +512,25 @@
     },
     "/app/etcdserverpb.KV/Compact": {
       "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Compaction__In"
+              }
+            }
+          },
+          "description": "Auto-generated request body schema"
+        },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Compaction__Out"
+                }
+              }
+            },
             "description": "Default response description"
           },
           "default": {
@@ -316,8 +544,25 @@
     },
     "/app/etcdserverpb.KV/DeleteRange": {
       "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteRange__In"
+              }
+            }
+          },
+          "description": "Auto-generated request body schema"
+        },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteRange__Out"
+                }
+              }
+            },
             "description": "Default response description"
           },
           "default": {
@@ -331,8 +576,25 @@
     },
     "/app/etcdserverpb.KV/Put": {
       "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Put__In"
+              }
+            }
+          },
+          "description": "Auto-generated request body schema"
+        },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Put__Out"
+                }
+              }
+            },
             "description": "Default response description"
           },
           "default": {
@@ -361,8 +623,25 @@
     },
     "/app/etcdserverpb.KV/Txn": {
       "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Txn__In"
+              }
+            }
+          },
+          "description": "Auto-generated request body schema"
+        },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Txn__Out"
+                }
+              }
+            },
             "description": "Default response description"
           },
           "default": {
@@ -376,8 +655,25 @@
     },
     "/app/etcdserverpb.Lease/LeaseGrant": {
       "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeaseGrant__In"
+              }
+            }
+          },
+          "description": "Auto-generated request body schema"
+        },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaseGrant__Out"
+                }
+              }
+            },
             "description": "Default response description"
           },
           "default": {
@@ -391,8 +687,25 @@
     },
     "/app/etcdserverpb.Lease/LeaseKeepAlive": {
       "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeaseKeepAlive__In"
+              }
+            }
+          },
+          "description": "Auto-generated request body schema"
+        },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaseKeepAlive__Out"
+                }
+              }
+            },
             "description": "Default response description"
           },
           "default": {
@@ -421,8 +734,25 @@
     },
     "/app/etcdserverpb.Lease/LeaseRevoke": {
       "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeaseRevoke__In"
+              }
+            }
+          },
+          "description": "Auto-generated request body schema"
+        },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaseRevoke__Out"
+                }
+              }
+            },
             "description": "Default response description"
           },
           "default": {
@@ -661,8 +991,25 @@
     },
     "/app/v3/kv/compact": {
       "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Compaction__In"
+              }
+            }
+          },
+          "description": "Auto-generated request body schema"
+        },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Compaction__Out"
+                }
+              }
+            },
             "description": "Default response description"
           },
           "default": {
@@ -676,8 +1023,25 @@
     },
     "/app/v3/kv/delete_range": {
       "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteRange__In"
+              }
+            }
+          },
+          "description": "Auto-generated request body schema"
+        },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteRange__Out"
+                }
+              }
+            },
             "description": "Default response description"
           },
           "default": {
@@ -691,8 +1055,25 @@
     },
     "/app/v3/kv/put": {
       "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Put__In"
+              }
+            }
+          },
+          "description": "Auto-generated request body schema"
+        },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Put__Out"
+                }
+              }
+            },
             "description": "Default response description"
           },
           "default": {
@@ -721,8 +1102,25 @@
     },
     "/app/v3/kv/txn": {
       "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Txn__In"
+              }
+            }
+          },
+          "description": "Auto-generated request body schema"
+        },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Txn__Out"
+                }
+              }
+            },
             "description": "Default response description"
           },
           "default": {
@@ -736,8 +1134,25 @@
     },
     "/app/v3/lease/grant": {
       "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeaseGrant__In"
+              }
+            }
+          },
+          "description": "Auto-generated request body schema"
+        },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaseGrant__Out"
+                }
+              }
+            },
             "description": "Default response description"
           },
           "default": {
@@ -751,8 +1166,25 @@
     },
     "/app/v3/lease/keepalive": {
       "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeaseKeepAlive__In"
+              }
+            }
+          },
+          "description": "Auto-generated request body schema"
+        },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaseKeepAlive__Out"
+                }
+              }
+            },
             "description": "Default response description"
           },
           "default": {
@@ -781,8 +1213,25 @@
     },
     "/app/v3/lease/revoke": {
       "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeaseRevoke__In"
+              }
+            }
+          },
+          "description": "Auto-generated request body schema"
+        },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaseRevoke__Out"
+                }
+              }
+            },
             "description": "Default response description"
           },
           "default": {
@@ -857,4 +1306,3 @@
   },
   "servers": []
 }
-
