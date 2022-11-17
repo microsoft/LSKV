@@ -52,3 +52,44 @@ jobs:
       - name: Push sgx image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: docker push $ACR_REGISTRY/public/lskv:latest-sgx
+
+
+  publish-binaries:
+    runs-on: ubuntu-20.04
+    needs:
+      - publish-docker-virtual
+      - publish-docker-sgx
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Download images
+        run: |
+          docker pull $ACR_REGISTRY/public/lskv:latest-virtual
+          docker pull $ACR_REGISTRY/public/lskv:latest-sgx
+
+      - name: Copy files out of images
+        run: |
+          docker create --name lskv-virtual $ACR_REGISTRY/public/lskv:latest-virtual
+          docker cp lskv-virtual:/app/liblskv.virtual.so liblskv.virtual.so
+          docker rm lskv-virtual
+
+          docker create --name lskv-sgx $ACR_REGISTRY/public/lskv:latest-sgx
+          docker cp lskv-sgx:/app/liblskv.enclave.so.signed liblskv.enclave.so.signed
+          docker rm lskv-sgx
+
+      - name: Tag latest-main
+        run: |
+          git tag latest-main
+          git push --force origin latest-main
+
+      - name: Publish latest release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Latest main
+          tag_name: latest-main
+          prerelease: true
+          files: |
+            liblskv.virtual.so
+            liblskv.enclave.so.signed
+
