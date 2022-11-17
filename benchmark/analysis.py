@@ -8,12 +8,12 @@ Analysis utils.
 
 import json
 import os
+import textwrap
 from typing import List, Tuple
 
 import common
 import pandas as pd  # type: ignore
 import seaborn as sns  # type: ignore
-import textwrap
 
 
 def make_title(invariant_vars: List[str]) -> str:
