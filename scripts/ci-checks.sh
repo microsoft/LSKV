@@ -10,17 +10,17 @@ else
   FIX=0
 fi
 
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
-ROOT_DIR=$( dirname "$SCRIPT_DIR" )
-pushd "$ROOT_DIR" > /dev/null
+ROOT_DIR=$(dirname "$SCRIPT_DIR")
+pushd "$ROOT_DIR" >/dev/null
 
 # GitHub actions workflow commands: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions
-function group(){
-    echo "::group::$1"
+function group() {
+  echo "::group::$1"
 }
 function endgroup() {
-    echo "::endgroup::"
+  echo "::endgroup::"
 }
 
 group "Shell scripts"
@@ -59,9 +59,8 @@ endgroup
 group "Python dependencies"
 # Virtual Environment w/ dependencies for Python steps
 VENV_DIR=.venv
-if [ ! -f "${VENV_DIR}/bin/activate" ]
-    then
-        python3.8 -m venv ${VENV_DIR}
+if [ ! -f "${VENV_DIR}/bin/activate" ]; then
+  python3.8 -m venv ${VENV_DIR}
 fi
 
 # shellcheck source=/dev/null
