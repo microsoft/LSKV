@@ -386,7 +386,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                                 ledger_chunk_bytes=ledger_chunk_bytes,
                                 snapshot_tx_interval=snapshot_tx_interval,
                             )
-                            if args.enclave == "virtual":
+                            if "virtual" in args.enclave:
                                 lskv_config = copy.deepcopy(lskv_config)
                                 logger.debug("adding virtual lskv")
                                 if args.http1:
@@ -401,7 +401,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                                     configs.append(lskv_config)
 
                             # sgx
-                            if args.enclave == "sgx":
+                            if "sgx" in args.enclave:
                                 logger.debug("adding sgx lskv")
                                 lskv_config = copy.deepcopy(lskv_config)
                                 lskv_config.enclave = "sgx"
