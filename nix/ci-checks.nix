@@ -7,6 +7,7 @@
   cpplint,
   alejandra,
   deadnix,
+  shfmt,
 }: let
   pythonDeps = with python3Packages; [
     loguru
@@ -106,6 +107,19 @@ in {
       buildInputs = [deadnix];
     } ''
       deadnix --fail ${./.}
+      mkdir $out
+    '';
+
+  shfmt-fix =
+    writeShellScriptBin "shfmt"
+    ''
+      git ls-files -- . ':!:3rdparty/' | grep -e '\.sh$'| xargs ${shfmt}/bin/shfmt --write --simplify --case-indent --indent 2
+    '';
+
+  shfmt =
+    runCommand "shfmt" {}
+    ''
+      find ${./.} -name '*.sh' ! -name "3rdparty" | xargs ${shfmt}/bin/shfmt --diff --simplify --case-indent --indent 2
       mkdir $out
     '';
 }
