@@ -60,6 +60,7 @@ def perf_configurations(args: argparse.Namespace) -> List[perf.PerfConfig]:
     """
     common_configurations(args)
     args.http1 = True
+    args.etcd = False
 
     return perf.make_configurations(args)
 
