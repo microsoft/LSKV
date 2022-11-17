@@ -4,7 +4,7 @@
   stdenv,
   openenclave-version,
   openenclave-src,
-  clang,
+  clang_10,
   gcc,
 }: let
   intel-tarball = fetchzip {
@@ -18,7 +18,7 @@ in
     src = openenclave-src;
     patches = [patches/openenclave.diff];
 
-    buildInputs = [clang gcc];
+    buildInputs = [clang_10 gcc];
 
     preConfigure = ''
       patchShebangs scripts/lvi-mitigation/*
