@@ -40,6 +40,7 @@ stdenv.mkDerivation rec {
   cmakeFlags = [
     "-DBUILD_TESTS=OFF"
     "-DBUILD_UNIT_TESTS=OFF"
+    "-DLVI_MITIGATIONS=OFF"
     "-DCOMPILE_TARGET=${enclave}"
   ];
 

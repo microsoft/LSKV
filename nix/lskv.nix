@@ -33,6 +33,7 @@ stdenv.mkDerivation rec {
 
   cmakeFlags = [
     "-DCOMPILE_TARGET=${enclave}"
+    "-DLVI_MITIGATIONS=OFF"
   ];
 
   LSKV_VERSION = version;
