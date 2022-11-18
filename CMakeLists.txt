@@ -64,13 +64,6 @@ add_ccf_app(
   status.virtual
   protobuf.virtual)
 
-if(PUBLIC_MAPS)
-  message(STATUS "Using public maps")
-  add_compile_definitions(PUBLIC_MAPS)
-else()
-  message(STATUS "Using private maps")
-endif()
-
 if(VERBOSE_LOGGING)
   message(STATUS "Using verbose logging")
   add_compile_definitions(VERBOSE_LOGGING)

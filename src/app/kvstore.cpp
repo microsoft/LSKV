@@ -8,12 +8,35 @@
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
 #include "kv/untyped_map.h" // TODO(#22): private header
+#include "service/tables/service.h"
 
 #include <nlohmann/json.hpp>
 
 namespace app::kvstore
 {
   using json = nlohmann::json;
+
+  std::vector<KVStore::K> get_public_prefixes(kv::ReadOnlyTx& tx) {
+      auto ccf_governance_map =
+        tx.template ro<ccf::Service>(ccf::Tables::SERVICE);
+      CCF_APP_DEBUG("Getting service_info map");
+      auto service_info_opt = ccf_governance_map->get();
+      if (!service_info_opt.has_value()) {
+      CCF_APP_DEBUG("Service info had no value, returning early");
+          return {};
+      }
+      CCF_APP_DEBUG("Extracting service data");
+      auto service_data = service_info_opt.value().service_data;
+      ServiceData sd;
+      try {
+          CCF_APP_DEBUG("Parsing service data: {}", service_data);
+          sd = service_data.get<ServiceData>();
+      }
+      catch (nlohmann::json::exception) {
+          CCF_APP_DEBUG("failed to get service data from json");
+      }
+      return sd.public_prefixes;
+  }
 
   Value::Value(const std::string& v, int64_t lease_id)
   {
@@ -35,25 +58,38 @@ namespace app::kvstore
   DECLARE_JSON_REQUIRED_FIELDS(
     Value, data, create_revision, mod_revision, version, lease);
 
-  // using K = std::string;
-  // using V = Value;
-  // using KSerialiser = kv::serialisers::BlitSerialiser<K>;
-  // using VSerialiser = kv::serialisers::JsonSerialiser<V>;
-
-  // Use untyped map so we can access the range API.
-  // using MT = kv::untyped::Map;
+  /// @brief Check whether the given key is public
+  /// @param key
+  /// @return whether the key is public
+  bool KVStore::is_public(const KVStore::K& key) {
+      CCF_APP_DEBUG("Checking if key is public: {}", key);
+      auto key_len = key.size();
+      for (const auto& prefix : public_prefixes) {
+          CCF_APP_DEBUG("Checking if key is public against: {}", prefix);
+          auto prefix_len = prefix.size();
+          if (key_len >= prefix_len ) {
+              KVStore::K key_prefix = {key.begin(), key.begin() + prefix_len};
+              if (prefix == key_prefix) {
+                  return true;
+              }
+          }
+      }
+      return false;
+  }
 
   /// @brief Constructs a KVStore
   /// @param ctx
-  KVStore::KVStore(kv::Tx& tx)
+  KVStore::KVStore(kv::Tx& tx, const std::vector<KVStore::K> &public_prefixes_) : public_prefixes(public_prefixes_)
   {
-    inner_map = tx.template rw<KVStore::MT>(RECORDS);
+    private_map = tx.template ro<KVStore::MT>(RECORDS);
+    public_map = tx.template ro<KVStore::MT>(PUBLIC_RECORDS);
   }
   /// @brief Constructs a KVStore
   /// @param ctx
-  KVStore::KVStore(kv::ReadOnlyTx& tx)
+  KVStore::KVStore(kv::ReadOnlyTx& tx,const std::vector<KVStore::K>&public_prefixes_) : public_prefixes(public_prefixes_)
   {
-    inner_map = tx.template ro<KVStore::MT>(RECORDS);
+    private_map = tx.template ro<KVStore::MT>(RECORDS);
+    public_map = tx.template ro<KVStore::MT>(PUBLIC_RECORDS);
   }
 
   /// @brief get retrieves the value stored for the given key. It hydrates the
@@ -64,7 +100,7 @@ namespace app::kvstore
   std::optional<KVStore::V> KVStore::get(const KVStore::K& key)
   {
     // get the value out and deserialise it
-    auto res = inner_map->get(KSerialiser::to_serialised(key));
+    auto res = private_map->get(KSerialiser::to_serialised(key));
     if (!res.has_value())
     {
       return std::nullopt;
@@ -79,7 +115,7 @@ namespace app::kvstore
   void KVStore::foreach(
     const std::function<bool(const KVStore::K&, const KVStore::V&)>& fn)
   {
-    inner_map->foreach([&](auto& key, auto& value) -> bool {
+    private_map->foreach([&](auto& key, auto& value) -> bool {
       auto k = KVStore::KSerialiser::from_serialised(key);
       auto v = KVStore::VSerialiser::from_serialised(value);
       hydrate_value(k, v);
@@ -97,7 +133,7 @@ namespace app::kvstore
     {
       to = KVStore::KSerialiser::to_serialised(to_opt.value());
     }
-    inner_map->range(
+    private_map->range(
       [&](auto& key, auto& value) {
         auto k = KVStore::KSerialiser::from_serialised(key);
         auto v = KVStore::VSerialiser::from_serialised(value);
@@ -127,7 +163,7 @@ namespace app::kvstore
       if (old_val.create_revision == 0)
       {
         // first put after creation of this key so set the revision
-        auto version_opt = inner_map->get_version_of_previous_write(
+        auto version_opt = private_map->get_version_of_previous_write(
           KVStore::KSerialiser::to_serialised(key));
         if (version_opt.has_value())
         {
@@ -144,9 +180,18 @@ namespace app::kvstore
       value.version = old_val.version + 1;
     }
 
-    inner_map->put(
-      KVStore::KSerialiser::to_serialised(key),
-      KVStore::VSerialiser::to_serialised(value));
+    auto key_ser =
+      KVStore::KSerialiser::to_serialised(key);
+    auto value_ser =
+      KVStore::VSerialiser::to_serialised(value);
+
+    private_map->put( key_ser, value_ser);
+
+    if (is_public(key)) {
+    public_map->put(
+            key_ser,
+            value_ser);
+    }
 
     return old;
   }
@@ -157,8 +202,12 @@ namespace app::kvstore
   std::optional<KVStore::V> KVStore::remove(const KVStore::K& key)
   {
     auto k = KVStore::KSerialiser::to_serialised(key);
-    auto old = inner_map->get(k);
-    inner_map->remove(k);
+    auto old = private_map->get(k);
+    private_map->remove(k);
+    if (is_public(key)) {
+        public_map->remove(k);
+    }
+
     if (old.has_value())
     {
       return KVStore::VSerialiser::from_serialised(old.value());
@@ -173,7 +222,7 @@ namespace app::kvstore
   {
     // the version of the write to this key is our revision
     auto version_opt =
-      inner_map->get_version_of_previous_write(KSerialiser::to_serialised(key));
+      private_map->get_version_of_previous_write(KSerialiser::to_serialised(key));
     // if there is no version (somehow) then just default it
     // this shouldn't be nullopt though.
     uint64_t revision = version_opt.value_or(0);

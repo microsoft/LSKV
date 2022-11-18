@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "service/tables/service.h"
 #include "ccf/app_interface.h"
 #include "ccf/common_auth_policies.h"
 #include "ccf/http_query.h"
@@ -14,11 +15,12 @@
 
 namespace app::kvstore
 {
-#ifdef PUBLIC_MAPS
-  static constexpr auto RECORDS = "public:records";
-#else
+
+
+  // default all data to private table
   static constexpr auto RECORDS = "records";
-#endif
+  // public data gets duplicated here
+  static constexpr auto PUBLIC_RECORDS = "public:records";
 
   struct Value
   {
@@ -48,8 +50,8 @@ namespace app::kvstore
     using KSerialiser = kv::serialisers::BlitSerialiser<K>;
     using VSerialiser = kv::serialisers::JsonSerialiser<V>;
     using MT = kv::untyped::Map;
-    explicit KVStore(kv::Tx& tx);
-    explicit KVStore(kv::ReadOnlyTx& tx);
+    explicit KVStore(kv::Tx& tx,const std::vector<KVStore::K>& public_prefixes_);
+    explicit KVStore(kv::ReadOnlyTx& tx,const std::vector<KVStore::K>& public_prefixes_);
     /// @brief get retrieves the value stored for the given key. It hydrates the
     /// value with up-to-date information as values may not store all
     /// information about revisions.
@@ -82,7 +84,22 @@ namespace app::kvstore
     std::optional<V> remove(const K& key);
 
   private:
-    MT::Handle* inner_map;
+    MT::Handle* private_map;
+    MT::Handle* public_map;
+    const std::vector<K>& public_prefixes;
+
     void hydrate_value(const K& key, V& value);
+  bool is_public(const K& key) ;
   };
+
+    // TODO: move to a separate namespace
+  struct ServiceData {
+      std::vector<KVStore::K> public_prefixes;
+  };
+
+  DECLARE_JSON_TYPE(ServiceData);
+  DECLARE_JSON_REQUIRED_FIELDS(ServiceData, public_prefixes);
+
+  std::vector<KVStore::K> get_public_prefixes(kv::ReadOnlyTx& tx) ;
+
 }; // namespace app::kvstore
