@@ -32,8 +32,8 @@ namespace app::kvstore
           CCF_APP_DEBUG("Parsing service data: {}", service_data);
           sd = service_data.get<ServiceData>();
       }
-      catch (nlohmann::json::exception) {
-          CCF_APP_DEBUG("failed to get service data from json");
+      catch (nlohmann::json::exception e) {
+          CCF_APP_DEBUG("Failed to get service data from json: {}", e.what());
       }
       return sd.public_prefixes;
   }
