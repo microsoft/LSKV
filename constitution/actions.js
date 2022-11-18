@@ -1250,6 +1250,7 @@ const actions = new Map([
     new Action(
       // validate
       function (args) {
+        // TODO: this should probably be a base64 string so it can represent full byte vectors
         checkType(args.public_prefix, "string", "public_prefix");
         const public_prefix_map = ccf.kv[publicPrefixMapName];
         if (public_prefix_map.has(ccf.strToBuf(args.public_prefix))) {
@@ -1267,6 +1268,7 @@ const actions = new Map([
     new Action(
       // validate
       function (args) {
+        // TODO: this should probably be a base64 string so it can represent full byte vectors
         checkType(args.public_prefix, "string", "public_prefix");
         const public_prefix_map = ccf.kv[publicPrefixMapName];
         if (!public_prefix_map.has(ccf.strToBuf(args.public_prefix))) {
