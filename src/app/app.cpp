@@ -265,10 +265,10 @@ namespace app
     {
       if (!initialised_service_data)
       {
-        CCF_APP_DEBUG("loading service data");
+        CCF_APP_DEBUG("Loading service data");
         service_data = service_data::get_service_data(tx);
         CCF_APP_DEBUG(
-          "loaded service data: {}", nlohmann::json(service_data).dump());
+          "Loaded service data: {}", nlohmann::json(service_data).dump());
         initialised_service_data = true;
       }
     }
