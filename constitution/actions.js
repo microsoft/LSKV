@@ -1250,9 +1250,7 @@ const actions = new Map([
     new Action(
       // validate
       function (args) {
-        if (typeof args.public_prefix != "string") {
-          throw new Error("public prefix should be a string");
-        }
+        checkType(args.public_prefix, "string", "public_prefix");
         const public_prefix_map = ccf.kv[publicPrefixMapName];
         if (public_prefix_map.has(ccf.strToBuf(args.public_prefix))) {
           throw new Error("Public prefix already set");
@@ -1269,9 +1267,7 @@ const actions = new Map([
     new Action(
       // validate
       function (args) {
-        if (typeof args.public_prefix != "string") {
-          throw new Error("public prefix should be a string");
-        }
+        checkType(args.public_prefix, "string", "public_prefix");
         const public_prefix_map = ccf.kv[publicPrefixMapName];
         if (!public_prefix_map.has(ccf.strToBuf(args.public_prefix))) {
           throw new Error("Public prefix not set");
