@@ -11,8 +11,8 @@
 #include "ccf/json_handler.h"
 #include "ccf/service/tables/nodes.h"
 #include "ccf/service/tables/service.h"
-#include "endpoints/grpc.h" // TODO(#22): private header
-#include "endpoints/grpc_stream.h" // TODO(#22): private header
+#include "endpoints/grpc/grpc.h" // TODO(#22): private header
+#include "endpoints/grpc/stream.h" // TODO(#22): private header
 #include "etcd.pb.h"
 #include "grpc.h"
 #include "http/http2_types.h" // TODO(#22): private header
@@ -319,7 +319,7 @@ namespace app
       auto committed = last_committed_txid();
       fill_header(*response.mutable_header(), committed);
 
-      stream->stream_msg(response);
+      stream->stream_msg(response, true);
       CCF_APP_INFO("Sent response");
 
       // TODO: add the watch to the store
