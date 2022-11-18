@@ -335,7 +335,24 @@ function updateServiceConfig(new_config) {
   }
 }
 
-const public_prefix_map_name = "public:lskv.gov.public_prefixes";
+const publicRecordsMapName = "public:records";
+const privateRecordsMapName = "records";
+const publicPrefixMapName = "public:lskv.gov.public_prefixes";
+
+function setPublicPrefix(public_prefix) {
+  // set the prefix name
+  ccf.kv[publicPrefixMapName].set(
+    ccf.strToBuf(public_prefix),
+    new ArrayBuffer(0)
+  );
+  // TODO: copy all of the keys with the prefix over from the private map to the public one (leaving them in the private one too)
+}
+
+function removePublicPrefix(public_prefix) {
+  // delete the prefix name
+  ccf.kv[publicPrefixMapName].delete(ccf.strToBuf(public_prefix));
+  // TODO: remove all of the keys with the given prefix from the public records map
+}
 
 const actions = new Map([
   [
@@ -1214,19 +1231,14 @@ const actions = new Map([
         if (typeof args.public_prefix != "string") {
           throw new Error("public prefix should be a string");
         }
-        const public_prefix_map = ccf.kv[public_prefix_map_name];
+        const public_prefix_map = ccf.kv[publicPrefixMapName];
         if (public_prefix_map.has(ccf.strToBuf(args.public_prefix))) {
           throw new Error("Public prefix already set");
         }
       },
       // apply
       function (args) {
-        // set the prefix name
-        ccf.kv[public_prefix_map_name].set(
-          ccf.strToBuf(args.public_prefix),
-          new ArrayBuffer(0)
-        );
-        // TODO: copy all of the keys with the prefix over from the private map to the public one (leaving them in the private one too)
+        setPublicPrefix(args.public_prefix);
       }
     ),
   ],
@@ -1238,16 +1250,14 @@ const actions = new Map([
         if (typeof args.public_prefix != "string") {
           throw new Error("public prefix should be a string");
         }
-        const public_prefix_map = ccf.kv[public_prefix_map_name];
+        const public_prefix_map = ccf.kv[publicPrefixMapName];
         if (!public_prefix_map.has(ccf.strToBuf(args.public_prefix))) {
           throw new Error("Public prefix not set");
         }
       },
       // apply
       function (args) {
-        // set the prefix name
-        ccf.kv[public_prefix_map_name].delete(ccf.strToBuf(args.public_prefix));
-        // TODO: remove all of the keys with the given prefix from the public records map
+        removePublicPrefix(args.public_prefix);
       }
     ),
   ],
