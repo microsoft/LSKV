@@ -1204,4 +1204,28 @@ const actions = new Map([
       function (args) {}
     ),
   ],
+  [
+    "set_public_prefix",
+    new Action(
+      // validate
+      function (args) {
+        if (typeof args.public_prefix != "string") {
+          throw new Error("public prefix should be a string");
+        }
+        const public_prefix_map_name = "public:lskv.gov.public_prefixes";
+        let public_prefix_map = ccf.kv[public_prefix_map_name];
+        if (public_prefix_map.has(ccf.strToBuf(args.public_prefix))) {
+          throw new Error("Public prefix already set");
+        }
+      },
+      // apply
+      function (args) {
+        // set the prefix name
+        ccf.kv[public_prefix_map_name].set(
+          ccf.strToBuf(args.public_prefix),
+          new ArrayBuffer(0)
+        );
+      }
+    ),
+  ],
 ]);
