@@ -3,12 +3,10 @@
 
 #include "ccf/app_interface.h"
 #include "ccf/common_auth_policies.h"
-#include "service_data.h"
 #include "ccf/crypto/sha256.h"
 #include "ccf/crypto/verifier.h"
 #include "ccf/ds/hex.h"
 #include "ccf/historical_queries_adapter.h"
-#include <fmt/ranges.h>
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
 #include "ccf/service/tables/nodes.h"
@@ -22,6 +20,9 @@
 #include "leases.h"
 #include "lskvserver.pb.h"
 #include "node_data.h"
+#include "service_data.h"
+
+#include <fmt/ranges.h>
 
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
@@ -260,23 +261,28 @@ namespace app
         etcdserverpb, maintenance, "Status", "/v3/maintenance/status", status);
     }
 
-    void populate_service_data(kv::ReadOnlyTx& tx) {
-        if (!initialised_service_data) {
-            CCF_APP_DEBUG("loading service data");
-            service_data = service_data::get_service_data(tx);
-            CCF_APP_DEBUG("loaded service data: {}", nlohmann::json(service_data).dump());
-            initialised_service_data = true;
-        }
+    void populate_service_data(kv::ReadOnlyTx& tx)
+    {
+      if (!initialised_service_data)
+      {
+        CCF_APP_DEBUG("loading service data");
+        service_data = service_data::get_service_data(tx);
+        CCF_APP_DEBUG(
+          "loaded service data: {}", nlohmann::json(service_data).dump());
+        initialised_service_data = true;
+      }
     }
 
-    kvstore::KVStore get_kvstore(kv::Tx& tx) {
-        populate_service_data(tx);
-        return kvstore::KVStore(tx, service_data.public_prefixes);
+    kvstore::KVStore get_kvstore(kv::Tx& tx)
+    {
+      populate_service_data(tx);
+      return kvstore::KVStore(tx, service_data.public_prefixes);
     }
 
-    kvstore::KVStore get_kvstore(kv::ReadOnlyTx& tx) {
-        populate_service_data(tx);
-        return kvstore::KVStore(tx, service_data.public_prefixes);
+    kvstore::KVStore get_kvstore(kv::ReadOnlyTx& tx)
+    {
+      populate_service_data(tx);
+      return kvstore::KVStore(tx, service_data.public_prefixes);
     }
 
     template <typename Out>

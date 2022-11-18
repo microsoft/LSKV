@@ -38,32 +38,40 @@ namespace app::kvstore
   /// @brief Check whether the given key is public
   /// @param key
   /// @return whether the key is public
-  bool KVStore::is_public(const KVStore::K& key) {
-      CCF_APP_DEBUG("Checking if key is public: {}", key);
-      auto key_len = key.size();
-      for (const auto& prefix : public_prefixes) {
-          CCF_APP_DEBUG("Checking if key is public against: {}", prefix);
-          auto prefix_len = prefix.size();
-          if (key_len >= prefix_len ) {
-              KVStore::K key_prefix = {key.begin(), key.begin() + prefix_len};
-              if (prefix == key_prefix) {
-                  return true;
-              }
-          }
+  bool KVStore::is_public(const KVStore::K& key)
+  {
+    CCF_APP_DEBUG("Checking if key is public: {}", key);
+    auto key_len = key.size();
+    for (const auto& prefix : public_prefixes)
+    {
+      CCF_APP_DEBUG("Checking if key is public against: {}", prefix);
+      auto prefix_len = prefix.size();
+      if (key_len >= prefix_len)
+      {
+        KVStore::K key_prefix = {key.begin(), key.begin() + prefix_len};
+        if (prefix == key_prefix)
+        {
+          return true;
+        }
       }
-      return false;
+    }
+    return false;
   }
 
   /// @brief Constructs a KVStore
   /// @param ctx
-  KVStore::KVStore(kv::Tx& tx, const std::vector<KVStore::K> &public_prefixes_) : public_prefixes(public_prefixes_)
+  KVStore::KVStore(
+    kv::Tx& tx, const std::vector<KVStore::K>& public_prefixes_) :
+    public_prefixes(public_prefixes_)
   {
     private_map = tx.template ro<KVStore::MT>(RECORDS);
     public_map = tx.template ro<KVStore::MT>(PUBLIC_RECORDS);
   }
   /// @brief Constructs a KVStore
   /// @param ctx
-  KVStore::KVStore(kv::ReadOnlyTx& tx,const std::vector<KVStore::K>&public_prefixes_) : public_prefixes(public_prefixes_)
+  KVStore::KVStore(
+    kv::ReadOnlyTx& tx, const std::vector<KVStore::K>& public_prefixes_) :
+    public_prefixes(public_prefixes_)
   {
     private_map = tx.template ro<KVStore::MT>(RECORDS);
     public_map = tx.template ro<KVStore::MT>(PUBLIC_RECORDS);
@@ -157,17 +165,14 @@ namespace app::kvstore
       value.version = old_val.version + 1;
     }
 
-    auto key_ser =
-      KVStore::KSerialiser::to_serialised(key);
-    auto value_ser =
-      KVStore::VSerialiser::to_serialised(value);
+    auto key_ser = KVStore::KSerialiser::to_serialised(key);
+    auto value_ser = KVStore::VSerialiser::to_serialised(value);
 
-    private_map->put( key_ser, value_ser);
+    private_map->put(key_ser, value_ser);
 
-    if (is_public(key)) {
-    public_map->put(
-            key_ser,
-            value_ser);
+    if (is_public(key))
+    {
+      public_map->put(key_ser, value_ser);
     }
 
     return old;
@@ -181,8 +186,9 @@ namespace app::kvstore
     auto k = KVStore::KSerialiser::to_serialised(key);
     auto old = private_map->get(k);
     private_map->remove(k);
-    if (is_public(key)) {
-        public_map->remove(k);
+    if (is_public(key))
+    {
+      public_map->remove(k);
     }
 
     if (old.has_value())
@@ -198,8 +204,8 @@ namespace app::kvstore
   void KVStore::hydrate_value(const K& key, V& value)
   {
     // the version of the write to this key is our revision
-    auto version_opt =
-      private_map->get_version_of_previous_write(KSerialiser::to_serialised(key));
+    auto version_opt = private_map->get_version_of_previous_write(
+      KSerialiser::to_serialised(key));
     // if there is no version (somehow) then just default it
     // this shouldn't be nullopt though.
     uint64_t revision = version_opt.value_or(0);
