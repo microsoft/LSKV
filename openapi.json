@@ -32,9 +32,7 @@
         "type": "object"
       },
       "CodeStatus": {
-        "enum": [
-          "AllowedToJoin"
-        ],
+        "enum": ["AllowedToJoin"],
         "type": "string"
       },
       "Compaction__In": {
@@ -55,9 +53,7 @@
             "$ref": "#/components/schemas/base64string"
           }
         },
-        "required": [
-          "key"
-        ],
+        "required": ["key"],
         "type": "object"
       },
       "DeleteRange__Out": {
@@ -72,11 +68,7 @@
             "$ref": "#/components/schemas/KeyValue_array"
           }
         },
-        "required": [
-          "header",
-          "deleted",
-          "prev_kvs"
-        ],
+        "required": ["header", "deleted", "prev_kvs"],
         "type": "object"
       },
       "EndpointMetrics": {
@@ -85,9 +77,7 @@
             "$ref": "#/components/schemas/EndpointMetricsEntry_array"
           }
         },
-        "required": [
-          "metrics"
-        ],
+        "required": ["metrics"],
         "type": "object"
       },
       "EndpointMetricsEntry": {
@@ -133,9 +123,7 @@
             "$ref": "#/components/schemas/GetCode__Version_array"
           }
         },
-        "required": [
-          "versions"
-        ],
+        "required": ["versions"],
         "type": "object"
       },
       "GetCode__Version": {
@@ -147,10 +135,7 @@
             "$ref": "#/components/schemas/CodeStatus"
           }
         },
-        "required": [
-          "digest",
-          "status"
-        ],
+        "required": ["digest", "status"],
         "type": "object"
       },
       "GetCode__Version_array": {
@@ -165,9 +150,7 @@
             "$ref": "#/components/schemas/TransactionId"
           }
         },
-        "required": [
-          "transaction_id"
-        ],
+        "required": ["transaction_id"],
         "type": "object"
       },
       "GetSnpHostDataMap__HostData": {
@@ -179,10 +162,7 @@
             "$ref": "#/components/schemas/string"
           }
         },
-        "required": [
-          "raw",
-          "metadata"
-        ],
+        "required": ["raw", "metadata"],
         "type": "object"
       },
       "GetSnpHostDataMap__HostData_array": {
@@ -197,9 +177,7 @@
             "$ref": "#/components/schemas/GetSnpHostDataMap__HostData_array"
           }
         },
-        "required": [
-          "host_data"
-        ],
+        "required": ["host_data"],
         "type": "object"
       },
       "GetTxStatus__Out": {
@@ -211,10 +189,7 @@
             "$ref": "#/components/schemas/TransactionId"
           }
         },
-        "required": [
-          "transaction_id",
-          "status"
-        ],
+        "required": ["transaction_id", "status"],
         "type": "object"
       },
       "KeyValue": {
@@ -292,10 +267,7 @@
             "$ref": "#/components/schemas/base64string"
           }
         },
-        "required": [
-          "key",
-          "value"
-        ],
+        "required": ["key", "value"],
         "type": "object"
       },
       "Put__Out": {
@@ -307,10 +279,7 @@
             "$ref": "#/components/schemas/KeyValue"
           }
         },
-        "required": [
-          "header",
-          "prev_kv"
-        ],
+        "required": ["header", "prev_kv"],
         "type": "object"
       },
       "ResponseHeader": {
@@ -349,12 +318,7 @@
         "type": "string"
       },
       "TxStatus": {
-        "enum": [
-          "Unknown",
-          "Pending",
-          "Committed",
-          "Invalid"
-        ],
+        "enum": ["Unknown", "Pending", "Committed", "Invalid"],
         "type": "string"
       },
       "Txn__In": {
