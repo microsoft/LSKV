@@ -53,7 +53,6 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: docker push $ACR_REGISTRY/public/lskv:latest-sgx
 
-
   publish-binaries:
     runs-on: ubuntu-20.04
     needs:
@@ -92,4 +91,3 @@ jobs:
           files: |
             liblskv.virtual.so
             liblskv.enclave.so.signed
-
