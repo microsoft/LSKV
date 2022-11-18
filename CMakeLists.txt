@@ -50,6 +50,7 @@ add_ccf_app(
   src/app/kvstore.cpp
   src/app/index.cpp
   src/app/leases.cpp
+  src/app/service_data.cpp
   INCLUDE_DIRS
   "${CMAKE_BINARY_DIR}/proto"
   "${CCF_DIR}/include/ccf/_private"

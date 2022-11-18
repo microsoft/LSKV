@@ -3,6 +3,7 @@
 
 #include "ccf/app_interface.h"
 #include "ccf/common_auth_policies.h"
+#include "service_data.h"
 #include "ccf/crypto/sha256.h"
 #include "ccf/crypto/verifier.h"
 #include "ccf/ds/hex.h"
@@ -49,8 +50,8 @@ namespace app
 
     int64_t cluster_id;
 
-    std::vector<kvstore::KVStore::K> public_prefixes;
-    bool initialised_public_prefixes = false;
+    service_data::ServiceData service_data;
+    bool initialised_service_data = false;
 
   public:
     explicit AppHandlers(ccfapp::AbstractNodeContext& context) :
@@ -259,23 +260,23 @@ namespace app
         etcdserverpb, maintenance, "Status", "/v3/maintenance/status", status);
     }
 
-    void populate_public_prefixes(kv::ReadOnlyTx& tx) {
-        if (!initialised_public_prefixes) {
-            CCF_APP_DEBUG("loading public prefixes");
-            public_prefixes = kvstore::get_public_prefixes(tx);
-            CCF_APP_DEBUG("loaded public prefixes: {}", public_prefixes);
-            initialised_public_prefixes = true;
+    void populate_service_data(kv::ReadOnlyTx& tx) {
+        if (!initialised_service_data) {
+            CCF_APP_DEBUG("loading service data");
+            service_data = service_data::get_service_data(tx);
+            CCF_APP_DEBUG("loaded service data: {}", nlohmann::json(service_data).dump());
+            initialised_service_data = true;
         }
     }
 
     kvstore::KVStore get_kvstore(kv::Tx& tx) {
-        populate_public_prefixes(tx);
-        return kvstore::KVStore(tx, public_prefixes);
+        populate_service_data(tx);
+        return kvstore::KVStore(tx, service_data.public_prefixes);
     }
 
     kvstore::KVStore get_kvstore(kv::ReadOnlyTx& tx) {
-        populate_public_prefixes(tx);
-        return kvstore::KVStore(tx, public_prefixes);
+        populate_service_data(tx);
+        return kvstore::KVStore(tx, service_data.public_prefixes);
     }
 
     template <typename Out>

@@ -91,15 +91,4 @@ namespace app::kvstore
     void hydrate_value(const K& key, V& value);
   bool is_public(const K& key) ;
   };
-
-    // TODO: move to a separate namespace
-  struct ServiceData {
-      std::vector<KVStore::K> public_prefixes;
-  };
-
-  DECLARE_JSON_TYPE(ServiceData);
-  DECLARE_JSON_REQUIRED_FIELDS(ServiceData, public_prefixes);
-
-  std::vector<KVStore::K> get_public_prefixes(kv::ReadOnlyTx& tx) ;
-
 }; // namespace app::kvstore

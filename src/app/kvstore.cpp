@@ -8,35 +8,12 @@
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
 #include "kv/untyped_map.h" // TODO(#22): private header
-#include "service/tables/service.h"
 
 #include <nlohmann/json.hpp>
 
 namespace app::kvstore
 {
   using json = nlohmann::json;
-
-  std::vector<KVStore::K> get_public_prefixes(kv::ReadOnlyTx& tx) {
-      auto ccf_governance_map =
-        tx.template ro<ccf::Service>(ccf::Tables::SERVICE);
-      CCF_APP_DEBUG("Getting service_info map");
-      auto service_info_opt = ccf_governance_map->get();
-      if (!service_info_opt.has_value()) {
-      CCF_APP_DEBUG("Service info had no value, returning early");
-          return {};
-      }
-      CCF_APP_DEBUG("Extracting service data");
-      auto service_data = service_info_opt.value().service_data;
-      ServiceData sd;
-      try {
-          CCF_APP_DEBUG("Parsing service data: {}", service_data);
-          sd = service_data.get<ServiceData>();
-      }
-      catch (nlohmann::json::exception e) {
-          CCF_APP_DEBUG("Failed to get service data from json: {}", e.what());
-      }
-      return sd.public_prefixes;
-  }
 
   Value::Value(const std::string& v, int64_t lease_id)
   {
