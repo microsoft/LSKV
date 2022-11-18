@@ -1446,7 +1446,6 @@ namespace app
       return out;
     }
   };
-
 } // namespace app
 
 namespace ccfapp
