@@ -8,7 +8,7 @@
 
 namespace app::service_data
 {
-  PublicPrefixes get_public_prefixes(kv::ReadOnlyTx& tx)
+  ServiceData get_service_data(kv::ReadOnlyTx& tx)
   {
     auto ccf_governance_map =
       tx.template ro<ccf::Service>(ccf::Tables::SERVICE);
@@ -31,6 +31,6 @@ namespace app::service_data
     {
       CCF_APP_DEBUG("Failed to get service data from json: {}", e.what());
     }
-    return sd.public_prefixes;
+    return sd;
   }
 } // namespace app::service_data
