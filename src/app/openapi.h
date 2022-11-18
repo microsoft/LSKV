@@ -5,6 +5,8 @@
 
 #include "ccf/app_interface.h"
 
+#include <vector>
+
 namespace app::openapi
 {
   using bytes = std::vector<uint8_t>;
@@ -160,4 +162,4 @@ namespace app::openapi
   DECLARE_JSON_REQUIRED_FIELDS(LeaseKeepAlive::In)
   DECLARE_JSON_TYPE(LeaseKeepAlive::Out)
   DECLARE_JSON_REQUIRED_FIELDS(LeaseKeepAlive::Out)
-}
+} // namespace app::openapi
