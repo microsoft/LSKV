@@ -102,9 +102,9 @@ class Client:
     def propose(self, proposals: Proposal):
         proposal_dict = proposals.asdict()
         proposal_json = json.dumps(proposal_dict)
-        with open("test.json", "w", encoding="utf-8") as f:
+        with open("proposal_content.json", "w", encoding="utf-8") as f:
             f.write(proposal_json)
-        res = self.run("proposal", "test.json")
+        res = self.run("proposal", "proposal_content.json")
         logger.debug("Created proposal with id {}", res.proposal_id)
         return res
 
@@ -113,9 +113,9 @@ class Client:
             "ballot": "export function vote (proposal, proposerId) { return true }"
         }
         accept_json = json.dumps(accept)
-        with open("test.json", "w", encoding="utf-8") as f:
+        with open("proposal_content.json", "w", encoding="utf-8") as f:
             f.write(accept_json)
-        res = self.run("ballot", "test.json", proposal_id=proposal_id)
+        res = self.run("ballot", "proposal_content.json", proposal_id=proposal_id)
         logger.debug("Success: proposal state is {}", res.state)
         return res
 
