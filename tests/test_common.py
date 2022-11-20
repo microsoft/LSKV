@@ -17,7 +17,7 @@ import pytest
 import typing_extensions
 from loguru import logger
 
-from lskv import governance
+from lskv import governance  # type: ignore
 
 
 class Sandbox:

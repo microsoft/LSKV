@@ -21,7 +21,7 @@ from test_common import (
     fixture_sandbox,
 )
 
-from lskv import governance
+from lskv import governance  # type: ignore
 
 
 # pylint: disable=redefined-outer-name
@@ -243,6 +243,9 @@ def test_tx_status(http1_client):
 
 
 def test_public_prefix(governance_client):
+    """
+    Test the constitution action for public prefixes.
+    """
     # set a secret prefix
     proposal = governance.Proposal()
     proposal.set_public_prefix("mysecretprefix")
