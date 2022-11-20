@@ -68,8 +68,8 @@ class Client:
         self,
         address: str,
         cacert: str,
-        signing_key="member0_privk.pem",
-        signing_cert="member0_cert.pem",
+        signing_key: str,
+        signing_cert: str,
     ):
         self.address = address
         self.cacert = cacert
@@ -99,7 +99,7 @@ class Client:
             raise Exception(ccf_error)
         return ProposalResponse(**ret_json)
 
-    def propose(self, proposals: Proposal):
+    def propose(self, proposals: Proposal) -> ProposalResponse:
         proposal_dict = proposals.asdict()
         proposal_json = json.dumps(proposal_dict)
         with open("proposal_content.json", "w", encoding="utf-8") as f:
@@ -133,8 +133,8 @@ if __name__ == "__main__":
     client = Client(
         "127.0.0.1:8000",
         "workspace/sandbox_common/service_cert.pem",
-        signing_key="workspace/sandbox_common/member0_privk.pem",
-        signing_cert="workspace/sandbox_common/member0_cert.pem",
+        "workspace/sandbox_common/member0_privk.pem",
+        "workspace/sandbox_common/member0_cert.pem",
     )
     res = client.propose(proposal)
     client.accept(res.proposal_id)
