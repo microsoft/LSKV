@@ -276,13 +276,13 @@ namespace app
     kvstore::KVStore get_kvstore(kv::Tx& tx)
     {
       populate_service_data(tx);
-      return kvstore::KVStore(tx, service_data.public_prefixes);
+      return kvstore::KVStore(tx);
     }
 
     kvstore::KVStore get_kvstore(kv::ReadOnlyTx& tx)
     {
       populate_service_data(tx);
-      return kvstore::KVStore(tx, service_data.public_prefixes);
+      return kvstore::KVStore(tx);
     }
 
     template <typename Out>

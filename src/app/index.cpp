@@ -32,8 +32,7 @@ namespace app::index
     CCF_APP_DEBUG("index: handling committed transaction {}", tx_id.seqno);
     current_txid = tx_id;
     auto tx = store_ptr->create_read_only_tx();
-    const std::vector<kvstore::KVStore::K> dummy_public_prefixes;
-    auto kvs = kvstore::KVStore(tx, dummy_public_prefixes);
+    auto kvs = kvstore::KVStore(tx);
     auto revision = tx_id.seqno;
 
     kvs.foreach([this, &revision](const auto& k, const auto& v) {

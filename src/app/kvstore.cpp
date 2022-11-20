@@ -41,9 +41,11 @@ namespace app::kvstore
   bool KVStore::is_public(const KVStore::K& key)
   {
     CCF_APP_DEBUG("Checking if key is public: {}", key);
+
     auto key_len = key.size();
-    for (const auto& prefix : public_prefixes)
-    {
+    bool is_public = false;
+
+    public_prefixes_map->foreach([&is_public, key_len, key](const auto& prefix, const auto& _){
       CCF_APP_DEBUG("Checking if key is public against: {}", prefix);
       auto prefix_len = prefix.size();
       if (key_len >= prefix_len)
@@ -51,30 +53,32 @@ namespace app::kvstore
         KVStore::K key_prefix = {key.begin(), key.begin() + prefix_len};
         if (prefix == key_prefix)
         {
-          return true;
+        is_public = true;
+          return false;
         }
       }
-    }
-    return false;
+    return true;
+    });
+    return is_public;
   }
 
   /// @brief Constructs a KVStore
   /// @param ctx
   KVStore::KVStore(
-    kv::Tx& tx, const std::vector<KVStore::K>& public_prefixes_) :
-    public_prefixes(public_prefixes_)
+    kv::Tx& tx)
   {
     private_map = tx.template ro<KVStore::MT>(RECORDS);
     public_map = tx.template ro<KVStore::MT>(PUBLIC_RECORDS);
+    public_prefixes_map = tx.template ro<KVStore::PP>(PUBLIC_PREFIXES);
   }
   /// @brief Constructs a KVStore
   /// @param ctx
   KVStore::KVStore(
-    kv::ReadOnlyTx& tx, const std::vector<KVStore::K>& public_prefixes_) :
-    public_prefixes(public_prefixes_)
+    kv::ReadOnlyTx& tx)
   {
     private_map = tx.template ro<KVStore::MT>(RECORDS);
     public_map = tx.template ro<KVStore::MT>(PUBLIC_RECORDS);
+    public_prefixes_map = tx.template ro<KVStore::PP>(PUBLIC_PREFIXES);
   }
 
   /// @brief get retrieves the value stored for the given key. It hydrates the

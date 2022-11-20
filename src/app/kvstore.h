@@ -20,6 +20,9 @@ namespace app::kvstore
   // public data gets duplicated here
   static constexpr auto PUBLIC_RECORDS = "public:records";
 
+  // public prefix map
+  static constexpr auto PUBLIC_PREFIXES = "public:lskv.gov.public_prefixes";
+
   struct Value
   {
     // the actual value that the client wants written stored as a list of bytes
@@ -48,10 +51,14 @@ namespace app::kvstore
     using KSerialiser = kv::serialisers::BlitSerialiser<K>;
     using VSerialiser = kv::serialisers::JsonSerialiser<V>;
     using MT = kv::untyped::Map;
+
+    // TODO: don't care about the value here
+    using PP = kv::TypedMap<K, K, KSerialiser, KSerialiser> ;
+
     explicit KVStore(
-      kv::Tx& tx, const std::vector<KVStore::K>& public_prefixes_);
+      kv::Tx& tx);
     explicit KVStore(
-      kv::ReadOnlyTx& tx, const std::vector<KVStore::K>& public_prefixes_);
+      kv::ReadOnlyTx& tx);
     /// @brief get retrieves the value stored for the given key. It hydrates the
     /// value with up-to-date information as values may not store all
     /// information about revisions.
@@ -86,7 +93,9 @@ namespace app::kvstore
   private:
     MT::Handle* private_map;
     MT::Handle* public_map;
-    const std::vector<K>& public_prefixes;
+
+    // reference to the
+    PP::ReadOnlyHandle* public_prefixes_map;
 
     void hydrate_value(const K& key, V& value);
     bool is_public(const K& key);
