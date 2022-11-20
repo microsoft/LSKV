@@ -20,7 +20,6 @@
 #include "leases.h"
 #include "lskvserver.pb.h"
 #include "node_data.h"
-#include "service_data.h"
 
 #include <fmt/ranges.h>
 
@@ -50,9 +49,6 @@ namespace app
     std::shared_ptr<IndexStrategy> kvindex = nullptr;
 
     int64_t cluster_id;
-
-    service_data::ServiceData service_data;
-    bool initialised_service_data = false;
 
   public:
     explicit AppHandlers(ccfapp::AbstractNodeContext& context) :
@@ -259,18 +255,6 @@ namespace app
         etcdserverpb::StatusRequest,
         etcdserverpb::StatusResponse>(
         etcdserverpb, maintenance, "Status", "/v3/maintenance/status", status);
-    }
-
-    void populate_service_data(kv::ReadOnlyTx& tx)
-    {
-      if (!initialised_service_data)
-      {
-        CCF_APP_DEBUG("Loading service data");
-        service_data = service_data::get_service_data(tx);
-        CCF_APP_DEBUG(
-          "Loaded service data: {}", nlohmann::json(service_data).dump());
-        initialised_service_data = true;
-      }
     }
 
     template <typename Out>
