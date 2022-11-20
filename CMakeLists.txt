@@ -35,7 +35,7 @@ endif()
 add_subdirectory(proto)
 
 option(
-  PUBLIC_MAPS
+  PUBLIC_LEASES
   "If enabled, all keys and values are recorded in plaintext in the ledger (insecure!)"
   OFF)
 
