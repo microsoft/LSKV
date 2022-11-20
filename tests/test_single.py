@@ -8,16 +8,20 @@ Test a single node
 import re
 from http import HTTPStatus
 
+import pytest
 from loguru import logger
 
 # pylint: disable=unused-import
 # pylint: disable=no-name-in-module
 from test_common import (
     b64decode,
+    fixture_governance_client,
     fixture_http1_client,
     fixture_http1_client_unauthenticated,
     fixture_sandbox,
 )
+
+from lskv import governance
 
 
 # pylint: disable=redefined-outer-name
@@ -236,6 +240,34 @@ def test_tx_status(http1_client):
     check_response(res)
     status = res.json()["status"]
     assert status == "Invalid"
+
+
+def test_public_prefix(governance_client):
+    # set a secret prefix
+    proposal = governance.Proposal()
+    proposal.set_public_prefix("mysecretprefix")
+    res = governance_client.propose(proposal)
+    proposal_id = res.proposal_id
+    governance_client.accept(proposal_id)
+
+    # setting an existing prefix is an error
+    proposal = governance.Proposal()
+    proposal.set_public_prefix("mysecretprefix")
+    with pytest.raises(Exception):
+        governance_client.propose(proposal)
+
+    # removing an existing prefix is ok
+    proposal = governance.Proposal()
+    proposal.remove_public_prefix("mysecretprefix")
+    res = governance_client.propose(proposal)
+    proposal_id = res.proposal_id
+    governance_client.accept(proposal_id)
+
+    # but removing one that doesn't exist is an error
+    proposal = governance.Proposal()
+    proposal.remove_public_prefix("mysecretprefix")
+    with pytest.raises(Exception):
+        governance_client.propose(proposal)
 
 
 def check_response(res):
