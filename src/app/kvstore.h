@@ -21,7 +21,7 @@ namespace app::kvstore
   static constexpr auto PUBLIC_RECORDS = "public:records";
 
   // public prefix map
-  static constexpr auto PUBLIC_PREFIXES = "public:lskv.gov.public_prefixes";
+  static constexpr auto PUBLIC_PREFIXES = "public:ccf.gov.public_prefixes";
 
   struct Value
   {

@@ -337,7 +337,7 @@ function updateServiceConfig(new_config) {
 
 const publicRecordsMapName = "public:records";
 const privateRecordsMapName = "records";
-const publicPrefixMapName = "public:lskv.gov.public_prefixes";
+const publicPrefixMapName = "public:ccf.gov.public_prefixes";
 
 function setPublicPrefix(public_prefix) {
   // set the prefix name
