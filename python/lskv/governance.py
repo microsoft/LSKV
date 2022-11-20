@@ -63,7 +63,7 @@ class CCFError:
     message: str
 
 
-class GovernanceClient:
+class Client:
     def __init__(
         self,
         address: str,
@@ -130,7 +130,7 @@ if __name__ == "__main__":
             "constitution/validate.js",
         ]
     )
-    client = GovernanceClient(
+    client = Client(
         "127.0.0.1:8000",
         "workspace/sandbox_common/service_cert.pem",
         signing_key="workspace/sandbox_common/member0_privk.pem",
