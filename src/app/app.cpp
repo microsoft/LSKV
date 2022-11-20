@@ -77,7 +77,7 @@ namespace app
                      ccf::endpoints::ReadOnlyEndpointContext& ctx,
                      etcdserverpb::RangeRequest&& payload) {
         populate_cluster_id(ctx.tx);
-        auto kvs = get_kvstore(ctx.tx);
+        auto kvs = kvstore::KVStore(ctx.tx);
         auto lstore = leasestore::ReadOnlyLeaseStore(ctx.tx);
         return this->range(kvs, lstore, std::move(payload));
       };
@@ -271,18 +271,6 @@ namespace app
           "Loaded service data: {}", nlohmann::json(service_data).dump());
         initialised_service_data = true;
       }
-    }
-
-    kvstore::KVStore get_kvstore(kv::Tx& tx)
-    {
-      populate_service_data(tx);
-      return kvstore::KVStore(tx);
-    }
-
-    kvstore::KVStore get_kvstore(kv::ReadOnlyTx& tx)
-    {
-      populate_service_data(tx);
-      return kvstore::KVStore(tx);
     }
 
     template <typename Out>
@@ -660,7 +648,7 @@ namespace app
         // continue with normal flow, recording the lease in the kvstore
       }
 
-      auto records_map = get_kvstore(ctx.tx);
+      auto records_map = kvstore::KVStore(ctx.tx);
 
       auto old =
         records_map.put(payload.key(), kvstore::Value(payload.value(), lease));
@@ -695,7 +683,7 @@ namespace app
         payload.prev_kv());
       etcdserverpb::DeleteRangeResponse delete_range_response;
 
-      auto records_map = get_kvstore(ctx.tx);
+      auto records_map = kvstore::KVStore(ctx.tx);
       auto& key = payload.key();
 
       if (payload.range_end().empty())
@@ -795,7 +783,7 @@ namespace app
         payload.failure().size());
 
       bool success = true;
-      auto records_map = get_kvstore(ctx.tx);
+      auto records_map = kvstore::KVStore(ctx.tx);
       auto lstore = leasestore::ReadOnlyLeaseStore(ctx.tx);
       // evaluate each comparison in the transaction and report the success
       for (auto const& cmp : payload.compare())
@@ -1096,7 +1084,7 @@ namespace app
       auto lstore = leasestore::LeaseStore(ctx.tx);
       lstore.revoke(id);
 
-      auto kvs = get_kvstore(ctx.tx);
+      auto kvs = kvstore::KVStore(ctx.tx);
       kvs.foreach([&id, &kvs](auto key, auto value) {
         if (value.lease == id)
         {
@@ -1349,7 +1337,7 @@ namespace app
       });
 
       // and remove all keys associated with it in the kvstore
-      auto kvs = get_kvstore(tx);
+      auto kvs = kvstore::KVStore(tx);
       kvs.foreach([&expired_leases, &kvs](auto key, auto value) {
         if (value.lease > 0 && expired_leases.contains(value.lease))
         {
