@@ -45,27 +45,27 @@ namespace app::kvstore
     auto key_len = key.size();
     bool is_public = false;
 
-    public_prefixes_map->foreach([&is_public, key_len, key](const auto& prefix, const auto& _){
-      CCF_APP_DEBUG("Checking if key is public against: {}", prefix);
-      auto prefix_len = prefix.size();
-      if (key_len >= prefix_len)
-      {
-        KVStore::K key_prefix = {key.begin(), key.begin() + prefix_len};
-        if (prefix == key_prefix)
+    public_prefixes_map->foreach(
+      [&is_public, key_len, key](const auto& prefix, const auto& _) {
+        CCF_APP_DEBUG("Checking if key is public against: {}", prefix);
+        auto prefix_len = prefix.size();
+        if (key_len >= prefix_len)
         {
-        is_public = true;
-          return false;
+          KVStore::K key_prefix = {key.begin(), key.begin() + prefix_len};
+          if (prefix == key_prefix)
+          {
+            is_public = true;
+            return false;
+          }
         }
-      }
-    return true;
-    });
+        return true;
+      });
     return is_public;
   }
 
   /// @brief Constructs a KVStore
   /// @param ctx
-  KVStore::KVStore(
-    kv::Tx& tx)
+  KVStore::KVStore(kv::Tx& tx)
   {
     private_map = tx.template ro<KVStore::MT>(RECORDS);
     public_map = tx.template ro<KVStore::MT>(PUBLIC_RECORDS);
@@ -73,8 +73,7 @@ namespace app::kvstore
   }
   /// @brief Constructs a KVStore
   /// @param ctx
-  KVStore::KVStore(
-    kv::ReadOnlyTx& tx)
+  KVStore::KVStore(kv::ReadOnlyTx& tx)
   {
     private_map = tx.template ro<KVStore::MT>(RECORDS);
     public_map = tx.template ro<KVStore::MT>(PUBLIC_RECORDS);
