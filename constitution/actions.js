@@ -343,37 +343,37 @@ function setPublicPrefix(public_prefix) {
   // set the prefix name
   const prefix_buf = ccf.strToBuf(public_prefix);
   ccf.kv[publicPrefixMapName].set(prefix_buf, new ArrayBuffer(0));
-  const prefix_len = prefix_buf.byteLength;
+  // const prefix_len = prefix_buf.byteLength;
 
   // copy all of the keys with the prefix over from the private map to the public one (leaving them in the private one too)
-  ccf.kv[privateRecordsMapName].forEach((v, k) => {
-    console.log(`maybe copying key '${k}' to public map`);
-    const key_len = k.byteLength;
-    if (key_len >= prefix_len) {
-      // this could be a prefix
-      if (k.slice(0, prefix_len + 1) == prefix_buf) {
-        console.log(`copying key '${k}' to public map`);
-        ccf.kv[publicRecordsMapName].set(k, v);
-      }
-    }
-  });
+  // ccf.kv[privateRecordsMapName].forEach((v, k) => {
+  //   console.log(`maybe copying key '${k}' to public map`);
+  //   const key_len = k.byteLength;
+  //   if (key_len >= prefix_len) {
+  //     // this could be a prefix
+  //     if (k.slice(0, prefix_len + 1) == prefix_buf) {
+  //       console.log(`copying key '${k}' to public map`);
+  //       ccf.kv[publicRecordsMapName].set(k, v);
+  //     }
+  //   }
+  // });
 }
 
 function removePublicPrefix(public_prefix) {
   // delete the prefix name
   ccf.kv[publicPrefixMapName].delete(ccf.strToBuf(public_prefix));
   // remove all of the keys with the given prefix from the public records map
-  ccf.kv[publicRecordsMapName].forEach((v, k) => {
-    console.log(`maybe removing key '${k}' from private map`);
-    const key_len = k.byteLength;
-    if (key_len >= prefix_len) {
-      // this could be a prefix
-      if (k.slice(0, prefix_len + 1) == prefix_buf) {
-        console.log(`removing key '${k}' from public map`);
-        ccf.kv[publicRecordsMapName].delete(k);
-      }
-    }
-  });
+  // ccf.kv[publicRecordsMapName].forEach((v, k) => {
+  //   console.log(`maybe removing key '${k}' from private map`);
+  //   const key_len = k.byteLength;
+  //   if (key_len >= prefix_len) {
+  //     // this could be a prefix
+  //     if (k.slice(0, prefix_len + 1) == prefix_buf) {
+  //       console.log(`removing key '${k}' from public map`);
+  //       ccf.kv[publicRecordsMapName].delete(k);
+  //     }
+  //   }
+  // });
 }
 
 const actions = new Map([
