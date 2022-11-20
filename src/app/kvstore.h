@@ -52,13 +52,10 @@ namespace app::kvstore
     using VSerialiser = kv::serialisers::JsonSerialiser<V>;
     using MT = kv::untyped::Map;
 
-    // TODO: don't care about the value here
-    using PP = kv::TypedMap<K, K, KSerialiser, KSerialiser> ;
+    using PP = kv::TypedMap<K, K, KSerialiser, KSerialiser>;
 
-    explicit KVStore(
-      kv::Tx& tx);
-    explicit KVStore(
-      kv::ReadOnlyTx& tx);
+    explicit KVStore(kv::Tx& tx);
+    explicit KVStore(kv::ReadOnlyTx& tx);
     /// @brief get retrieves the value stored for the given key. It hydrates the
     /// value with up-to-date information as values may not store all
     /// information about revisions.
