@@ -5,10 +5,11 @@
 Test a single node
 """
 
+import os
 import re
 from http import HTTPStatus
 
-import pytest
+import ccf.ledger  # type: ignore
 from loguru import logger
 
 # pylint: disable=unused-import
@@ -242,35 +243,66 @@ def test_tx_status(http1_client):
     assert status == "Invalid"
 
 
-def test_public_prefix(governance_client):
+def test_public_prefix(governance_client, http1_client, sandbox):
     """
     Test the constitution action for public prefixes.
     """
+    prefix = "mysecretprefix"
+    res = http1_client.put(f"{prefix}/test", "my secret")
+    check_response(res)
+    term = int(res.json()["header"]["raftTerm"])
+    rev = int(res.json()["header"]["revision"])
+    http1_client.wait_for_commit(term, rev)
+
+    ledger = ccf.ledger.Ledger(
+        [os.path.join(sandbox.workspace(), "sandbox_0", "0.ledger")],
+        committed_only=False,
+    )
+    txn = ledger.get_transaction(rev)
+    public_domain = txn.get_public_domain()
+    assert len(public_domain.get_tables()) == 0
+
     # set a secret prefix
     proposal = governance.Proposal()
-    proposal.set_public_prefix("mysecretprefix")
+    proposal.set_public_prefix(prefix)
     res = governance_client.propose(proposal)
     proposal_id = res.proposal_id
     governance_client.accept(proposal_id)
 
-    # setting an existing prefix is an error
+    res = http1_client.put(f"{prefix}/test", "my secret")
+    check_response(res)
+    term = int(res.json()["header"]["raftTerm"])
+    rev = int(res.json()["header"]["revision"])
+    http1_client.wait_for_commit(term, rev)
+
+    ledger = ccf.ledger.Ledger(
+        [os.path.join(sandbox.workspace(), "sandbox_0", "0.ledger")],
+        committed_only=False,
+    )
+    txn = ledger.get_transaction(rev)
+    public_domain = txn.get_public_domain()
+    assert len(public_domain.get_tables()) == 1
+
+    # setting an existing prefix is ok
     proposal = governance.Proposal()
-    proposal.set_public_prefix("mysecretprefix")
-    with pytest.raises(Exception):
-        governance_client.propose(proposal)
+    proposal.set_public_prefix(prefix)
+    res = governance_client.propose(proposal)
+    proposal_id = res.proposal_id
+    governance_client.accept(proposal_id)
 
     # removing an existing prefix is ok
     proposal = governance.Proposal()
-    proposal.remove_public_prefix("mysecretprefix")
+    proposal.remove_public_prefix(prefix)
     res = governance_client.propose(proposal)
     proposal_id = res.proposal_id
     governance_client.accept(proposal_id)
 
-    # but removing one that doesn't exist is an error
+    # and removing one that doesn't exist is ok too
     proposal = governance.Proposal()
-    proposal.remove_public_prefix("mysecretprefix")
-    with pytest.raises(Exception):
-        governance_client.propose(proposal)
+    proposal.remove_public_prefix(prefix)
+    res = governance_client.propose(proposal)
+    proposal_id = res.proposal_id
+    governance_client.accept(proposal_id)
 
 
 def check_response(res):
