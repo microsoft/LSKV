@@ -304,6 +304,21 @@ def test_public_prefix(governance_client, http1_client, sandbox):
     proposal_id = res.proposal_id
     governance_client.accept(proposal_id)
 
+    # setting a new key now doesn't end up public
+    res = http1_client.put(f"{prefix}/test", "my secret")
+    check_response(res)
+    term = int(res.json()["header"]["raftTerm"])
+    rev = int(res.json()["header"]["revision"])
+    http1_client.wait_for_commit(term, rev)
+
+    ledger = ccf.ledger.Ledger(
+        [os.path.join(sandbox.workspace(), "sandbox_0", "0.ledger")],
+        committed_only=False,
+    )
+    txn = ledger.get_transaction(rev)
+    public_domain = txn.get_public_domain()
+    assert len(public_domain.get_tables()) == 0
+
 
 def check_response(res):
     """
