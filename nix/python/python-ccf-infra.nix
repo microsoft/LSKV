@@ -49,7 +49,7 @@ buildPythonPackage {
     cose
     jwcrypto
     cbor2
-  ];
+  ] ++ httpx.optional-dependencies.http2;
 
   preConfigure = ''
     cd tests
@@ -57,7 +57,6 @@ buildPythonPackage {
     sed -i '/python-iptables/d' requirements.txt
     sed -i '/py-spy/d' requirements.txt
     sed -i '/locust/d' requirements.txt
-    sed -i 's/httpx.*/httpx/' requirements.txt
 
     sed -i '1s|^|#!/usr/bin/env python3\n|' start_network.py
     chmod +x start_network.py
