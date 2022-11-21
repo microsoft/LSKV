@@ -52,6 +52,9 @@ jobs:
       - name: Install venv
         run: sudo apt install -y python3.8-venv
 
+      - name: Install pip
+        run: sudo apt install -y python3-pip
+
       - name: Upgrade pip
         run: pip3 install --upgrade pip
 

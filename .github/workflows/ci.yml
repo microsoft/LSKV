@@ -34,6 +34,9 @@ jobs:
       - name: Install go
         run: curl -L -o go1.19.1.linux-amd64.tar.gz https://go.dev/dl/go1.19.1.linux-amd64.tar.gz && tar -C /usr/local -xzf go1.19.1.linux-amd64.tar.gz
 
+      - name: Install pip
+        run: sudo apt install -y python3-pip
+
       - name: Upgrade pip
         run: pip3 install --upgrade pip
 
