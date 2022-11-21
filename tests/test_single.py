@@ -225,6 +225,7 @@ def test_tx_status(http1_client):
     j = res.json()
     term = j["header"]["raftTerm"]
     rev = j["header"]["revision"]
+    http1_client.wait_for_commit(term, rev)
 
     res = http1_client.tx_status(term, rev)
     check_response(res)
