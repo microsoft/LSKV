@@ -8,4 +8,4 @@ httpx[http2]==0.23.0
 loguru==0.6.0
 pytest==7.2.0
 ccf==4.0.0dev0
--e ./python
+./python
