@@ -88,6 +88,7 @@ namespace app::kvstore
   std::optional<KVStore::V> KVStore::get(const KVStore::K& key)
   {
     // get the value out and deserialise it
+    // TODO(#191): Currently we have to keep all data in private map and some in public. A nicer solution would avoid duplicating the data by using iterators over the CCF map, allowing us to do a range over both public and private at the same time and keeping the items in order.
     auto res = private_map->get(KSerialiser::to_serialised(key));
     if (!res.has_value())
     {
@@ -103,6 +104,7 @@ namespace app::kvstore
   void KVStore::foreach(
     const std::function<bool(const KVStore::K&, const KVStore::V&)>& fn)
   {
+    // TODO(#191): Currently we have to keep all data in private map and some in public. A nicer solution would avoid duplicating the data by using iterators over the CCF map, allowing us to do a range over both public and private at the same time and keeping the items in order.
     private_map->foreach([&](auto& key, auto& value) -> bool {
       auto k = KVStore::KSerialiser::from_serialised(key);
       auto v = KVStore::VSerialiser::from_serialised(value);
@@ -121,6 +123,7 @@ namespace app::kvstore
     {
       to = KVStore::KSerialiser::to_serialised(to_opt.value());
     }
+    // TODO(#191): Currently we have to keep all data in private map and some in public. A nicer solution would avoid duplicating the data by using iterators over the CCF map, allowing us to do a range over both public and private at the same time and keeping the items in order.
     private_map->range(
       [&](auto& key, auto& value) {
         auto k = KVStore::KSerialiser::from_serialised(key);
@@ -173,6 +176,7 @@ namespace app::kvstore
 
     private_map->put(key_ser, value_ser);
 
+    // TODO(#191): Currently we have to keep all data in private map and some in public. A nicer solution would avoid duplicating the data by using iterators over the CCF map, allowing us to do a range over both public and private at the same time and keeping the items in order.
     if (is_public(key))
     {
       public_map->put(key_ser, value_ser);
@@ -189,6 +193,7 @@ namespace app::kvstore
     auto k = KVStore::KSerialiser::to_serialised(key);
     auto old = private_map->get(k);
     private_map->remove(k);
+    // TODO(#191): Currently we have to keep all data in private map and some in public. A nicer solution would avoid duplicating the data by using iterators over the CCF map, allowing us to do a range over both public and private at the same time and keeping the items in order.
     if (is_public(key))
     {
       public_map->remove(k);
