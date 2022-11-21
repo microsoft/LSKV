@@ -257,7 +257,10 @@ def test_openapi(http1_client):
     with open(openapi_filename, "w", encoding="utf-8") as openapi_file:
         logger.info("saving openapi.json file")
         json.dump(store_api, openapi_file, indent=2, sort_keys=True)
-    assert store_api == file_openapi, "saved openapi file is different from the generated one, the file has been updated for you to commit."
+    assert store_api == file_openapi, (
+        "saved openapi file is different from the generated one, "
+        "the file has been updated for you to commit."
+    )
 
 
 def check_response(res):
