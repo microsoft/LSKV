@@ -4,7 +4,7 @@
 # get the current version from git
 find_package(Git)
 execute_process(
-  COMMAND ${GIT_EXECUTABLE} describe --tags --dirty
+  COMMAND ${GIT_EXECUTABLE} describe --tags --dirty --exclude latest-main
   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
   OUTPUT_VARIABLE "LSKV_VERSION"
   OUTPUT_STRIP_TRAILING_WHITESPACE
