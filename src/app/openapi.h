@@ -7,6 +7,13 @@
 
 #include <vector>
 
+// Since the generated protobuf code doesn't expose members of the classes we
+// need to duplicate the schema into C++ here in order for it to be registered
+// as openapi types.
+//
+// This means that updates to the .proto files should probably have a
+// corresponding change here (and in the openapi schema file, but there's a test
+// for that).
 namespace app::openapi
 {
   using bytes = std::vector<uint8_t>;
