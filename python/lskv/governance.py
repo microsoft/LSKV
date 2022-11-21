@@ -143,7 +143,7 @@ class Client:
             "--data-binary",
             "@-",
             "-H",
-            "content-type: application/cose",
+            "'content-type: application/cose'",
         ]
         cmd = f"{' '.join(cose_sign1_cmd)} | {' '.join(curl_cmd)}"
         logger.debug("Running: {}", cmd)
