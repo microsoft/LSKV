@@ -1360,7 +1360,10 @@ namespace app
 
     void populate_cluster_id(kv::ReadOnlyTx& tx)
     {
-      cluster_id = get_cluster_id(tx);
+      if (cluster_id == 0)
+      {
+        cluster_id = get_cluster_id(tx);
+      }
     }
 
     int64_t get_cluster_id(kv::ReadOnlyTx& tx)
