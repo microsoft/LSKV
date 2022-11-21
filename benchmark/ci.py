@@ -34,7 +34,7 @@ def etcd_configurations(args: argparse.Namespace) -> List[etcd.EtcdConfig]:
     args.bench_args = [["put"]]
     args.clients = [10]
     args.connections = [10]
-    args.rate = [1000]
+    args.rate = [200]
 
     common_configurations(args)
 
@@ -46,7 +46,7 @@ def ycsb_configurations(args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     Set args for all ycsb configurations.
     """
     args.workloads = ["a"]
-    args.rate = [1000]
+    args.rate = [200]
     args.threads = [1]
 
     common_configurations(args)
@@ -60,6 +60,7 @@ def perf_configurations(args: argparse.Namespace) -> List[perf.PerfConfig]:
     """
     common_configurations(args)
     args.http1 = True
+    args.etcd = False
 
     return perf.make_configurations(args)
 
@@ -72,15 +73,16 @@ def k6_configurations(args: argparse.Namespace) -> List[k6.K6Config]:
     args.http1 = True
     args.http2 = True
     args.etcd = False
+    args.rate = [200]
     args.func = [
         "put_single",
-        "put_single_wait",
-        "get_single",
-        "get_range",
-        "delete_single",
-        "delete_single_wait",
-        "mixed_single",
-        "get_receipt",
+        # "put_single_wait",
+        # "get_single",
+        # "get_range",
+        # "delete_single",
+        # "delete_single_wait",
+        # "mixed_single",
+        # "get_receipt",
     ]
 
     return k6.make_configurations(args)

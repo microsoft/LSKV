@@ -46,6 +46,7 @@ const val0 = encoding.b64encode("value0");
 
 const addr = "127.0.0.1:8000"
 const host = `https://${addr}`;
+
 const total_requests = rate * duration_s;
 const prefill_keys = total_requests / 2;
 
@@ -93,7 +94,7 @@ export function put_single(i = 0, tag = "put_single") {
     check(response, {
       "status is 200": (r) => r && r.status === grpc.StatusOK,
     });
-
+    
     const res = response.message;
     const header = res["header"];
     const term = header["raftTerm"];
@@ -235,6 +236,12 @@ export function delete_single(i = 0, tag = "delete_single") {
 
     check_success(response);
   }
+}
+
+export function put_get_delete(i = 0) {
+  put_single(i);
+  get_single(i);
+  delete_single(i);
 }
 
 export function put_get_delete(i = 0) {
