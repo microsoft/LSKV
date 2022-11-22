@@ -19,10 +19,10 @@ make install-ccf-virtual
 Or
 
 ```bash
-$ wget https://github.com/microsoft/CCF/releases/download/ccf-3.0.0-rc2/ccf_virtual_3.0.0_rc2_amd64.deb
-$ sudo dpkg -i ccf_virtual_3.0.0_rc2_amd64.deb # Installs CCF under /opt/ccf_virtual
+$ wget https://github.com/microsoft/CCF/releases/download/ccf-4.0.0-dev0/ccf_virtual_4.0.0_dev0_amd64.deb
+$ sudo dpkg -i ccf_virtual_4.0.0_dev0_amd64.deb # Installs CCF under /opt/ccf_virtual
 $ cat /opt/ccf_virtual/share/VERSION_LONG
-ccf-3.0.0-rc2
+ccf-4.0.0-dev0
 $ /opt/ccf_virtual/getting_started/setup_vm/run.sh /opt/ccf_virtual/getting_started/setup_vm/app-dev.yml  # Install dependencies
 ```
 
