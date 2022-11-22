@@ -69,25 +69,25 @@
   remote_user: "{{ vm_user }}"
   gather_facts: false
   tasks:
-    - name: Install deps for sandbox
+    - name: Install pip for sandbox
       ansible.builtin.pip:
         name: pip
         virtualenv: /tmp/lskv/.venv_ccf_sandbox
         virtualenv_command: python3 -m venv
 
-    - name: Install deps for sandbox
+    - name: Install ccf for sandbox
       ansible.builtin.pip:
         name: ccf=={{ py_ccf_ver }}
         virtualenv: /tmp/lskv/.venv_ccf_sandbox
         virtualenv_command: python3 -m venv
 
-    - name: Install deps for sandbox
+    - name: Install requirements for sandbox
       ansible.builtin.pip:
         requirements: /opt/ccf_sgx/bin/requirements.txt
         virtualenv: /tmp/lskv/.venv_ccf_sandbox
         virtualenv_command: python3 -m venv
 
-    - name: Install deps for benchmarking
+    - name: Install requirements for benchmarking
       ansible.builtin.pip:
         requirements: /tmp/lskv/requirements.txt
         virtualenv: /tmp/lskv/.venv
