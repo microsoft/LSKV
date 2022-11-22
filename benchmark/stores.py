@@ -162,7 +162,7 @@ class DistributedLSKVStore(Store):
                     package += ".virtual.so"
                 lskv_cmd = [
                     # we only install sgx ccf on the distributed nodes
-                    "/opt/ccf_sgx/bin/sandbox.sh",
+                    f"/opt/ccf_{self.config.enclave}/bin/sandbox.sh",
                     "--enclave-type",
                     "virtual" if self.config.enclave == "virtual" else "release",
                     "--enclave-platform",
