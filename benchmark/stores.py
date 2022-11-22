@@ -162,6 +162,9 @@ class DistributedLSKVStore(Store):
                     "/opt/ccf_virtual/bin/sandbox.sh",
                     "--enclave-type",
                     "virtual" if self.config.enclave == "virtual" else "release",
+                    "--package",
+                    package,
+                    "--verbose",
                     "--worker-threads",
                     str(self.config.worker_threads),
                     "--sig-tx-interval",
@@ -172,11 +175,11 @@ class DistributedLSKVStore(Store):
                     self.config.ledger_chunk_bytes,
                     "--snapshot-tx-interval",
                     str(self.config.snapshot_tx_interval),
-                    "--http-version",
-                    str(self.config.http_version),
                     "--workspace",
                     self.workspace(),
                 ]
+                if self.config.http_version == 2:
+                    lskv_cmd.append("--http2")
                 for node in nodes:
                     lskv_cmd += ["--node", node]
 
