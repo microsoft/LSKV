@@ -46,9 +46,9 @@ class PerfBenchmark(common.Benchmark):
         """
         Return the command to run the benchmark for the given store.
         """
+        ccf_bin = f"/opt/ccf_{self.config.enclave}/bin"
         bench = [
-            # TODO: change to installed ccf bin when release is available.
-            "../CCF/build/submit",
+            f"{ccf_bin}/submit",
             "--send-filepath",
             os.path.join(self.config.output_dir(), "requests.parquet"),
             "--response-filepath",
