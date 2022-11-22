@@ -93,7 +93,7 @@ run-virtual-verbose-http1: build-virtual-verbose
 
 .PHONY: run-sgx
 run-sgx: build-sgx
-	VENV_DIR=.venv $(CCF_PREFIX_SGX)/bin/sandbox.sh -p $(BUILD)/liblskv.enclave.so.signed -e release -t virtual --http2
+	VENV_DIR=.venv $(CCF_PREFIX_SGX)/bin/sandbox.sh -p $(BUILD)/liblskv.enclave.so.signed -e release -t sgx --http2
 
 .PHONY: test-virtual
 test-virtual: build-virtual patched-etcd
