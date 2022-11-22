@@ -108,7 +108,7 @@ class Sandbox:
                 "w",
                 encoding="utf-8",
             ) as err:
-                libargs = ["build/liblskv.virtual.so"]
+                libargs = ["build/liblskv.virtual.so", "-e", "virtual", "-t", "virtual"]
                 env = os.environ.copy()
                 env["VENV_DIR"] = os.path.join(os.getcwd(), ".venv")
                 nodes = []
