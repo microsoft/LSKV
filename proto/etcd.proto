@@ -2,7 +2,8 @@ syntax = "proto3";
 
 package etcdserverpb;
 
-service KV {
+service KV
+{
   rpc Put(PutRequest) returns (PutResponse) {}
   rpc Range(RangeRequest) returns (RangeResponse) {}
   rpc DeleteRange(DeleteRangeRequest) returns (DeleteRangeResponse) {}
