@@ -77,7 +77,7 @@ class Analyser:
             return data, 0
         if self.benchmark == "k6":
             starts = data["timestamp"]
-            reqs = data[data["metric_name"] == "http_req_duration"]
+            reqs = data[data["metric_name"].isin(["http_req_duration", "grpc_req_duration"])]
             reqs = reqs[reqs["group"] != "::setup"]
             start = reqs["timestamp"].min()
             starts -= start
