@@ -82,7 +82,7 @@
 
     - name: Install deps for sandbox
       ansible.builtin.pip:
-        requirements: /opt/ccf_virtual/bin/requirements.txt
+        requirements: /opt/ccf_sgx/bin/requirements.txt
         virtualenv: /tmp/lskv/.venv_ccf_sandbox
         virtualenv_command: python3 -m venv
 
