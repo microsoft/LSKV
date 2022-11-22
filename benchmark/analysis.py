@@ -353,8 +353,10 @@ class Analyser:
     def plot_achieved_throughput_bar(
         self,
         data: pd.DataFrame,
+        x_column="vars",
         row=None,
         col=None,
+        hue=None,
         # pylint: disable=dangerous-default-value
         ignore_vars=[],
         filename="",
@@ -362,19 +364,20 @@ class Analyser:
         """
         Plot a bar graph of achieved throughput.
         """
-        x_column = "vars"
         y_column = "achieved_throughput"
 
         var, invariant_vars = condense_vars(
-            data, [x_column, y_column, row, col] + ignore_vars
+            data, [x_column, y_column, row, col, hue] + ignore_vars
         )
-        data[x_column] = var
+        data[hue] = var
 
         group_cols = [x_column]
         if row:
             group_cols.append(row)
         if col:
             group_cols.append(col)
+        if hue:
+            group_cols.append(hue)
         grouped = data.groupby(group_cols, dropna=False)
         throughputs = grouped.first()
 
