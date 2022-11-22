@@ -148,7 +148,7 @@ class Store(abc.ABC):
                 self.key(),
                 "-X",
                 "POST",
-                f"{self.config.scheme()}://127.0.0.1:{self.config.port}/v3/kv/range",
+                f"{self.config.scheme()}://{self.config.node_ips[0]}:{self.config.port}/v3/kv/range",
                 "-d",
                 '{"key":"bWlzc2luZyBrZXkK"}',
                 "-H",
@@ -213,7 +213,7 @@ class Store(abc.ABC):
         return [
             "bin/etcdctl",
             "--endpoints",
-            f"{self.config.scheme()}://127.0.0.1:{self.config.port}",
+            f"{self.config.scheme()}://{self.config.node_ips[0]}:{self.config.port}",
             "--cacert",
             self.cacert(),
             "--cert",
