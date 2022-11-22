@@ -3,7 +3,7 @@ vm_user: "lskv"
 
 oe_ver: "0.18.4"
 oe_ver_: "0.18.4"
-oe_host_verify_deb: "https://github.com/openenclave/openenclave/releases/download/v{{ oe_ver }}/Ubuntu_2004_open-enclave-hostverify_{{ oe_ver_ }}_amd64.deb"
+oe_deb: "https://github.com/openenclave/openenclave/releases/download/v{{ oe_ver }}/Ubuntu_2004_open-enclave_{{ oe_ver_ }}_amd64.deb"
 
 py_ccf_ver: "3.0.0rc1"
 ccf_ver: "ccf-3.0.0-rc1"

@@ -53,9 +53,9 @@
         update_cache: true
       become: true
 
-    - name: Install oe host verify
+    - name: Install openenclave
       ansible.builtin.apt:
-        deb: "{{ oe_host_verify_deb }}"
+        deb: "{{ oe_deb }}"
         update_cache: true
       become: true
 
