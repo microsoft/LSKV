@@ -152,7 +152,7 @@ class DistributedLSKVStore(Store):
                 nodes = []
                 port = 8000
                 for i, ip in enumerate(self.config.node_ips):
-                    nodes.append(f"ssh://{ip}:{port + i}")
+                    nodes.append(f"ssh://0.0.0.0:{port + i},{ip}:{port + i}")
                 package = "build/liblskv"
                 if self.config.enclave == "sgx":
                     package += ".enclave.signed.so"
