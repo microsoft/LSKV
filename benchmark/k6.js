@@ -12,6 +12,7 @@ const preAllocatedVUs = __ENV.PRE_ALLOCATED_VUS;
 const maxVUs = __ENV.MAX_VUS;
 const func = __ENV.FUNC;
 const content_type = __ENV.CONTENT_TYPE;
+const addr = __ENV.ADDR
 
 const duration_s = 10;
 
@@ -44,7 +45,6 @@ function key(i) {
 }
 const val0 = encoding.b64encode("value0");
 
-const addr = "127.0.0.1:8000";
 const host = `https://${addr}`;
 
 const total_requests = rate * duration_s;
