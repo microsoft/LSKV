@@ -472,6 +472,8 @@ def condense_vars(all_data, without) -> Tuple[pd.Series, List[str]]:
             return all_data[name].map(lambda t: "tls" if t else "plain")
         if name == "content_type":
             return all_data[name].astype(str)
+        if name == "enclave":
+            return all_data[name].astype(str)
         if name == "http_version":
             return "http" + all_data[name].astype(str)
         return f"{name}=" + all_data[name].astype(str)
