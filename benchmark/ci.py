@@ -60,7 +60,10 @@ def perf_configurations(args: argparse.Namespace) -> List[perf.PerfConfig]:
     """
     common_configurations(args)
     args.http1 = True
+    args.http2 = False
     args.etcd = False
+    args.workloads = ["benchmark/piccolo-requests-http1.parquet"]
+    args.max_inflight_requests = [2]
 
     return perf.make_configurations(args)
 

@@ -70,11 +70,11 @@ class Analyser:
             data.drop(["timestamp_us"], axis=1, inplace=True)
             return data, 0
         if self.benchmark == "perf":
-            start = data["start_us"].min()
-            data["start_us"] -= start
-            data["start_ms"] = data["start_us"] / 1000
-            data.drop(["start_us"], axis=1, inplace=True)
-            return data, 0
+            start = data["sendTime"].min()
+            data["sendTime"] -= start
+            data["start_ms"] = data["sendTime"] * 1000
+            data.drop(["sendTime"], axis=1, inplace=True)
+            return data, start
         if self.benchmark == "k6":
             starts = data["timestamp"]
             reqs = data[
@@ -101,7 +101,9 @@ class Analyser:
             data["end_ms"] = data["start_ms"] + (data["latency_us"] / 1000)
             return data
         if self.benchmark == "perf":
-            data["end_ms"] = data["start_ms"] + (data["latency_us"] / 1000)
+            data["receiveTime"] -= start
+            data["end_ms"] = data["receiveTime"] * 1000
+            data.drop(["receiveTime"], axis=1, inplace=True)
             return data
         if self.benchmark == "k6":
             data["end_ms"] = data["start_ms"] + data["metric_value"]
@@ -120,8 +122,7 @@ class Analyser:
             data.drop(["latency_us"], axis=1, inplace=True)
             return data
         if self.benchmark == "perf":
-            data["latency_ms"] = data["latency_us"] / 1000
-            data.drop(["latency_us"], axis=1, inplace=True)
+            data["latency_ms"] = data["end_ms"] - data["start_ms"]
             return data
         if self.benchmark == "k6":
             data["latency_ms"] = data["metric_value"]
@@ -146,10 +147,27 @@ class Analyser:
             ) as config_f:
                 config = json.loads(config_f.read())
 
-            file = os.path.join(bench_dir, config_hash, "timings.csv")
+            if self.benchmark == "perf":
+                file = os.path.join(bench_dir, config_hash, "responses.parquet")
+            else:
+                file = os.path.join(bench_dir, config_hash, "timings.csv")
+
             if not os.path.exists(file):
                 continue
-            dataframe = pd.read_csv(file)
+
+            if self.benchmark == "perf":
+                dataframe = pd.read_parquet(file)
+            else:
+                dataframe = pd.read_csv(file)
+
+            if self.benchmark == "perf":
+                # parse the send dataframe too and store that
+                file = os.path.join(bench_dir, config_hash, "requests.parquet")
+                if not os.path.exists(file):
+                    continue
+                df2 = pd.read_parquet(file)
+                assert len(dataframe) == len(df2)
+                dataframe = dataframe.join(df2.set_index("messageID"), on="messageID")
 
             dataframe, start = self.make_start_ms(dataframe)
             dataframe = self.make_end_ms(dataframe, start)
@@ -268,6 +286,7 @@ class Analyser:
     def plot_throughput_bar(
         self,
         data: pd.DataFrame,
+        x_column="rate",
         row=None,
         col=None,
         # pylint: disable=dangerous-default-value
@@ -278,33 +297,29 @@ class Analyser:
         Plot a bar graph of throughput.
         """
         hue = "vars"
-        x_column = "rate"
         y_column = "achieved_throughput_ratio"
 
         var, invariant_vars = condense_vars(
             data, [x_column, y_column, row, col, hue] + ignore_vars
         )
-        if not var.empty:
-            data[hue] = var
+        data[hue] = var
+        # fill in missing values so that groupby works
+        data[hue].fillna("", inplace=True)
 
-        group_cols = ["rate"]
-        if not var.empty:
-            group_cols.append(hue)
+        group_cols = [x_column, hue]
         if row:
             group_cols.append(row)
         if col:
             group_cols.append(col)
-        data["rate2"] = data["rate"]
-        grouped = data.groupby(group_cols, dropna=False)
+        data["rate2"] = data[x_column]
+        grouped = data.groupby(group_cols)
         throughputs = grouped.first()
 
         durations = (grouped["end_ms"].max() - grouped["start_ms"].min()) / 1000
         counts = grouped["start_ms"].count()
         achieved_throughput = counts / durations
 
-        throughputs["achieved_throughput_ratio"] = (
-            achieved_throughput / throughputs["rate2"]
-        )
+        throughputs[y_column] = achieved_throughput / throughputs["rate2"]
 
         throughputs.reset_index(inplace=True)
 
