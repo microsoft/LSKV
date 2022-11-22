@@ -76,7 +76,7 @@ class LSKVStore(Store):
             ) as err:
                 package = "build/liblskv"
                 if self.config.enclave == "sgx":
-                    package += ".enclave.signed.so"
+                    package += ".enclave.so.signed"
                 else:
                     package += ".virtual.so"
                 lskv_cmd = [
