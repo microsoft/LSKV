@@ -244,12 +244,6 @@ export function put_get_delete(i = 0) {
   delete_single(i);
 }
 
-export function put_get_delete(i = 0) {
-  put_single(i);
-  get_single(i);
-  delete_single(i);
-}
-
 // perform a single delete request but poll until it is committed
 export function delete_single_wait(i = 0) {
   const txid = delete_single(i, "delete_single_wait");
@@ -262,8 +256,8 @@ export function mixed_single() {
   if (rnd >= 0 && rnd < 0.6) {
     // 60% reads
     get_single();
-  } else if (rnd >= 0.5 && rnd < 0.9) {
-    // 40% writes
+  } else if (rnd >= 0.6 && rnd < 0.9) {
+    // 30% writes
     put_single();
   } else {
     // 10% deletes
