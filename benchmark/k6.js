@@ -4,14 +4,19 @@ import { check, randomSeed } from "k6";
 import http from "k6/http";
 import encoding from "k6/encoding";
 import exec from "k6/execution";
+import grpc from 'k6/net/grpc';
 
 const rate = Number(__ENV.RATE);
 const workspace = __ENV.WORKSPACE;
 const preAllocatedVUs = __ENV.PRE_ALLOCATED_VUS;
 const maxVUs = __ENV.MAX_VUS;
 const func = __ENV.FUNC;
+const content_type = __ENV.CONTENT_TYPE;
 
 const duration_s = 10;
+
+const grpc_client = new grpc.Client();
+grpc_client.load(["definitions"], "../../proto/etcd.proto");
 
 export let options = {
   tlsAuth: [
@@ -39,12 +44,16 @@ function key(i) {
 }
 const val0 = encoding.b64encode("value0");
 
-const host = "https://127.0.0.1:8000";
+const addr = "127.0.0.1:8000"
+const host = `https://${addr}`;
+
 const total_requests = rate * duration_s;
 const prefill_keys = total_requests / 2;
 
 export function setup() {
   randomSeed(123);
+
+  grpc_client.connect(addr, {})
 
   let receipt_txids = [];
   var txid = "";
@@ -72,29 +81,51 @@ function check_committed(status) {
 
 // perform a single put request at a preset key
 export function put_single(i = 0, tag = "put_single") {
-  let payload = JSON.stringify({
-    key: key(i),
-    value: val0,
-  });
-  let params = {
-    headers: {
-      "Content-Type": "application/json",
-    },
-    tags: {
-      caller: tag,
-    },
-  };
+  if (content_type == "grpc") {
+    if (tag != "setup" && exec.vu.iterationInInstance == 0) {
+      grpc_client.connect(addr, {})
+    }
+    const payload = {
+      key: key(i),
+      value: val0,
+    };
+    const response = grpc_client.invoke("etcdserverpb.KV/Put", payload)
 
-  let response = http.post(`${host}/v3/kv/put`, payload, params);
+    check(response, {
+      "status is 200": (r) => r && r.status === grpc.StatusOK,
+    });
+    
+    const res = response.message;
+    const header = res["header"];
+    const term = header["raftTerm"];
+    const rev = header["revision"];
+    const txid = `${term}.${rev}`;
+    return txid;
+  } else {
+    let payload = JSON.stringify({
+      key: key(i),
+      value: val0,
+    });
+    let params = {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      tags: {
+        caller: tag,
+      },
+    };
 
-  check_success(response);
+    let response = http.post(`${host}/v3/kv/put`, payload, params);
 
-  const res = response.json();
-  const header = res["header"];
-  const term = header["raftTerm"];
-  const rev = header["revision"];
-  const txid = `${term}.${rev}`;
-  return txid;
+    check_success(response);
+
+    const res = response.json();
+    const header = res["header"];
+    const term = header["raftTerm"];
+    const rev = header["revision"];
+    const txid = `${term}.${rev}`;
+    return txid;
+  }
 }
 
 // check the status of a transaction id with the service
@@ -123,21 +154,35 @@ export function put_single_wait(i = 0) {
 
 // perform a single get request at a preset key
 export function get_single(i = 0, tag = "get_single") {
-  let payload = JSON.stringify({
-    key: key(i),
-  });
-  let params = {
-    headers: {
-      "Content-Type": "application/json",
-    },
-    tags: {
-      caller: tag,
-    },
-  };
+  if (content_type == "grpc") {
+    if (tag != "setup" && exec.vu.iterationInInstance == 0) {
+      grpc_client.connect(addr, {})
+    }
+    const payload = {
+      key: key(i),
+    };
+    const response = grpc_client.invoke("etcdserverpb.KV/Range", payload)
 
-  let response = http.post(`${host}/v3/kv/range`, payload, params);
+    check(response, {
+      "status is 200": (r) => r && r.status === grpc.StatusOK,
+    });
+  } else {
+    let payload = JSON.stringify({
+      key: key(i),
+    });
+    let params = {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      tags: {
+        caller: tag,
+      },
+    };
 
-  check_success(response);
+    let response = http.post(`${host}/v3/kv/range`, payload, params);
+
+    check_success(response);
+  }
 }
 
 // perform a single get request at a preset key
@@ -162,21 +207,41 @@ export function get_range(i = 0, tag = "get_range") {
 
 // perform a single delete request at a preset key
 export function delete_single(i = 0, tag = "delete_single") {
-  let payload = JSON.stringify({
-    key: key(i),
-  });
-  let params = {
-    headers: {
-      "Content-Type": "application/json",
-    },
-    tags: {
-      caller: tag,
-    },
-  };
+  if (content_type == "grpc") {
+    if (tag != "setup" && exec.vu.iterationInInstance == 0) {
+      grpc_client.connect(addr, {})
+    }
+    const payload = {
+      key: key(i),
+    };
+    const response = grpc_client.invoke("etcdserverpb.KV/DeleteRange", payload)
 
-  let response = http.post(`${host}/v3/kv/delete_range`, payload, params);
+    check(response, {
+      "status is 200": (r) => r && r.status === grpc.StatusOK,
+    });
+  } else {
+    let payload = JSON.stringify({
+      key: key(i),
+    });
+    let params = {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      tags: {
+        caller: tag,
+      },
+    };
 
-  check_success(response);
+    let response = http.post(`${host}/v3/kv/delete_range`, payload, params);
+
+    check_success(response);
+  }
+}
+
+export function put_get_delete(i = 0) {
+  put_single(i);
+  get_single(i);
+  delete_single(i);
 }
 
 export function put_get_delete(i = 0) {
