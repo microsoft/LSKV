@@ -4,3 +4,8 @@
 - /docker-workspace/
 - /plots/
 - /.git/
+- /.venv/
+- /.venv_ccf_sandbox/
+- /scripts/env/
+- /.cache/
+- /.mypy_cache/
