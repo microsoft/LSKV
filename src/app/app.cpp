@@ -11,7 +11,7 @@
 #include "ccf/json_handler.h"
 #include "ccf/service/tables/nodes.h"
 #include "ccf/service/tables/service.h"
-#include "endpoints/grpc.h" // TODO(#22): private header
+#include "endpoints/grpc/grpc.h" // TODO(#22): private header
 #include "etcd.pb.h"
 #include "grpc.h"
 #include "index.h"
