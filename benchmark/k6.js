@@ -53,7 +53,9 @@ const prefill_keys = total_requests / 2;
 export function setup() {
   randomSeed(123);
 
-  grpc_client.connect(addr, {});
+  if (content_type == "grpc") {
+    grpc_client.connect(addr, {});
+  }
 
   let receipt_txids = [];
   var txid = "";
