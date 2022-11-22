@@ -55,6 +55,11 @@
       args:
         chdir: /tmp/CCF
 
+    - name: Run the CCF virtual getting started playbook
+      shell: ./getting_started/setup_vm/run.sh ./getting_started/setup_vm/app-run.yml --extra-vars 'platform=virtual' --extra-vars 'ccf_ver={{ ccf_ver }}'
+      args:
+        chdir: /tmp/CCF
+
     - name: Install apt packages
       ansible.builtin.apt:
         name:
