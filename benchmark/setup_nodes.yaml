@@ -44,6 +44,17 @@
         src: "{{ playbook_dir }}/../"
         dest: /tmp/lskv
 
+    - name: Clone the CCF repo
+      ansible.builtin.git:
+        repo: "https://github.com/microsoft/CCF"
+        dest: /tmp/CCF
+        version: ccf-4.0.0-dev0
+
+    - name: Run the CCF sgx getting started playbook
+      shell: ./getting_started/setup_vm/run.sh ./getting_started/setup_vm/app-run.yml --extra-vars 'platform=sgx' --extra-vars 'ccf_ver={{ ccf_ver }}'
+      args:
+        chdir: /tmp/CCF
+
     - name: Install apt packages
       ansible.builtin.apt:
         name:
@@ -52,23 +63,6 @@
           - python3.8-venv
         update_cache: true
       become: true
-
-    - name: Install openenclave
-      ansible.builtin.apt:
-        deb: "{{ oe_deb }}"
-        update_cache: true
-      become: true
-
-    - name: Install ccf
-      ansible.builtin.apt:
-        deb: "{{ ccf_deb }}"
-        update_cache: true
-        force: true
-      become: true
-
-    - name: Install app dev deps
-      ansible.builtin.command:
-        cmd: /opt/ccf_virtual/getting_started/setup_vm/run.sh /opt/ccf_virtual/getting_started/setup_vm/app-dev.yml --extra-vars "platform=virtual" --extra-vars "oe_ver='{{ oe_ver }}'" --extra-vars "oe_ver_='{{ oe_ver_ }}'"
 
 - hosts: all[0]
   remote_user: "{{ vm_user }}"
