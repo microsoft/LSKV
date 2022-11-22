@@ -120,7 +120,7 @@ class Curl:
         )
 
     def base_cmd(self) -> List[str]:
-        return ["curl", "-s", "--cacert", "service_cert.pem"]
+        return ["curl", "-s", "--cacert", "service_cert.pem", "--cert", "user0_cert.pem", "--key", "user0_privk.pem"]
 
     def get(self, key: str, end: str = "", rev: int = 0):
         data: Dict[str, Any] = {"key": key}
@@ -254,6 +254,10 @@ class Etcdctl:
                 self.address,
                 "--cacert",
                 "service_cert.pem",
+                "--cert",
+                "user0_cert.pem",
+                "--key",
+                "user0_privk.pem",
                 "-w",
                 "json",
             ]
@@ -427,6 +431,9 @@ def main(port: int, common_dir: str, client_type: str):
     print()
     print("Now what if we want to verify that what we wrote is in the ledger?")
     client.get_receipt(put_term, put_rev, {"key": key, "value": value}, {})
+
+    # print ledger
+    subprocess.run(["read_ledger.py", "workspace/sandbox_0/0.ledger", "--uncommitted"], check=True)
 
 
 if __name__ == "__main__":
