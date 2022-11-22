@@ -284,15 +284,18 @@ class Analyser:
         var, invariant_vars = condense_vars(
             data, [x_column, y_column, row, col, hue] + ignore_vars
         )
-        data[hue] = var
+        if not var.empty:
+            data[hue] = var
 
-        group_cols = ["rate", hue]
+        group_cols = ["rate"]
+        if not var.empty:
+            group_cols.append(hue)
         if row:
             group_cols.append(row)
         if col:
             group_cols.append(col)
         data["rate2"] = data["rate"]
-        grouped = data.groupby(group_cols)
+        grouped = data.groupby(group_cols, dropna=False)
         throughputs = grouped.first()
 
         durations = (grouped["end_ms"].max() - grouped["start_ms"].min()) / 1000
@@ -312,7 +315,7 @@ class Analyser:
             y=y_column,
             row=row,
             col=col,
-            hue=hue,
+            hue=hue if not var.empty else None,
         )
 
         plot.figure.subplots_adjust(top=0.9)
@@ -357,7 +360,7 @@ class Analyser:
             group_cols.append(row)
         if col:
             group_cols.append(col)
-        grouped = data.groupby(group_cols)
+        grouped = data.groupby(group_cols, dropna=False)
         throughputs = grouped.first()
 
         durations = (grouped["end_ms"].max() - grouped["start_ms"].min()) / 1000
@@ -451,7 +454,11 @@ def condense_vars(all_data, without) -> Tuple[pd.Series, List[str]]:
         if name == "store":
             return all_data[name].astype(str)
         if name == "tls":
-            return all_data[name].map(lambda t: "tls" if t else "notls")
+            return all_data[name].map(lambda t: "tls" if t else "plain")
+        if name == "content_type":
+            return all_data[name].astype(str)
+        if name == "http_version":
+            return "http" + all_data[name].astype(str)
         return f"{name}=" + all_data[name].astype(str)
 
     invariant_columns = []
