@@ -10,6 +10,7 @@
   sgx-psw,
   makeWrapper,
   protobuf,
+  arrow-cpp,
 }: {enclave}:
 stdenv.mkDerivation rec {
   pname = "ccf-${enclave}";
@@ -32,6 +33,7 @@ stdenv.mkDerivation rec {
     ninja
     libuv
     protobuf
+    arrow-cpp
     sgx-dcap
     openenclave
     makeWrapper
