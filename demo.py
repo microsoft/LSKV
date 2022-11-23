@@ -3,10 +3,11 @@
 # Licensed under the MIT License.
 
 import argparse
-import os
 import base64
 import json
+import os
 import subprocess
+import time
 from pprint import pprint
 from typing import Any, Dict, List, Tuple
 
@@ -67,7 +68,9 @@ def run(
 
     cmd_str = subprocess.list2cmdline(cmd_to_print)
     if wait:
-        input(f"Run: {cmd_str}")
+        print(f"Run: {cmd_str}")
+        time.sleep(1)
+        # input(f"Run: {cmd_str}")
     elif not cmd_silent:
         print(f"Run: {cmd_str}")
 
@@ -211,7 +214,7 @@ class Curl:
             "/v3/receipt/get_receipt",
             [
                 "-d",
-                json.dumps(data).replace('"', "'"),
+                json.dumps(data),
             ],
             json_resp=False,
         )
@@ -221,7 +224,7 @@ class Curl:
             "/v3/receipt/get_receipt",
             [
                 "-d",
-                json.dumps(data).replace('"', "'"),
+                json.dumps(data),
             ],
             load_json=load_receipt_json(request, response),
         )
