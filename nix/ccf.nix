@@ -13,13 +13,13 @@
 }: {enclave}:
 stdenv.mkDerivation rec {
   pname = "ccf-${enclave}";
-  version = "3.0.0-rc2";
+  version = "4.0.0-dev0";
   src = fetchFromGitHub {
     owner = "microsoft";
     repo = "CCF";
     name = "ccf-${version}";
     rev = "ccf-${version}";
-    hash = "sha256-hSmNxQakBPHY0sRudqQvUYlJQJiX/5/WLQweQeVLOSw=";
+    hash = "sha256-pnopMvATNoQxEJ68wA+A6eLqFVnxBHkdOUNcJXi+Abs=";
   };
   patches = [
     patches/ccf-no-python.diff
