@@ -19,7 +19,7 @@
   grpcio-tools,
   python-ccf,
   cimetrics,
-  cose,
+  pycose,
   jwcrypto,
   cbor2,
 }:
@@ -46,7 +46,7 @@ buildPythonPackage {
     docutils
     grpcio-tools
     cimetrics
-    cose
+    pycose
     jwcrypto
     cbor2
   ] ++ httpx.optional-dependencies.http2;
