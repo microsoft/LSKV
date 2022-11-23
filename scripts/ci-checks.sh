@@ -28,7 +28,7 @@ git ls-files | grep -e '\.sh$' | grep -E -v "^3rdparty" | xargs shellcheck -s ba
 endgroup
 
 group "TODOs"
-"$SCRIPT_DIR"/check-todo.sh include src
+"$SCRIPT_DIR"/check-todo.sh include src constitution
 endgroup
 
 group "C/C++/Proto format"
