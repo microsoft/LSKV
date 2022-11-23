@@ -364,8 +364,8 @@ def main(port: int, common_dir: str, client_type: str):
     else:
         raise ValueError(f"incorrect client type: {client_type}")
 
-    prefill_size = 100
-    print(f"Prefilling {prefill_size} keys")
+    # prefill_size = 100
+    # print(f"Prefilling {prefill_size} keys")
     # prefill(client, prefill_size)
 
     client.list_endpoints()
