@@ -392,7 +392,7 @@ def main(port: int, common_dir: str, client_type: str):
 
     print()
     input("Add some more values")
-    for i in range(10):
+    for i in range(3):
         keyi = make_key(i)
         vali = make_value(i)
         _, _ = client.put(keyi, vali, wait=False, silent=True)
