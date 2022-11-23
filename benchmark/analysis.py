@@ -29,17 +29,18 @@ class Analyser:
     Analyser for helper functions.
     """
 
-    def __init__(self, benchmark: str):
+    def __init__(self, benchmark: str, bench_results:str=common.BENCH_DIR):
         """
         Initialise analyser.
         """
         self.benchmark = benchmark
+        self.bench_results = bench_results
 
     def bench_dir(self) -> str:
         """
         Return the bench directory where results are stored.
         """
-        return os.path.join("..", common.BENCH_DIR, self.benchmark)
+        return os.path.join("..", self.bench_results, self.benchmark)
 
     def plot_dir(self) -> str:
         """
@@ -369,7 +370,7 @@ class Analyser:
         var, invariant_vars = condense_vars(
             data, [x_column, y_column, row, col, hue] + ignore_vars
         )
-        data[hue] = var
+        data["vars"] = var
 
         group_cols = [x_column]
         if row:
