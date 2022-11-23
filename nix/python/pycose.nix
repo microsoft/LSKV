@@ -10,12 +10,12 @@
 }:
 buildPythonPackage rec {
   pname = "pycose";
-  version = "0.9.dev8";
+  version = "1.0.1";
   src = fetchFromGitHub {
     owner = "TimothyClaeys";
     repo = "pycose";
     rev = "v${version}";
-    hash = "sha256-/jwq2C2nvHInsgPG4jZCr+XsvlUJdYewAkasrUPVaHM=";
+    hash = "sha256-8d6HebWlSKgx7dmOnT7ZZ5mrMfg6mNWhz1hHPv75XF4=";
   };
   propagatedBuildInputs = [
     attrs
