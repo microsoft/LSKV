@@ -73,7 +73,7 @@ The cmake build can be configured with the following lskv-specific options:
 
 - `COMPILE_TARGET`: build LSKV for a specific deployment target, one of [virtual;sgx;snp], defaults to virtual
   - **Note**: this requires the corresponding `ccf_${COMPILE_TARGET}` package to be installed
-- `PUBLIC_MAPS`: store data in public maps (publicly visible in the ledger)
+- `PUBLIC_LEASES`: store lease data in public maps (publicly visible in the ledger)
 - `VERBOSE_LOGGING`: enable verbose logging which may output private data to logs
 
 ## Testing

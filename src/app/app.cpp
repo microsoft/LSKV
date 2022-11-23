@@ -21,6 +21,8 @@
 #include "lskvserver.pb.h"
 #include "node_data.h"
 
+#include <fmt/ranges.h>
+
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
 
