@@ -14,7 +14,8 @@ if(NOT RETURN_CODE STREQUAL "0")
   set(LSKV_VERSION "0.0.0")
   message(
     WARNING
-    "Could not find any tag in repository. Defaulting LSKV version to ${LSKV_VERSION}")
+      "Could not find any tag in repository. Defaulting LSKV version to ${LSKV_VERSION}"
+  )
 endif()
 
 # strip 'v' prefix from version
