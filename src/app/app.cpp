@@ -16,7 +16,6 @@
 #include "etcd.pb.h"
 #include "grpc.h"
 #include "http/http2_types.h" // TODO(#22): private header
-#include "http/responder_lookup_interface.h" // TODO(#22): private header
 #include "index.h"
 #include "json_grpc.h"
 #include "kvstore.h"
@@ -50,8 +49,6 @@ namespace app
     using IndexStrategy = app::index::KVIndexer;
     std::shared_ptr<IndexStrategy> kvindex = nullptr;
 
-    std::shared_ptr<http::AbstractResponderLookup> responder_lookup = nullptr;
-
     int64_t cluster_id;
 
   public:
@@ -64,13 +61,6 @@ namespace app
 
       kvindex = std::make_shared<IndexStrategy>(app::kvstore::RECORDS);
       context.get_indexing_strategies().install_strategy(kvindex);
-
-      responder_lookup = context.get_subsystem<http::AbstractResponderLookup>();
-      if (responder_lookup == nullptr)
-      {
-        throw std::runtime_error(
-          "App cannot be constructed without ResponderLookup subsystem");
-      }
 
       const auto etcdserverpb = "etcdserverpb";
       const auto lskvserverpb = "lskvserverpb";
@@ -325,32 +315,40 @@ namespace app
         etcdserverpb::StatusResponse>(
         etcdserverpb, maintenance, "Status", "/v3/maintenance/status", status);
 
-      auto watch = [this](
-                     ccf::endpoints::EndpointContext& ctx,
-                     etcdserverpb::WatchRequest&& payload) {
-        this->watch(ctx, std::move(payload));
-        return ccf::grpc::make_success();
-      };
-      make_endpoint(
+      auto watch =
+        [this](
+          ccf::endpoints::CommandEndpointContext& ctx,
+          etcdserverpb::WatchRequest&& payload,
+          ccf::grpc::StreamPtr<etcdserverpb::WatchResponse>&& out_stream) {
+          static bool is_streaming = true;
+          if (!is_streaming)
+          {
+            return ccf::grpc::make_success();
+          }
+          this->watch_impl(
+            ctx,
+            std::move(payload),
+            ccf::grpc::detach_stream(std::move(out_stream)));
+          return ccf::grpc::make_success();
+          is_streaming = false;
+        };
+      make_command_endpoint(
         "/etcdserverpb.Watch/Watch",
         HTTP_POST,
-        ccf::grpc_stream_adapter<
+        ccf::grpc_command_unary_stream_adapter<
           etcdserverpb::WatchRequest,
-          ccf::grpc::DetachedStream<etcdserverpb::WatchResponse>>(watch),
+          etcdserverpb::WatchResponse>(watch),
         {ccf::no_auth_required})
         .install();
     }
 
-    void watch(
-      ccf::endpoints::EndpointContext& ctx,
-      etcdserverpb::WatchRequest&& payload)
+    void watch_impl(
+      ccf::endpoints::CommandEndpointContext& ctx,
+      etcdserverpb::WatchRequest&& payload,
+      ccf::grpc::DetachedStreamPtr<etcdserverpb::WatchResponse>&& stream)
     {
       CCF_APP_INFO("Watch");
       CCF_APP_INFO("Watch request received {}", payload.DebugString());
-
-      auto stream =
-        ccf::grpc::make_detached_stream<etcdserverpb::WatchResponse>(
-          ctx.rpc_ctx, responder_lookup);
 
       CCF_APP_INFO("Made detached stream");
 
@@ -371,7 +369,7 @@ namespace app
       auto committed = last_committed_txid();
       fill_header(*response.mutable_header(), committed);
 
-      stream->stream_msg(response, true);
+      stream->stream_msg(response);
       CCF_APP_INFO("Sent response");
 
       // TODO: add the watch to the store
