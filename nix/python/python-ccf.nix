@@ -3,6 +3,7 @@
   string-color,
   loguru,
   cryptography,
+  pycose,
   ccf,
   pythonRelaxDepsHook,
 }: let
@@ -27,6 +28,7 @@ in
       string-color
       loguru
       cryptography
+      pycose
     ];
 
     # Tests don't run, seems to be a problem with cryptography version pin.
