@@ -83,6 +83,8 @@ class LSKVStore(Store):
                     f"/opt/ccf_{self.config.enclave}/bin/sandbox.sh",
                     "--enclave-type",
                     "virtual" if self.config.enclave == "virtual" else "release",
+                    "--enclave-platform",
+                    self.config.enclave,
                     "--package",
                     package,
                     "--verbose",
