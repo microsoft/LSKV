@@ -57,6 +57,7 @@ buildPythonPackage {
     sed -i '/python-iptables/d' requirements.txt
     sed -i '/py-spy/d' requirements.txt
     sed -i '/locust/d' requirements.txt
+    sed -i 's/grpcio-tools == 1.44.0/grpcio-tools' requirements.txt
 
     sed -i '1s|^|#!/usr/bin/env python3\n|' start_network.py
     chmod +x start_network.py
