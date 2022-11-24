@@ -5,19 +5,24 @@
 Test a single node
 """
 
+import os
 import re
 from http import HTTPStatus
 
+import ccf.ledger  # type: ignore
 from loguru import logger
 
 # pylint: disable=unused-import
 # pylint: disable=no-name-in-module
 from test_common import (
     b64decode,
+    fixture_governance_client,
     fixture_http1_client,
     fixture_http1_client_unauthenticated,
     fixture_sandbox,
 )
+
+from lskv import governance  # type: ignore
 
 
 # pylint: disable=redefined-outer-name
@@ -220,6 +225,7 @@ def test_tx_status(http1_client):
     j = res.json()
     term = j["header"]["raftTerm"]
     rev = j["header"]["revision"]
+    http1_client.wait_for_commit(term, rev)
 
     res = http1_client.tx_status(term, rev)
     check_response(res)
@@ -236,6 +242,83 @@ def test_tx_status(http1_client):
     check_response(res)
     status = res.json()["status"]
     assert status == "Invalid"
+
+
+def test_public_prefix(governance_client, http1_client, sandbox):
+    """
+    Test the constitution action for public prefixes.
+    """
+    prefix = "mysecretprefix"
+    res = http1_client.put(f"{prefix}/test", "my secret")
+    check_response(res)
+    term = int(res.json()["header"]["raftTerm"])
+    rev = int(res.json()["header"]["revision"])
+    http1_client.wait_for_commit(term, rev)
+
+    ledger = ccf.ledger.Ledger(
+        [os.path.join(sandbox.workspace(), "sandbox_0", "0.ledger")],
+        committed_only=False,
+    )
+    txn = ledger.get_transaction(rev)
+    public_domain = txn.get_public_domain()
+    assert len(public_domain.get_tables()) == 0
+
+    # set a secret prefix
+    proposal = governance.Proposal()
+    proposal.set_public_prefix(prefix)
+    res = governance_client.propose(proposal)
+    proposal_id = res.proposal_id
+    governance_client.accept(proposal_id)
+
+    res = http1_client.put(f"{prefix}/test", "my secret")
+    check_response(res)
+    term = int(res.json()["header"]["raftTerm"])
+    rev = int(res.json()["header"]["revision"])
+    http1_client.wait_for_commit(term, rev)
+
+    ledger = ccf.ledger.Ledger(
+        [os.path.join(sandbox.workspace(), "sandbox_0", "0.ledger")],
+        committed_only=False,
+    )
+    txn = ledger.get_transaction(rev)
+    public_domain = txn.get_public_domain()
+    assert len(public_domain.get_tables()) == 1
+
+    # setting an existing prefix is ok
+    proposal = governance.Proposal()
+    proposal.set_public_prefix(prefix)
+    res = governance_client.propose(proposal)
+    proposal_id = res.proposal_id
+    governance_client.accept(proposal_id)
+
+    # removing an existing prefix is ok
+    proposal = governance.Proposal()
+    proposal.remove_public_prefix(prefix)
+    res = governance_client.propose(proposal)
+    proposal_id = res.proposal_id
+    governance_client.accept(proposal_id)
+
+    # and removing one that doesn't exist is ok too
+    proposal = governance.Proposal()
+    proposal.remove_public_prefix(prefix)
+    res = governance_client.propose(proposal)
+    proposal_id = res.proposal_id
+    governance_client.accept(proposal_id)
+
+    # setting a new key now doesn't end up public
+    res = http1_client.put(f"{prefix}/test", "my secret")
+    check_response(res)
+    term = int(res.json()["header"]["raftTerm"])
+    rev = int(res.json()["header"]["revision"])
+    http1_client.wait_for_commit(term, rev)
+
+    ledger = ccf.ledger.Ledger(
+        [os.path.join(sandbox.workspace(), "sandbox_0", "0.ledger")],
+        committed_only=False,
+    )
+    txn = ledger.get_transaction(rev)
+    public_domain = txn.get_public_domain()
+    assert len(public_domain.get_tables()) == 0
 
 
 def check_response(res):

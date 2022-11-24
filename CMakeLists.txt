@@ -34,10 +34,9 @@ endif()
 
 add_subdirectory(proto)
 
-option(
-  PUBLIC_MAPS
-  "If enabled, all keys and values are recorded in plaintext in the ledger (insecure!)"
-  OFF)
+option(PUBLIC_LEASES
+       "If enabled, leases are recorded in plaintext in the ledger (insecure!)"
+       OFF)
 
 option(VERBOSE_LOGGING "enable verbose logging" OFF)
 
@@ -63,13 +62,6 @@ add_ccf_app(
   lskvserver.virtual
   status.virtual
   protobuf.virtual)
-
-if(PUBLIC_MAPS)
-  message(STATUS "Using public maps")
-  add_compile_definitions(PUBLIC_MAPS)
-else()
-  message(STATUS "Using private maps")
-endif()
 
 if(VERBOSE_LOGGING)
   message(STATUS "Using verbose logging")
