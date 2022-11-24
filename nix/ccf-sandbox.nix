@@ -11,6 +11,8 @@ in
     pname = "ccf-sandbox-${enclave}";
     inherit (c) version src;
 
+    dontBuild = true;
+
     installPhase = ''
       install -m755 -D ${./ccf-sandbox.sh} $out/bin/sandbox.sh
       install -m644 -t $out/bin \
