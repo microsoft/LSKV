@@ -29,7 +29,7 @@ class Analyser:
     Analyser for helper functions.
     """
 
-    def __init__(self, benchmark: str, bench_results:str=common.BENCH_DIR):
+    def __init__(self, benchmark: str, bench_results: str = common.BENCH_DIR):
         """
         Initialise analyser.
         """
