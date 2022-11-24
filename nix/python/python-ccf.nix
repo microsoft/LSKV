@@ -7,7 +7,7 @@
   ccf,
   pythonRelaxDepsHook,
 }: let
-  ccf-virtual = ccf {enclave = "virtual";};
+  ccf-virtual = ccf.virtual;
 in
   buildPythonPackage {
     inherit (ccf-virtual) version src;

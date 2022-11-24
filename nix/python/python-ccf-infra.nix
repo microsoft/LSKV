@@ -26,30 +26,32 @@
 buildPythonPackage {
   inherit (python-ccf) version src;
   pname = "python-ccf-infra";
-  propagatedBuildInputs = [
-    python-ccf
-    cryptography
-    httpx
-    psutil
-    matplotlib
-    loguru
-    pandas
-    pyasn1
-    pyjwt
-    paramiko
-    jinja2
-    docker
-    GitPython
-    openapi-spec-validator
-    better-exceptions
-    pyopenssl
-    docutils
-    grpcio-tools
-    cimetrics
-    pycose
-    jwcrypto
-    cbor2
-  ] ++ httpx.optional-dependencies.http2;
+  propagatedBuildInputs =
+    [
+      python-ccf
+      cryptography
+      httpx
+      psutil
+      matplotlib
+      loguru
+      pandas
+      pyasn1
+      pyjwt
+      paramiko
+      jinja2
+      docker
+      GitPython
+      openapi-spec-validator
+      better-exceptions
+      pyopenssl
+      docutils
+      grpcio-tools
+      cimetrics
+      pycose
+      jwcrypto
+      cbor2
+    ]
+    ++ httpx.optional-dependencies.http2;
 
   preConfigure = ''
     cd tests

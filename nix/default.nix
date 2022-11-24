@@ -25,22 +25,22 @@ pkgs.lib.makeScope pkgs.newScope (
       ccf = self.callPackage ./ccf.nix {
         stdenv = pkgs.llvmPackages_10.libcxxStdenv;
       };
-      ccf-virtual = ccf {enclave = "virtual";};
-      ccf-sgx = ccf {enclave = "sgx";};
+      ccf-virtual = ccf.virtual;
+      ccf-sgx = ccf.sgx;
 
       ccf-sandbox = self.callPackage ./ccf-sandbox.nix {};
-      ccf-sandbox-virtual = ccf-sandbox {enclave = "virtual";};
-      ccf-sandbox-sgx = ccf-sandbox {enclave = "sgx";};
+      ccf-sandbox-virtual = ccf-sandbox.virtual;
+      ccf-sandbox-sgx = ccf-sandbox.sgx;
 
       lskv = self.callPackage ./lskv.nix {
         stdenv = pkgs.llvmPackages_10.libcxxStdenv;
       };
-      lskv-virtual = lskv {enclave = "virtual";};
-      lskv-sgx = lskv {enclave = "sgx";};
+      lskv-virtual = lskv.virtual;
+      lskv-sgx = lskv.sgx;
 
       lskv-sandbox = self.callPackage ./lskv-sandbox.nix {};
-      lskv-sandbox-virtual = lskv-sandbox {enclave = "virtual";};
-      lskv-sandbox-sgx = lskv-sandbox {enclave = "sgx";};
+      lskv-sandbox-virtual = lskv-sandbox.virtual;
+      lskv-sandbox-sgx = lskv-sandbox.sgx;
 
       ci-checks = self.callPackage ./ci-checks.nix {};
 
