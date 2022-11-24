@@ -1,14 +1,14 @@
-# From https://github.com/microsoft/CCF/blob/2b6ac3e06d0398b57e1e52293900ad97723fea92/tests/perf-system/generator/generator.py
 # Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the Apache 2.0 License.
+# Licensed under the MIT License.
+#
+# From https://github.com/microsoft/CCF/blob/2b6ac3e06d0398b57e1e52293900ad97723fea92/tests/perf-system/generator/generator.py
 """
 Generate requests
 """
 
-import pandas as pd  # type: ignore
-
 # pylint: disable=import-error
 import fastparquet as fp  # type: ignore
+import pandas as pd  # type: ignore
 
 
 class Messages:
