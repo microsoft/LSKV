@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 #
+# pylint: disable=line-too-long
 # From https://github.com/microsoft/CCF/blob/2b6ac3e06d0398b57e1e52293900ad97723fea92/tests/perf-system/generator/generator.py
 """
 Generate requests
@@ -12,9 +13,14 @@ import pandas as pd  # type: ignore
 
 
 class Messages:
-    def __init__(self):
-        self.df = pd.DataFrame(columns=["messageID", "request"])
+    """
+    Messages that will be processed by the submitter.
+    """
 
+    def __init__(self):
+        self.requests = pd.DataFrame(columns=["messageID", "request"])
+
+    # pylint: disable=too-many-arguments
     def append(
         self,
         host,
@@ -34,7 +40,7 @@ class Messages:
         if len(data) > 0:
             data_headers = "content-length: " + str(len(data)) + "\r\n\r\n" + data
 
-        df_size = len(self.df.index)
+        df_size = len(self.requests.index)
 
         for ind in range(iterations):
             batch_df.loc[ind] = [
@@ -54,8 +60,11 @@ class Messages:
                 + data_headers,
             ]
 
-        self.df = pd.concat([self.df, batch_df])
+        self.requests = pd.concat([self.requests, batch_df])
         return batch_df
 
     def to_parquet_file(self, path):
-        fp.write(path, self.df)
+        """
+        Write out the current set of messages to a parquet file for ingestion by the submitter.
+        """
+        fp.write(path, self.requests)
