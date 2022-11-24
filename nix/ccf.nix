@@ -26,6 +26,7 @@ stdenv.mkDerivation rec {
     patches/ccf-no-python.diff
     patches/ccf-no-python-pb2.diff
     patches/ccf-protoc-binary.diff
+    patches/ccf-ignore-submitter.diff
   ];
 
   nativeBuildInputs = [
