@@ -52,6 +52,8 @@
         lskv-sandbox-sgx = self.packages.${system}.lskv-sandbox-sgx;
       };
 
+    lib = nix.lib;
+
     formatter.${system} = pkgs.alejandra;
 
     apps.${system} = {

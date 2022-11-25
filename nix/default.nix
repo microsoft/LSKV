@@ -3,7 +3,22 @@
   packageOverrides ? (_self: _super: {}),
 }:
 pkgs.lib.makeScope pkgs.newScope (
-  self:
+  self: let
+    lib =
+      import ./lib.nix {lib = pkgs.lib;};
+    ccf = self.callPackage ./ccf.nix {
+      stdenv = pkgs.llvmPackages_10.libcxxStdenv;
+    };
+    ccf-sandbox = self.callPackage ./ccf-sandbox.nix {inherit ccf;};
+    lskv = self.callPackage ./lskv.nix {
+      inherit ccf;
+      stdenv = pkgs.llvmPackages_10.libcxxStdenv;
+    };
+    lskv-sandbox = self.callPackage ./lskv-sandbox.nix {inherit ccf-sandbox lskv;};
+    packages = lib.forAllPlatforms {
+      inherit ccf ccf-sandbox lskv lskv-sandbox;
+    };
+  in
     rec {
       az-dcap = self.callPackage ./az-dcap.nix {};
       sgx-dcap = self.callPackage ./sgx-dcap.nix {};
@@ -22,26 +37,6 @@ pkgs.lib.makeScope pkgs.newScope (
         stdenv = pkgs.llvmPackages_10.stdenv;
       };
 
-      ccf = self.callPackage ./ccf.nix {
-        stdenv = pkgs.llvmPackages_10.libcxxStdenv;
-      };
-      ccf-virtual = ccf.override {platform = "virtual";};
-      ccf-sgx = ccf.override {platform = "sgx";};
-
-      ccf-sandbox = self.callPackage ./ccf-sandbox.nix {};
-      ccf-sandbox-virtual = ccf-sandbox.override {platform = "virtual";};
-      ccf-sandbox-sgx = ccf-sandbox.override {platform = "sgx";};
-
-      lskv = self.callPackage ./lskv.nix {
-        stdenv = pkgs.llvmPackages_10.libcxxStdenv;
-      };
-      lskv-virtual = lskv.override {platform = "virtual";};
-      lskv-sgx = lskv.override {platform = "sgx";};
-
-      lskv-sandbox = self.callPackage ./lskv-sandbox.nix {};
-      lskv-sandbox-virtual = lskv-sandbox.override {platform = "virtual";};
-      lskv-sandbox-sgx = lskv-sandbox.override {platform = "sgx";};
-
       ci-checks = self.callPackage ./ci-checks.nix {};
 
       # A python3 derivation that is extended with some CC related
@@ -57,9 +52,7 @@ pkgs.lib.makeScope pkgs.newScope (
           cimetrics = pself.callPackage ./python/cimetrics.nix {};
           better-exceptions = pself.callPackage ./python/better-exceptions.nix {};
 
-          python-ccf = pself.callPackage ./python/python-ccf.nix {
-            ccf = self.ccf;
-          };
+          python-ccf = pself.callPackage ./python/python-ccf.nix {inherit ccf;};
           python-ccf-infra = pself.callPackage ./python/python-ccf-infra.nix {};
         };
       };
@@ -78,4 +71,5 @@ pkgs.lib.makeScope pkgs.newScope (
       (name: value: pkgs.lib.attrsets.nameValuePair ("ci-checks-" + name) value)
       (pkgs.callPackage ./ci-checks.nix {})
     )
+    // packages
 )
