@@ -63,6 +63,8 @@ pkgs.lib.makeScope pkgs.newScope (
         };
       };
 
+      python-ccf = python3.pkgs.python-ccf;
+
       mkShell = args:
         (pkgs.mkShell.override {
           stdenv = pkgs.llvmPackages_10.libcxxStdenv;
