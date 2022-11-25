@@ -33,21 +33,21 @@ foreach(proto_file ${PROTO_FILES})
     set(EXTRA_INCLUDES ${CMAKE_CURRENT_BINARY_DIR}/etcd.pb.h)
   endif()
 
-  if(${COMPILE_TARGET} STREQUAL "virtual")
-    add_host_library(
-      ${PROTO_NAME_WE}.virtual
-      ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.cc
-      ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.h ${EXTRA_INCLUDES})
-    target_include_directories(
-      ${PROTO_NAME_WE}.virtual PUBLIC ${PROTOBUF_INCLUDE_DIR}
-                                      ${CMAKE_CURRENT_BINARY_DIR})
-  else()
+  if(${COMPILE_TARGET} STREQUAL "sgx")
     add_enclave_library(
       ${PROTO_NAME_WE}.enclave
       ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.cc
       ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.h ${EXTRA_INCLUDES})
     target_include_directories(
       ${PROTO_NAME_WE}.enclave PUBLIC ${PROTOBUF_INCLUDE_DIR}
+                                      ${CMAKE_CURRENT_BINARY_DIR})
+  else()
+    add_host_library(
+      ${PROTO_NAME_WE}.virtual
+      ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.cc
+      ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.h ${EXTRA_INCLUDES})
+    target_include_directories(
+      ${PROTO_NAME_WE}.virtual PUBLIC ${PROTOBUF_INCLUDE_DIR}
                                       ${CMAKE_CURRENT_BINARY_DIR})
   endif()
 endforeach()
