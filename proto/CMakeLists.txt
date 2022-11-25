@@ -41,6 +41,14 @@ foreach(proto_file ${PROTO_FILES})
     target_include_directories(
       ${PROTO_NAME_WE}.enclave PUBLIC ${PROTOBUF_INCLUDE_DIR}
                                       ${CMAKE_CURRENT_BINARY_DIR})
+  elseif(${COMPILE_TARGET} STREQUAL "snp")
+    add_host_library(
+      ${PROTO_NAME_WE}.snp
+      ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.cc
+      ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.h ${EXTRA_INCLUDES})
+    target_include_directories(
+      ${PROTO_NAME_WE}.snp PUBLIC ${PROTOBUF_INCLUDE_DIR}
+                                      ${CMAKE_CURRENT_BINARY_DIR})
   else()
     add_host_library(
       ${PROTO_NAME_WE}.virtual
