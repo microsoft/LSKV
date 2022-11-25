@@ -1,34 +1,37 @@
 {
   buildPythonPackage,
-  fetchFromGitHub,
   string-color,
   loguru,
   cryptography,
+  pycose,
   ccf,
   pythonRelaxDepsHook,
-}:
-buildPythonPackage {
-  inherit (ccf) version src;
-  pname = "ccf";
+}: let
+  ccf-virtual = ccf.virtual;
+in
+  buildPythonPackage {
+    inherit (ccf-virtual) version src;
+    pname = "ccf";
 
-  # ccf wants cryptography 37, but we only have 36.
-  nativeBuildInputs = [pythonRelaxDepsHook];
-  pythonRelaxDeps = ["cryptography"];
+    # ccf wants cryptography 37, but we only have 36.
+    nativeBuildInputs = [pythonRelaxDepsHook];
+    pythonRelaxDeps = ["cryptography"];
 
-  preConfigure = ''
-    cd python
-    cat > version.py <<EOF
-    CCF_VERSION = "$version"
-    EOF
-  '';
+    preConfigure = ''
+      cd python
+      cat > version.py <<EOF
+      CCF_VERSION = "$version"
+      EOF
+    '';
 
-  propagatedBuildInputs = [
-    string-color
-    loguru
-    cryptography
-  ];
+    propagatedBuildInputs = [
+      string-color
+      loguru
+      cryptography
+      pycose
+    ];
 
-  # Tests don't run, seems to be a problem with cryptography version pin.
-  # CCF doesn't have any python tests anyway.
-  doCheck = false;
-}
+    # Tests don't run, seems to be a problem with cryptography version pin.
+    # CCF doesn't have any python tests anyway.
+    doCheck = false;
+  }

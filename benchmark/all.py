@@ -7,23 +7,25 @@ Run all configurations of the benchmarks
 """
 
 import argparse
-import logging
 from typing import List
 
 import common
 import etcd
+import perf_system
 import ycsb
-
-logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.DEBUG)
+import k6
 
 
 def all_common_configurations(args: argparse.Namespace):
     """
     Fill in the args for all common configurations.
     """
+    args.nodes = [1, 3, 5]
     args.worker_threads = [1, 2, 4]
     args.virtual = True
     args.sgx = True
+    args.http2 = True
+    args.etcd = True
 
     args.sig_tx_intervals = [5000, 10000, 20000]
     args.sig_ms_intervals = [100, 1000, 10000]
@@ -61,10 +63,45 @@ def all_ycsb_configurations(args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     return ycsb.make_configurations(args)
 
 
+def all_perf_configurations(args: argparse.Namespace) -> List[perf_system.PerfConfig]:
+    """
+    Set args for all perf configurations.
+    """
+    args.http1 = True
+    args.http2 = True
+
+    all_common_configurations(args)
+    return perf_system.make_configurations(args)
+
+
+def all_k6_configurations(args: argparse.Namespace) -> List[k6.K6Config]:
+    """
+    Set args for all k6 configurations.
+    """
+    args.http1 = True
+    args.http2 = True
+    args.etcd = False
+
+    all_common_configurations(args)
+    return k6.make_configurations(args)
+
+
 if __name__ == "__main__":
     common.main(
         "etcd", etcd.get_arguments, all_etcd_configurations, etcd.execute_config
     )
     common.main(
         "ycsb", ycsb.get_arguments, all_ycsb_configurations, ycsb.execute_config
+    )
+    common.main(
+        "perf",
+        perf_system.get_arguments,
+        all_perf_configurations,
+        perf_system.execute_config,
+    )
+    common.main(
+        "k6",
+        k6.get_arguments,
+        all_k6_configurations,
+        k6.execute_config,
     )

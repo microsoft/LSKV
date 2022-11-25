@@ -6,7 +6,18 @@
   python3Packages,
   cpplint,
   alejandra,
-}: {
+  deadnix,
+  shfmt,
+}: let
+  pythonDeps = with python3Packages; [
+    loguru
+    httpx
+    pandas
+    seaborn
+    pytest
+    typing-extensions
+  ];
+in {
   shellcheck =
     runCommand "shellcheck"
     {
@@ -51,7 +62,7 @@
   pylint =
     runCommand "pylint"
     {
-      buildInputs = [python3Packages.pylint python3Packages.pandas python3Packages.seaborn python3Packages.setuptools];
+      buildInputs = [python3Packages.pylint] ++ pythonDeps;
     } ''
       find ${../.} -name '*.py' ! -name "3rdparty" | xargs pylint --ignored-modules "*_pb2"
       mkdir $out
@@ -60,7 +71,7 @@
   mypy =
     runCommand "mypy"
     {
-      buildInputs = [python3Packages.mypy];
+      buildInputs = [python3Packages.mypy] ++ pythonDeps;
     } ''
       find ${../.} -name '*.py' ! -name "3rdparty" | xargs mypy
       mkdir $out
@@ -88,5 +99,27 @@
     writeShellScriptBin "nixfmt"
     ''
       git ls-files -- . ':!:3rdparty/' | grep -e '\.nix$' | xargs ${alejandra}/bin/alejandra
+    '';
+
+  deadnix =
+    runCommand "deadnix"
+    {
+      buildInputs = [deadnix];
+    } ''
+      deadnix --fail ${./.}
+      mkdir $out
+    '';
+
+  shfmt-fix =
+    writeShellScriptBin "shfmt"
+    ''
+      git ls-files -- . ':!:3rdparty/' | grep -e '\.sh$'| xargs ${shfmt}/bin/shfmt --write --simplify --case-indent --indent 2
+    '';
+
+  shfmt =
+    runCommand "shfmt" {}
+    ''
+      find ${./.} -name '*.sh' ! -name "3rdparty" | xargs ${shfmt}/bin/shfmt --diff --simplify --case-indent --indent 2
+      mkdir $out
     '';
 }

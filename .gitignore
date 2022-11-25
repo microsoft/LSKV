@@ -1,4 +1,4 @@
-build/**
+build/
 *.deb
 /.venv_ccf_sandbox/
 workspace/
@@ -11,7 +11,7 @@ bin/
 .vscode/
 
 /bench/
-default.etcd/
+/*.etcd/
 
 /.venv/
 /certs/
@@ -20,6 +20,12 @@ default.etcd/
 /plots/
 
 *.pyc
+*.egg-info
+
+*.out
+*.err
+
+/docker-workspace/
 
 /.direnv/
 

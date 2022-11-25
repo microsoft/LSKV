@@ -1,12 +1,22 @@
 {
   pkgs,
-  packageOverrides ? (self: super: {}),
+  packageOverrides ? (_self: _super: {}),
 }:
-pkgs.lib.makeScope pkgs.newScope (self:
+pkgs.lib.makeScope pkgs.newScope (
+  self:
     rec {
       az-dcap = self.callPackage ./az-dcap.nix {};
       sgx-dcap = self.callPackage ./sgx-dcap.nix {};
 
+      openenclave-version = "0.18.4";
+      openenclave-src = pkgs.fetchFromGitHub {
+        owner = "openenclave";
+        repo = "openenclave";
+        rev = "v${openenclave-version}";
+        hash = "sha256-65LHXKfDWUvLCMupJkF7o7d6ljsO7nwcmQxRU8H2Xls=";
+        fetchSubmodules = true;
+      };
+      lvi-mitigation = self.callPackage ./lvi-mitigation.nix {};
       openenclave = self.callPackage ./openenclave.nix {
         # Openenclave doesn't build with libcxx, for some reason.
         stdenv = pkgs.llvmPackages_10.stdenv;
@@ -15,29 +25,35 @@ pkgs.lib.makeScope pkgs.newScope (self:
       ccf = self.callPackage ./ccf.nix {
         stdenv = pkgs.llvmPackages_10.libcxxStdenv;
       };
+      ccf-virtual = ccf.virtual;
+      ccf-sgx = ccf.sgx;
 
       ccf-sandbox = self.callPackage ./ccf-sandbox.nix {};
+      ccf-sandbox-virtual = ccf-sandbox.virtual;
+      ccf-sandbox-sgx = ccf-sandbox.sgx;
 
       lskv = self.callPackage ./lskv.nix {
         stdenv = pkgs.llvmPackages_10.libcxxStdenv;
       };
-      lskv-virtual = lskv;
-      lskv-sgx = lskv.override {enclave = "sgx";};
+      lskv-virtual = lskv.virtual;
+      lskv-sgx = lskv.sgx;
 
-      lskv-sandbox-virtual = self.callPackage ./lskv-sandbox.nix {enclave = "virtual";};
-      lskv-sandbox-sgx = self.callPackage ./lskv-sandbox.nix {enclave = "sgx";};
+      lskv-sandbox = self.callPackage ./lskv-sandbox.nix {};
+      lskv-sandbox-virtual = lskv-sandbox.virtual;
+      lskv-sandbox-sgx = lskv-sandbox.sgx;
 
       ci-checks = self.callPackage ./ci-checks.nix {};
 
       # A python3 derivation that is extended with some CC related
       # packages.
       python3 = pkgs.python3.override {
-        packageOverrides = pself: psuper: {
+        packageOverrides = pself: _psuper: {
           # Some generic python packages that are missing from
           # nixpkgs.
           columnar = pself.callPackage ./python/columnar.nix {};
           string-color = pself.callPackage ./python/string-color.nix {};
           adtk = pself.callPackage ./python/adtk.nix {};
+          pycose = pself.callPackage ./python/pycose.nix {};
           cimetrics = pself.callPackage ./python/cimetrics.nix {};
           better-exceptions = pself.callPackage ./python/better-exceptions.nix {};
 
@@ -57,6 +73,9 @@ pkgs.lib.makeScope pkgs.newScope (self:
           }
           // args);
     }
-    // (pkgs.lib.attrsets.mapAttrs'
+    // (
+      pkgs.lib.attrsets.mapAttrs'
       (name: value: pkgs.lib.attrsets.nameValuePair ("ci-checks-" + name) value)
-      (pkgs.callPackage ./ci-checks.nix {})))
+      (pkgs.callPackage ./ci-checks.nix {})
+    )
+)

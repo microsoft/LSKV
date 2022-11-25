@@ -6,12 +6,12 @@
 Stores to run benchmarks against.
 """
 
-import logging
 import os
 import shutil
 from subprocess import Popen
 
 from common import Store
+from loguru import logger
 
 
 class EtcdStore(Store):
@@ -20,8 +20,6 @@ class EtcdStore(Store):
     """
 
     def spawn(self) -> Popen:
-        logging.debug("spawning etcd")
-        client_urls = f"{self.config.scheme()}://127.0.0.1:{self.config.port}"
         with open(
             os.path.join(self.config.output_dir(), "node.out"), "w", encoding="utf-8"
         ) as out:
@@ -31,21 +29,13 @@ class EtcdStore(Store):
                 encoding="utf-8",
             ) as err:
                 etcd_cmd = [
-                    "bin/etcd",
-                    "--listen-client-urls",
-                    client_urls,
-                    "--advertise-client-urls",
-                    client_urls,
+                    "benchmark/etcd_cluster.py",
+                    "--scheme",
+                    self.config.scheme(),
+                    "--nodes",
+                    str(self.config.nodes),
                 ]
-                if self.config.tls:
-                    etcd_cmd += [
-                        "--cert-file",
-                        "certs/server.pem",
-                        "--key-file",
-                        "certs/server-key.pem",
-                        "--trusted-ca-file",
-                        "certs/ca.pem",
-                    ]
+                logger.info("spawning etcd: {}", etcd_cmd)
                 return Popen(etcd_cmd, stdout=out, stderr=err)
 
     def cacert(self) -> str:
@@ -84,25 +74,29 @@ class LSKVStore(Store):
                 "w",
                 encoding="utf-8",
             ) as err:
-                libargs = ["build/liblskv.virtual.so"]
-                if self.config.sgx:
-                    libargs = ["build/liblskv.enclave.so.signed", "-e", "release"]
-                kvs_cmd = (
-                    ["/opt/ccf/bin/sandbox.sh", "-p"]
-                    + libargs
-                    + [
-                        "--worker-threads",
-                        str(self.config.worker_threads),
-                        "--workspace",
-                        self.workspace(),
-                        "--node",
-                        f"local://127.0.0.1:{self.config.port}",
-                        "--verbose",
-                        "--http2",
-                    ]
-                )
-                logging.info("spawning lskv %s", kvs_cmd)
-                return Popen(kvs_cmd, stdout=out, stderr=err)
+                lskv_cmd = [
+                    "benchmark/lskv_cluster.py",
+                    "--nodes",
+                    str(self.config.nodes),
+                    "--enclave",
+                    "sgx" if self.config.sgx else "virtual",
+                    "--worker-threads",
+                    str(self.config.worker_threads),
+                    "--sig-tx-interval",
+                    str(self.config.sig_tx_interval),
+                    "--sig-ms-interval",
+                    str(self.config.sig_ms_interval),
+                    "--ledger-chunk-bytes",
+                    self.config.ledger_chunk_bytes,
+                    "--snapshot-tx-interval",
+                    str(self.config.snapshot_tx_interval),
+                    "--http-version",
+                    str(self.config.http_version),
+                    "--workspace",
+                    self.workspace(),
+                ]
+                logger.info("spawning lskv: {}", lskv_cmd)
+                return Popen(lskv_cmd, stdout=out, stderr=err)
 
     def workspace(self):
         """
@@ -114,16 +108,16 @@ class LSKVStore(Store):
         """
         Return the path to the CA certificate.
         """
-        return f"{self.workspace()}/sandbox_common/service_cert.pem"
+        return f"{self.workspace()}/common/service_cert.pem"
 
     def cert(self) -> str:
         """
         Return the path to the client certificate.
         """
-        return f"{self.workspace()}/sandbox_common/user0_cert.pem"
+        return f"{self.workspace()}/common/user0_cert.pem"
 
     def key(self) -> str:
         """
         Return the path to the key for the client certificate.
         """
-        return f"{self.workspace()}/sandbox_common/user0_privk.pem"
+        return f"{self.workspace()}/common/user0_privk.pem"

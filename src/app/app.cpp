@@ -6,21 +6,39 @@
 #include "ccf/crypto/sha256.h"
 #include "ccf/crypto/verifier.h"
 #include "ccf/ds/hex.h"
+#include "ccf/historical_queries_adapter.h"
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
 #include "ccf/service/tables/nodes.h"
 #include "ccf/service/tables/service.h"
-#include "endpoints/grpc.h" // TODO(#22): private header
+#include "endpoints/grpc/grpc.h" // TODO(#22): private header
 #include "etcd.pb.h"
 #include "grpc.h"
 #include "index.h"
 #include "json_grpc.h"
 #include "kvstore.h"
 #include "leases.h"
+#include "lskvserver.pb.h"
 #include "node_data.h"
+
+#include <fmt/ranges.h>
 
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
+
+#define SET_CUSTOM_CLAIMS(rpc) \
+  { \
+    CCF_APP_DEBUG("building custom claims for " #rpc); \
+    lskvserverpb::ReceiptClaims claims; \
+    auto* request_##rpc = claims.mutable_request_##rpc(); \
+    *request_##rpc = payload; \
+    auto* response_##rpc = claims.mutable_response_##rpc(); \
+    *response_##rpc = rpc##_response; \
+    CCF_APP_DEBUG("serializing custom claims for " #rpc); \
+    auto claims_data = claims.SerializeAsString(); \
+    CCF_APP_DEBUG("registering custom claims for " #rpc); \
+    ctx.rpc_ctx->set_claims_digest(ccf::ClaimsDigest::Digest(claims_data)); \
+  }
 
 namespace app
 {
@@ -38,15 +56,18 @@ namespace app
     {
       openapi_info.title = "CCF Sample C++ Key-Value Store";
       openapi_info.description = "Sample Key-Value store built on CCF";
-      openapi_info.document_version = "0.0.1";
+      openapi_info.document_version = LSKV_VERSION;
 
       kvindex = std::make_shared<IndexStrategy>(app::kvstore::RECORDS);
       context.get_indexing_strategies().install_strategy(kvindex);
 
       const auto etcdserverpb = "etcdserverpb";
+      const auto lskvserverpb = "lskvserverpb";
       const auto kv = "KV";
       const auto lease = "Lease";
       const auto cluster = "Cluster";
+      const auto receipt = "Receipt";
+      const auto maintenance = "Maintenance";
 
       auto range = [this](
                      ccf::endpoints::ReadOnlyEndpointContext& ctx,
@@ -107,6 +128,21 @@ namespace app
         etcdserverpb::CompactionRequest,
         etcdserverpb::CompactionResponse>(
         etcdserverpb, kv, "Compact", "/v3/kv/compact", compact);
+
+      auto txstatus = [this](
+                        ccf::endpoints::CommandEndpointContext& ctx,
+                        lskvserverpb::TxStatusRequest&& payload) {
+        return this->tx_status(ctx, std::move(payload));
+      };
+
+      install_command_endpoint<
+        lskvserverpb::TxStatusRequest,
+        lskvserverpb::TxStatusResponse>(
+        etcdserverpb,
+        maintenance,
+        "TxStatus",
+        "/v3/maintenance/tx_status",
+        txstatus);
 
       auto lease_grant = [this](
                            ccf::endpoints::EndpointContext& ctx,
@@ -191,6 +227,34 @@ namespace app
         "MemberList",
         "/v3/cluster/member/list",
         member_list);
+
+      auto get_receipt = [this](
+                           ccf::endpoints::ReadOnlyEndpointContext& ctx,
+                           ccf::historical::StatePtr historical_state,
+                           lskvserverpb::GetReceiptRequest&& payload) {
+        return this->get_receipt(ctx, historical_state, std::move(payload));
+      };
+
+      install_historical_endpoint_with_header_ro<
+        lskvserverpb::GetReceiptRequest,
+        lskvserverpb::GetReceiptResponse>(
+        etcdserverpb,
+        receipt,
+        "GetReceipt",
+        "/v3/receipt/get_receipt",
+        get_receipt,
+        context);
+
+      auto status = [this](
+                      ccf::endpoints::CommandEndpointContext& ctx,
+                      etcdserverpb::StatusRequest&& payload) {
+        return this->status(ctx, std::move(payload));
+      };
+
+      install_command_endpoint<
+        etcdserverpb::StatusRequest,
+        etcdserverpb::StatusResponse>(
+        etcdserverpb, maintenance, "Status", "/v3/maintenance/status", status);
     }
 
     template <typename Out>
@@ -209,6 +273,49 @@ namespace app
         fill_header(*header, tx_id);
       } // else just leave the response
       return *res;
+    }
+
+    static ccf::AuthnPolicies auth_policies()
+    {
+      ccf::AuthnPolicies policies;
+      policies.push_back(ccf::user_cert_auth_policy);
+      return policies;
+    }
+
+    template <typename In, typename Out>
+    void install_command_endpoint(
+      const std::string& package,
+      const std::string& service,
+      const std::string& rpc,
+      const std::string& path,
+      const ccf::GrpcCommandEndpoint<In, Out>& f)
+    {
+      auto g = [this,
+                f](ccf::endpoints::CommandEndpointContext& ctx, In&& payload) {
+        auto res = f(ctx, std::move(payload));
+        if (auto success = std::get_if<ccf::grpc::SuccessResponse<Out>>(&res))
+        {
+          auto* header = success->body.mutable_header();
+          // command endpoints don't have a transaction so return the last
+          // committed one so etcd clients can use it still
+          auto committed = last_committed_txid();
+          fill_header(*header, committed);
+        } // else just leave the response
+        return res;
+      };
+      auto grpc_path = fmt::format("/{}.{}/{}", package, service, rpc);
+      make_command_endpoint(
+        grpc_path,
+        HTTP_POST,
+        ccf::grpc_command_adapter<In, Out>(g),
+        ccf::no_auth_required)
+        .install();
+      make_command_endpoint(
+        path,
+        HTTP_POST,
+        app::json_grpc::json_grpc_command_adapter<In, Out>(g),
+        ccf::no_auth_required)
+        .install();
     }
 
     template <typename In, typename Out>
@@ -233,7 +340,7 @@ namespace app
           auto res = post_commit<Out>(ctx, tx_id);
           ccf::grpc::set_grpc_response(res, ctx.rpc_ctx);
         },
-        ccf::no_auth_required)
+        auth_policies())
         .install();
       make_read_only_endpoint_with_local_commit_handler(
         path,
@@ -243,7 +350,7 @@ namespace app
           auto res = post_commit<Out>(ctx, tx_id);
           app::json_grpc::set_json_grpc_response(res, ctx.rpc_ctx);
         },
-        ccf::no_auth_required)
+        auth_policies())
         .install();
     }
 
@@ -269,7 +376,7 @@ namespace app
           auto res = post_commit<Out>(ctx, tx_id);
           ccf::grpc::set_grpc_response(res, ctx.rpc_ctx);
         },
-        ccf::no_auth_required)
+        auth_policies())
         .install();
       make_endpoint_with_local_commit_handler(
         path,
@@ -279,7 +386,57 @@ namespace app
           auto res = post_commit<Out>(ctx, tx_id);
           app::json_grpc::set_json_grpc_response(res, ctx.rpc_ctx);
         },
-        ccf::no_auth_required)
+        auth_policies())
+        .install();
+    }
+
+    static ccf::TxID txid_from_body(lskvserverpb::GetReceiptRequest&& payload)
+    {
+      auto revision = static_cast<uint64_t>(payload.revision());
+      return ccf::TxID{payload.raft_term(), revision};
+    }
+
+    template <typename In, typename Out>
+    void install_historical_endpoint_with_header_ro(
+      const std::string& package,
+      const std::string& service,
+      const std::string& rpc,
+      const std::string& json_path,
+      const app::grpc::HistoricalGrpcReadOnlyEndpoint<In, Out>& f,
+      ccfapp::AbstractNodeContext& context)
+    {
+      auto grpc_path = fmt::format("/{}.{}/{}", package, service, rpc);
+      auto is_tx_committed =
+        [this](ccf::View view, ccf::SeqNo seqno, std::string& error_reason) {
+          return ccf::historical::is_tx_committed_v2(
+            consensus, view, seqno, error_reason);
+        };
+      make_read_only_endpoint(
+        grpc_path,
+        HTTP_POST,
+        ccf::historical::read_only_adapter_v3(
+          app::grpc::historical_grpc_read_only_adapter<In>(f),
+          context,
+          is_tx_committed,
+          [](ccf::endpoints::ReadOnlyEndpointContext& ctx) {
+            return txid_from_body(ccf::grpc::get_grpc_payload<In>(ctx.rpc_ctx));
+          }),
+        auth_policies())
+        .set_forwarding_required(ccf::endpoints::ForwardingRequired::Never)
+        .install();
+      make_read_only_endpoint(
+        json_path,
+        HTTP_POST,
+        ccf::historical::read_only_adapter_v3(
+          app::json_grpc::historical_json_grpc_adapter<In>(f),
+          context,
+          is_tx_committed,
+          [](ccf::endpoints::ReadOnlyEndpointContext& ctx) {
+            return txid_from_body(
+              app::json_grpc::get_json_grpc_payload<In>(ctx.rpc_ctx));
+          }),
+        auth_policies())
+        .set_forwarding_required(ccf::endpoints::ForwardingRequired::Never)
         .install();
     }
 
@@ -491,6 +648,8 @@ namespace app
         prev_kv->set_lease(value.lease);
       }
 
+      SET_CUSTOM_CLAIMS(put)
+
       return ccf::grpc::make_success(put_response);
     }
 
@@ -592,6 +751,8 @@ namespace app
 
         delete_range_response.set_deleted(deleted);
       }
+
+      SET_CUSTOM_CLAIMS(delete_range)
 
       return ccf::grpc::make_success(delete_range_response);
     }
@@ -764,6 +925,8 @@ namespace app
         }
       }
 
+      SET_CUSTOM_CLAIMS(txn)
+
       return ccf::grpc::make_success(txn_response);
     }
 
@@ -823,6 +986,48 @@ namespace app
 
       revoke_expired_leases(ctx.tx);
       kvindex->compact(payload.revision());
+
+      return ccf::grpc::make_success(response);
+    }
+
+    ccf::grpc::GrpcAdapterResponse<lskvserverpb::TxStatusResponse> tx_status(
+      ccf::endpoints::CommandEndpointContext& ctx,
+      lskvserverpb::TxStatusRequest&& payload)
+    {
+      CCF_APP_DEBUG(
+        "TxStatus = term:{} revision:{}",
+        payload.raft_term(),
+        payload.revision());
+
+      lskvserverpb::TxStatusResponse response;
+
+      ccf::View view = payload.raft_term();
+      ccf::SeqNo seqno = payload.revision();
+      ccf::TxStatus status;
+      auto res = get_status_for_txid_v1(view, seqno, status);
+      if (res != ccf::ApiResult::OK)
+      {
+        CCF_APP_FAIL(
+          "failed to get status for txid {}.{}: {}", view, seqno, res);
+      }
+
+      switch (status)
+      {
+        case ccf::TxStatus::Unknown:
+          response.set_status(lskvserverpb::TxStatusResponse_Status_Unknown);
+          break;
+        case ccf::TxStatus::Pending:
+          response.set_status(lskvserverpb::TxStatusResponse_Status_Pending);
+          break;
+        case ccf::TxStatus::Committed:
+          response.set_status(lskvserverpb::TxStatusResponse_Status_Committed);
+          break;
+        case ccf::TxStatus::Invalid:
+          response.set_status(lskvserverpb::TxStatusResponse_Status_Invalid);
+          break;
+        default:
+          CCF_APP_FAIL("unknown txstatus {}", status);
+      }
 
       return ccf::grpc::make_success(response);
     }
@@ -940,6 +1145,14 @@ namespace app
       auto now_s = get_time_s();
       auto lstore = leasestore::LeaseStore(ctx.tx);
       auto ttl = lstore.keep_alive(id, now_s);
+      if (ttl == 0)
+      {
+        return ccf::grpc::make_error(
+          GRPC_STATUS_NOT_FOUND,
+          fmt::format(
+            "the lease with the given id '{}' has expired or has been revoked",
+            id));
+      }
 
       response.set_id(id);
       response.set_ttl(ttl);
@@ -1007,6 +1220,85 @@ namespace app
       return ccf::grpc::make_success(response);
     }
 
+    ccf::grpc::GrpcAdapterResponse<lskvserverpb::GetReceiptResponse>
+    get_receipt(
+      ccf::endpoints::ReadOnlyEndpointContext& ctx,
+      ccf::historical::StatePtr historical_state,
+      lskvserverpb::GetReceiptRequest&& payload)
+    {
+      assert(historical_state->receipt);
+      lskvserverpb::GetReceiptResponse response;
+      auto* receipt = response.mutable_receipt();
+      ccf::ReceiptPtr receipt_ptr =
+        ccf::describe_receipt_v2(*historical_state->receipt);
+      receipt->set_cert(receipt_ptr->cert.str());
+      receipt->set_signature(std::string(
+        receipt_ptr->signature.begin(), receipt_ptr->signature.end()));
+      receipt->set_node_id(receipt_ptr->node_id);
+      if (receipt_ptr->is_signature_transaction())
+      {
+        auto sr = std::dynamic_pointer_cast<ccf::SignatureReceipt>(receipt_ptr);
+        auto* sig_receipt = receipt->mutable_signature_receipt();
+
+        sig_receipt->set_leaf(sr->signed_root.hex_str());
+      }
+      else
+      {
+        auto tr = std::dynamic_pointer_cast<ccf::ProofReceipt>(receipt_ptr);
+        auto* tx_receipt = receipt->mutable_tx_receipt();
+
+        auto* leaf_components = tx_receipt->mutable_leaf_components();
+        // set the claims digest on the receipt so that the client can always
+        // just validate the receipt itself, without checking it against the
+        // original claims. clients that want to verify the claims themselves
+        // can do so by checking the claims digest against the claims they
+        // have and then verifying the receipt in full.
+        leaf_components->set_claims_digest(
+          tr->leaf_components.claims_digest.value().hex_str());
+        leaf_components->set_commit_evidence(
+          tr->leaf_components.commit_evidence);
+        leaf_components->set_write_set_digest(
+          tr->leaf_components.write_set_digest.hex_str());
+
+        for (const auto& proof : tr->proof)
+        {
+          auto* proof_entry = tx_receipt->add_proof();
+          if (proof.direction == ccf::ProofReceipt::ProofStep::Left)
+          {
+            proof_entry->set_left(proof.hash.hex_str());
+          }
+          else
+          {
+            proof_entry->set_right(proof.hash.hex_str());
+          }
+        }
+      }
+
+      populate_cluster_id(ctx.tx);
+
+      auto* header = response.mutable_header();
+      ccf::View view;
+      ccf::SeqNo seqno;
+      get_last_committed_txid_v1(view, seqno);
+      ccf::TxID tx_id{view, seqno};
+      fill_header(*header, tx_id);
+
+      return ccf::grpc::make_success(response);
+    }
+
+    ccf::grpc::GrpcAdapterResponse<etcdserverpb::StatusResponse> status(
+      ccf::endpoints::CommandEndpointContext& ctx,
+      etcdserverpb::StatusRequest&& payload)
+    {
+      etcdserverpb::StatusResponse response;
+      CCF_APP_DEBUG("MAINTENANCE STATUS");
+
+      response.set_leader(0);
+      response.set_version(LSKV_VERSION);
+
+      return ccf::grpc::make_success(response);
+    }
+
     void revoke_expired_leases(kv::Tx& tx)
     {
       CCF_APP_DEBUG("revoking any expired leases");
@@ -1056,13 +1348,32 @@ namespace app
     {
       header.set_cluster_id(cluster_id);
       header.set_member_id(member_id());
-      header.set_raft_term(tx_id.view);
       header.set_revision(tx_id.seqno);
+      header.set_raft_term(tx_id.view);
+
+      auto committed = last_committed_txid();
+      header.set_committed_revision(committed.seqno);
+      header.set_committed_raft_term(committed.view);
+    }
+
+    ccf::TxID last_committed_txid()
+    {
+      ccf::View committed_view;
+      ccf::SeqNo committed_seqno;
+      auto res = get_last_committed_txid_v1(committed_view, committed_seqno);
+      if (res != ccf::ApiResult::OK)
+      {
+        CCF_APP_FAIL("failed to get last committed txid: {}", res);
+      }
+      return {committed_view, committed_seqno};
     }
 
     void populate_cluster_id(kv::ReadOnlyTx& tx)
     {
-      cluster_id = get_cluster_id(tx);
+      if (cluster_id == 0)
+      {
+        cluster_id = get_cluster_id(tx);
+      }
     }
 
     int64_t get_cluster_id(kv::ReadOnlyTx& tx)

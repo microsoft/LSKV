@@ -1,40 +1,48 @@
 {
-  fetchFromGitHub,
   stdenv,
   cmake,
+  sgx-dcap,
   openenclave,
   ninja,
   protobuf,
   ccf,
   nix-filter,
-  enclave ? "virtual",
-}:
-stdenv.mkDerivation rec {
-  pname = "lskv-${enclave}";
-  version = "0.1.0";
-  src = nix-filter {
-    root = ./..;
-    include = [
-      "CMakeLists.txt"
-      "oe_sign.conf"
-      "src"
-      "proto"
-    ];
-  };
+}: let
+  lskv = enclave:
+    stdenv.mkDerivation rec {
+      pname = "lskv-${enclave}";
+      version = "0.1.0";
+      src = nix-filter {
+        root = ./..;
+        include = [
+          "CMakeLists.txt"
+          "cmake"
+          "oe_sign.conf"
+          "src"
+          "proto"
+        ];
+      };
 
-  nativeBuildInputs = [
-    cmake
-    ninja
-    (ccf.override {inherit enclave;})
-    openenclave
-    protobuf
-  ];
+      nativeBuildInputs = [
+        cmake
+        ninja
+        protobuf
+        sgx-dcap
+        ccf.${enclave}
+        openenclave
+      ];
 
-  cmakeFlags = [
-    "-DLVI_MITIGATIONS=OFF"
-    "-DCOMPILE_TARGETS=${enclave}"
-  ];
+      cmakeFlags = [
+        "-DCOMPILE_TARGET=${enclave}"
+        "-DLVI_MITIGATIONS=OFF"
+      ];
 
-  NIX_CFLAGS_COMPILE = "-Wno-unused-command-line-argument";
-  NIX_NO_SELF_RPATH = "1";
+      LSKV_VERSION = version;
+
+      NIX_CFLAGS_COMPILE = "-Wno-unused-command-line-argument";
+      NIX_NO_SELF_RPATH = "1";
+    };
+in {
+  virtual = lskv "virtual";
+  sgx = lskv "sgx";
 }

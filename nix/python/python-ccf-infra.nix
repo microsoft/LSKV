@@ -1,6 +1,5 @@
 {
   buildPythonPackage,
-  fetchFromGitHub,
   GitPython,
   better-exceptions,
   cryptography,
@@ -19,33 +18,40 @@
   pyopenssl,
   grpcio-tools,
   python-ccf,
-  string-color,
   cimetrics,
+  pycose,
+  jwcrypto,
+  cbor2,
 }:
 buildPythonPackage {
   inherit (python-ccf) version src;
   pname = "python-ccf-infra";
-  propagatedBuildInputs = [
-    python-ccf
-    cryptography
-    httpx
-    psutil
-    matplotlib
-    loguru
-    pandas
-    pyasn1
-    pyjwt
-    paramiko
-    jinja2
-    docker
-    GitPython
-    openapi-spec-validator
-    better-exceptions
-    pyopenssl
-    docutils
-    grpcio-tools
-    cimetrics
-  ];
+  propagatedBuildInputs =
+    [
+      python-ccf
+      cryptography
+      httpx
+      psutil
+      matplotlib
+      loguru
+      pandas
+      pyasn1
+      pyjwt
+      paramiko
+      jinja2
+      docker
+      GitPython
+      openapi-spec-validator
+      better-exceptions
+      pyopenssl
+      docutils
+      grpcio-tools
+      cimetrics
+      pycose
+      jwcrypto
+      cbor2
+    ]
+    ++ httpx.optional-dependencies.http2;
 
   preConfigure = ''
     cd tests
@@ -53,7 +59,7 @@ buildPythonPackage {
     sed -i '/python-iptables/d' requirements.txt
     sed -i '/py-spy/d' requirements.txt
     sed -i '/locust/d' requirements.txt
-    sed -i 's/httpx.*/httpx/' requirements.txt
+    sed -i 's/grpcio-tools == 1.44.0/grpcio-tools/' requirements.txt
 
     sed -i '1s|^|#!/usr/bin/env python3\n|' start_network.py
     chmod +x start_network.py

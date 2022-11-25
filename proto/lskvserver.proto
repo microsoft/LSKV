@@ -1,0 +1,97 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+syntax = "proto3";
+
+import "etcd.proto";
+
+package lskvserverpb;
+
+message ReceiptClaims
+{
+  oneof request
+  {
+    etcdserverpb.PutRequest request_put = 1;
+    etcdserverpb.DeleteRangeRequest request_delete_range = 2;
+    etcdserverpb.TxnRequest request_txn = 3;
+  }
+  oneof response
+  {
+    etcdserverpb.PutResponse response_put = 4;
+    etcdserverpb.DeleteRangeResponse response_delete_range = 5;
+    etcdserverpb.TxnResponse response_txn = 6;
+  }
+}
+
+message SignatureReceipt { string leaf = 1; }
+
+message Proof
+{
+  string left = 1;
+  string right = 2;
+}
+
+message LeafComponents
+{
+  string claims_digest = 1;
+  string commit_evidence = 2;
+  string write_set_digest = 3;
+}
+
+message TxReceipt
+{
+  LeafComponents leaf_components = 1;
+  repeated Proof proof = 2;
+}
+
+message Receipt
+{
+  string cert = 1;
+  bytes signature = 2;
+  string node_id = 3;
+  oneof receipt_extras
+  {
+    TxReceipt tx_receipt = 4;
+    SignatureReceipt signature_receipt = 5;
+  }
+}
+
+message GetReceiptRequest
+{
+  int64 revision = 1;
+  uint64 raft_term = 2;
+}
+
+message GetReceiptResponse
+{
+  etcdserverpb.ResponseHeader header = 1;
+  Receipt receipt = 2;
+}
+
+// https://microsoft.github.io/CCF/main/use_apps/verify_tx.html#checking-for-commit
+message TxStatusRequest
+{
+  int64 revision = 1;
+  uint64 raft_term = 2;
+}
+
+message TxStatusResponse
+{
+  etcdserverpb.ResponseHeader header = 1;
+  enum Status {
+    // This node has not received this transaction, and knows nothing about it
+    Unknown = 0;
+    // This node has this transaction locally, but has not yet heard that the
+    // transaction has been committed by the distributed consensus
+    Pending = 1;
+    // This node has seen that this transaction is committed, it is an
+    // irrevocable and durable part of the service's transaction history
+    Committed = 2;
+    // This node knows that the given transaction cannot be committed. This may
+    // mean there has been a view change, and a previously pending transaction
+    // has been lost (the original request should be resubmitted and will be
+    // given a new Transaction ID). This also describes IDs which are known to
+    // be impossible given the currently committed IDs
+    Invalid = 3;
+  }
+  Status status = 2;
+}

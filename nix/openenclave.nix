@@ -3,12 +3,13 @@
   fetchurl,
   fetchzip,
   fetchFromGitHub,
+  openenclave-version,
+  openenclave-src,
+  lvi-mitigation,
   cmake,
   ninja,
   perl,
   openssl_1_1,
-  mkStdenvNoLibs,
-  writeShellScriptBin,
 }: let
   sgx-h = fetchurl {
     url = "https://raw.githubusercontent.com/torvalds/linux/v5.13/arch/x86/include/uapi/asm/sgx.h";
@@ -30,14 +31,8 @@
 in
   stdenv.mkDerivation rec {
     pname = "openenclave";
-    version = "0.18.2";
-    src = fetchFromGitHub {
-      owner = "openenclave";
-      repo = "openenclave";
-      rev = "v${version}";
-      hash = "sha256-VjKrP9dKbCzKZKwypyq+iro2szm1iH8RAynYe5CP0Bc=";
-      fetchSubmodules = true;
-    };
+    version = openenclave-version;
+    src = openenclave-src;
     patches = [patches/openenclave.diff];
     cmakeFlags = [
       "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
@@ -54,6 +49,9 @@ in
 
       "-DCMAKE_BUILD_WITH_INSTALL_RPATH:BOOL=ON"
       "-DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=ON"
+
+      "-DLVI_MITIGATION=ControlFlow"
+      "-DLVI_MITIGATION_BINDIR=/build/source/build/lvi_mitigation_bin"
     ];
 
     preConfigure = ''
@@ -62,6 +60,8 @@ in
       ln -s ${compiler-rt} 3rdparty/compiler-rt/compiler-rt
       ln -s ${libcxx} 3rdparty/libcxx/libcxx
       ln -s ${symcrypt} build/3rdparty/symcrypt_engine/SymCrypt
+      ln -s ${lvi-mitigation}/bin build/lvi_mitigation_bin
+
       patchShebangs tools/oeutil/gen_pubkey_header.sh
       patchShebangs tools/oeapkman/oeapkman
       patchShebangs 3rdparty/openssl/append-unsupported

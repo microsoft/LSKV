@@ -1,22 +1,48 @@
 # Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the
-# MIT license.
+# MIT License.
 
 cmake_minimum_required(VERSION 3.16)
 
-project(lskv LANGUAGES C CXX)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cmake)
 
-if(NOT TARGET ccf)
-  find_package(ccf REQUIRED)
+project(
+  lskv
+  LANGUAGES C CXX
+  VERSION ${LSKV_VERSION_SHORT})
+
+option(
+  COMPILE_TARGET
+  "Compile target to build for, one of [virtual;sgx;snp], defaults to virtual"
+  virtual)
+
+set(CCF "ccf_${COMPILE_TARGET}")
+
+option(CCF_UNSAFE "build with unsafe options" OFF)
+if(${CCF_UNSAFE})
+  if(${COMPILE_TARGET} STREQUAL "sgx")
+    message(WARNING "Building with unsafe options")
+    set(CCF "${CCF}_unsafe")
+  else()
+    message(
+      FATAL_ERROR "CCF_UNSAFE is not support for target ${COMPILE_TARGET}")
+  endif()
 endif()
+
+if(NOT TARGET ${CCF})
+  find_package(${CCF} REQUIRED)
+endif()
+
+find_package(${CCF} REQUIRED)
 
 add_subdirectory(proto)
 
-option(
-  PUBLIC_MAPS
-  "If enabled, all keys and values are recorded in plaintext in the ledger (insecure!)"
-  OFF)
+option(PUBLIC_LEASES
+       "If enabled, leases are recorded in plaintext in the ledger (insecure!)"
+       OFF)
 
 option(VERBOSE_LOGGING "enable verbose logging" OFF)
+
+add_compile_definitions(LSKV_VERSION="${LSKV_VERSION}")
 
 add_ccf_app(
   lskv
@@ -30,20 +56,16 @@ add_ccf_app(
   "${CCF_DIR}/include/ccf/_private"
   LINK_LIBS_ENCLAVE
   etcd.enclave
+  lskvserver.enclave
   status.enclave
   protobuf.enclave
   LINK_LIBS_VIRTUAL
   etcd.virtual
+  lskvserver.virtual
   status.virtual
   protobuf.virtual
-  INSTALL_LIBS ON)
-
-if(PUBLIC_MAPS)
-  message(STATUS "Using public maps")
-  add_compile_definitions(PUBLIC_MAPS)
-else()
-  message(STATUS "Using private maps")
-endif()
+  INSTALL_LIBS
+  ON)
 
 if(VERBOSE_LOGGING)
   message(STATUS "Using verbose logging")

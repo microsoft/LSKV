@@ -6,13 +6,13 @@
 Analysis utils.
 """
 
+import json
 import os
-from typing import Tuple, List
-
-import pandas as pd  # type: ignore
-import seaborn as sns  # type: ignore
+from typing import List, Tuple
 
 import common
+import pandas as pd  # type: ignore
+import seaborn as sns  # type: ignore
 
 
 class Analyser:
@@ -55,8 +55,23 @@ class Analyser:
             data.drop(["start_micros"], axis=1, inplace=True)
             return data, start
         if self.benchmark == "ycsb":
+            start = data["timestamp_us"].min()
+            data["timestamp_us"] -= start
             data["start_ms"] = data["timestamp_us"] / 1000
             data.drop(["timestamp_us"], axis=1, inplace=True)
+            return data, 0
+        if self.benchmark == "perf":
+            start = data["start_us"].min()
+            data["start_us"] -= start
+            data["start_ms"] = data["start_us"] / 1000
+            data.drop(["start_us"], axis=1, inplace=True)
+            return data, 0
+        if self.benchmark == "k6":
+            starts = data["timestamp"]
+            start = starts.min()
+            starts -= start
+            data["start_ms"] = starts / 1000
+            data.drop(["timestamp"], axis=1, inplace=True)
             return data, 0
         return data, 0
 
@@ -72,6 +87,12 @@ class Analyser:
         if self.benchmark == "ycsb":
             data["end_ms"] = data["start_ms"] + (data["latency_us"] / 1000)
             return data
+        if self.benchmark == "perf":
+            data["end_ms"] = data["start_ms"] + (data["latency_us"] / 1000)
+            return data
+        if self.benchmark == "k6":
+            data["end_ms"] = data["start_ms"] + data["metric_value"]
+            return data
         return data
 
     def make_latency_ms(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -85,6 +106,13 @@ class Analyser:
             data["latency_ms"] = data["latency_us"] / 1000
             data.drop(["latency_us"], axis=1, inplace=True)
             return data
+        if self.benchmark == "perf":
+            data["latency_ms"] = data["latency_us"] / 1000
+            data.drop(["latency_us"], axis=1, inplace=True)
+            return data
+        if self.benchmark == "k6":
+            data["latency_ms"] = data["metric_value"]
+            return data
         return data
 
     def get_data(self) -> pd.DataFrame:
@@ -96,15 +124,16 @@ class Analyser:
         bench_dir = self.bench_dir()
         print(f"loading from {bench_dir}")
 
-        for store_config in os.listdir(bench_dir):
-            print(f"processing {store_config}")
-            parts = store_config.split(",")
-            config = {}
-            for part in parts:
-                keyvalue = part.split("=")
-                config[keyvalue[0]] = keyvalue[1]
+        for config_hash in os.listdir(bench_dir):
+            print(f"processing {config_hash}")
+            with open(
+                os.path.join(bench_dir, config_hash, "config.json"),
+                "r",
+                encoding="utf-8",
+            ) as config_f:
+                config = json.loads(config_f.read())
 
-            file = os.path.join(bench_dir, store_config, "timings.csv")
+            file = os.path.join(bench_dir, config_hash, "timings.csv")
             if not os.path.exists(file):
                 continue
             dataframe = pd.read_csv(file)
@@ -114,8 +143,8 @@ class Analyser:
             dataframe = self.make_latency_ms(dataframe)
 
             for key, value in config.items():
-                if value.isdigit():
-                    dataframe[key] = int(value)
+                if isinstance(value, list):
+                    dataframe[key] = "_".join(value)
                 else:
                     dataframe[key] = value
 
@@ -129,8 +158,8 @@ class Analyser:
         data: pd.DataFrame,
         x_column="start_ms",
         y_column="latency_ms",
-        row="",
-        col="",
+        row=None,
+        col=None,
         # pylint: disable=dangerous-default-value
         ignore_vars=[],
         filename="",
@@ -178,8 +207,8 @@ class Analyser:
         self,
         data: pd.DataFrame,
         x_column="latency_ms",
-        row="",
-        col="",
+        row=None,
+        col=None,
         # pylint: disable=dangerous-default-value
         ignore_vars=[],
         filename="",
@@ -226,8 +255,8 @@ class Analyser:
     def plot_throughput_bar(
         self,
         data: pd.DataFrame,
-        row="",
-        col="",
+        row=None,
+        col=None,
         # pylint: disable=dangerous-default-value
         ignore_vars=[],
         filename="",
@@ -244,14 +273,21 @@ class Analyser:
         )
         data[hue] = var
 
-        grouped = data.groupby([hue, row, col])
+        group_cols = ["rate", hue]
+        if row:
+            group_cols.append(row)
+        if col:
+            group_cols.append(col)
+        data["rate2"] = data["rate"]
+        grouped = data.groupby(group_cols)
         throughputs = grouped.first()
 
         durations = (grouped["end_ms"].max() - grouped["start_ms"].min()) / 1000
         counts = grouped["start_ms"].count()
         achieved_throughput = counts / durations
+
         throughputs["achieved_throughput_ratio"] = (
-            achieved_throughput / throughputs["rate"]
+            achieved_throughput / throughputs["rate2"]
         )
 
         throughputs.reset_index(inplace=True)
@@ -281,6 +317,110 @@ class Analyser:
 
         return plot
 
+    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-locals
+    def plot_achieved_throughput_bar(
+        self,
+        data: pd.DataFrame,
+        row=None,
+        col=None,
+        # pylint: disable=dangerous-default-value
+        ignore_vars=[],
+        filename="",
+    ):
+        """
+        Plot a bar graph of achieved throughput.
+        """
+        x_column = "vars"
+        y_column = "achieved_throughput"
+
+        var, invariant_vars = condense_vars(
+            data, [x_column, y_column, row, col] + ignore_vars
+        )
+        data[x_column] = var
+
+        group_cols = [x_column]
+        if row:
+            group_cols.append(row)
+        if col:
+            group_cols.append(col)
+        grouped = data.groupby(group_cols)
+        throughputs = grouped.first()
+
+        durations = (grouped["end_ms"].max() - grouped["start_ms"].min()) / 1000
+        counts = grouped["start_ms"].count()
+        achieved_throughput = counts / durations
+        throughputs["achieved_throughput"] = achieved_throughput
+
+        throughputs.reset_index(inplace=True)
+
+        plot = sns.catplot(
+            kind="bar",
+            data=throughputs,
+            x=x_column,
+            y=y_column,
+            row=row,
+            col=col,
+        )
+
+        plot.figure.subplots_adjust(top=0.9)
+        plot.figure.suptitle(",".join(invariant_vars))
+
+        # add tick labels to each x axis
+        for axes in plot.axes.flatten():
+            axes.tick_params(labelbottom=True)
+
+        plot.set_xticklabels(rotation=30, horizontalalignment="right")
+        plot.fig.tight_layout()
+
+        if not filename:
+            filename = f"achieved_throughput_bar-{x_column}-{row}-{col}"
+
+        plot.savefig(os.path.join(self.plot_dir(), f"{filename}.svg"))
+        plot.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
+
+        return plot
+
+    def plot_target_throughput_latency_line(
+        self,
+        data: pd.DataFrame,
+        row=None,
+        col=None,
+        # pylint: disable=dangerous-default-value
+        ignore_vars=[],
+        filename="",
+    ):
+        """
+        Plot a line plot of target throughput vs latency.
+        """
+        x_column = "rate"
+        y_column = "latency_ms"
+        hue = "vars"
+
+        var, invariant_vars = condense_vars(
+            data, [x_column, y_column, row, col, hue] + ignore_vars
+        )
+        data[hue] = var
+
+        plot = sns.relplot(
+            kind="line", data=data, x=x_column, y=y_column, hue=hue, row=row, col=col
+        )
+
+        plot.figure.subplots_adjust(top=0.9)
+        plot.figure.suptitle(",".join(invariant_vars))
+
+        # add tick labels to each x axis
+        for axes in plot.axes.flatten():
+            axes.tick_params(labelbottom=True)
+
+        if not filename:
+            filename = f"target_throughput_latency_line-{x_column}-{row}-{col}-{hue}"
+
+        plot.figure.savefig(os.path.join(self.plot_dir(), f"{filename}.svg"))
+        plot.figure.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
+
+        return plot
+
 
 def condense_vars(all_data, without) -> Tuple[pd.Series, List[str]]:
     """
@@ -304,8 +444,8 @@ def condense_vars(all_data, without) -> Tuple[pd.Series, List[str]]:
     invariant_columns = []
     variant_columns = []
     for column in remaining_columns:
-        data = all_data[column]
-        if len(set(data)) == 1:
+        data = all_data[column].dropna()
+        if len(set(data)) <= 1:
             new_column = make_new_column(column)
             invariant_columns.append(new_column.iat[0])
         else:

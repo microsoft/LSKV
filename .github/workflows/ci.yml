@@ -4,29 +4,28 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ACR_REGISTRY: ccfmsrc.azurecr.io
+  DOCKER_BUILDKIT: 1 # https://docs.docker.com/develop/develop-images/build_enhancements/
 
 jobs:
-  build-app:
+  build-and-test:
     runs-on: ubuntu-20.04
-    container: mcr.microsoft.com/ccf/app/dev:3.0.0-dev6-sgx
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Build app
-        run: mkdir -p build && cd build && CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja .. && ninja
-
-  test-virtual:
-    runs-on: ubuntu-20.04
-    container: mcr.microsoft.com/ccf/app/dev:3.0.0-dev6-sgx
+    container: mcr.microsoft.com/ccf/app/dev:4.0.0-dev0-virtual
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          submodules: true
+          fetch-depth: 0
+
+      - name: Make sure github workspace is git safe
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Build app
         run: make build-virtual
@@ -34,7 +33,16 @@ jobs:
       - name: Install go
         run: curl -L -o go1.19.1.linux-amd64.tar.gz https://go.dev/dl/go1.19.1.linux-amd64.tar.gz && tar -C /usr/local -xzf go1.19.1.linux-amd64.tar.gz
 
+      - name: Install pip
+        run: sudo apt install -y python3-pip
+
+      - name: Upgrade pip
+        run: pip3 install --upgrade pip
+
       - name: Test app
+        run: make tests
+
+      - name: Test app (etcd integration tests)
         run: export PATH=$PATH:/usr/local/go/bin && make test-virtual
         continue-on-error: true
 
@@ -44,9 +52,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Build container
-        run: docker build -t lskv-virtual -f Dockerfile.virtual .
+        run: docker build -t $ACR_REGISTRY/public/lskv:latest-virtual -f Dockerfile.virtual .
 
   build-docker-sgx:
     runs-on: ubuntu-20.04
@@ -54,6 +64,38 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Build container
-        run: docker build -t lskv-sgx -f Dockerfile.sgx .
+        run: docker build -t $ACR_REGISTRY/public/lskv:latest-sgx -f Dockerfile.sgx .
+
+  checks:
+    runs-on: ubuntu-latest
+    container: ccfmsrc.azurecr.io/ccf/ci/sgx:oe-0.18.2-protoc
+
+    steps:
+      - name: Make sure github workspace is git safe
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Run checks
+        run: ./scripts/ci-checks.sh
+
+  check-issues:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Check issues
+        run: ./scripts/check-issues.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

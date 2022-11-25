@@ -1,7 +1,6 @@
 {
   buildPythonPackage,
   fetchPypi,
-  lib,
   columnar,
   colorama,
 }:

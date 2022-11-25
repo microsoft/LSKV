@@ -22,6 +22,7 @@ sequenceDiagram
     App->>KV: kvstore.put(key, value)
     App->>CCF: transaction commit
     CCF--)Index: handle_committed_transaction
+    App->>App: Fill in header with optimistic transaction id<br> and committed transaction id
     end
     App->>User: send response
     CCF--)Nodes: Consensus
@@ -52,6 +53,34 @@ sequenceDiagram
         Index->>App: return KVs
         note over App: this reads from the index so only observes values<br> that have been committed but may be stale
     end
+    App->>App: Fill in header with optimistic transaction id<br> and committed transaction id
     end
     App->>User: send response
+```
+
+### Receipts
+
+See [Receipts](./receipts.md) for how to verify the receipt.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User
+    participant Proxy
+    participant App
+
+    note over User: Make mutating request so <br>have request and response
+
+    User->>Proxy: /etcdserverpb.Receipt/GetReceipt
+    Proxy->>App: /etcdserverpb.Receipt/GetReceipt
+    App->>Proxy: 202 Accepted, retry-after: 3s
+    Proxy->>User: 202 Accepted, retry-after: 3s
+    note over Proxy: A smart proxy may instead <br>handle the retry internally
+    note over User: Retry request
+    User->>Proxy: /etcdserverpb.Receipt/GetReceipt
+    Proxy->>App: /etcdserverpb.Receipt/GetReceipt
+    App-->>App: Get receipt
+    App->>Proxy: send receipt in response with header
+    Proxy->>User: send receipt in response with header
+    User->>User: Verify receipt with given request (and response)
 ```

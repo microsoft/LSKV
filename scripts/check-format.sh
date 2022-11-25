@@ -1,6 +1,6 @@
 #!/bin/bash
 # Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the Apache 2.0 License.
+# Licensed under the MIT License.
 
 set -u
 
@@ -15,14 +15,15 @@ while getopts ":f:" opt; do
     f)
       fix=true
       shift
-    ;;
-    \?) echo "Invalid option -$OPTARG" >&2
+      ;;
+    \?)
+      echo "Invalid option -$OPTARG" >&2
       exit
-    ;;
+      ;;
   esac
 done
 
-if $fix ; then
+if $fix; then
   echo "Formatting files in" "$@"
 else
   echo "Checking file format in" "$@"
@@ -33,7 +34,7 @@ unformatted_files=""
 badly_named_files=""
 for file in $(git ls-files "$@" | grep -e '\.h$' -e '\.hpp$' -e '\.cpp$' -e '\.c$' -e '\.proto$'); do
   if ! clang-format-10 -n -Werror -style=file "$file"; then
-    if $fix ; then
+    if $fix; then
       clang-format-10 -style=file -i "$file"
     fi
     if [ "$unformatted_files" != "" ]; then
@@ -51,13 +52,13 @@ for file in $(git ls-files "$@" | grep -e '\.h$' -e '\.hpp$' -e '\.cpp$' -e '\.c
 done
 
 if [ "$unformatted_files" != "" ]; then
-  if $fix ; then
+  if $fix; then
     echo "Fixed formatting:"
   else
     echo "Fix formatting:"
   fi
   echo "$unformatted_files"
-  if ! $fix ; then
+  if ! $fix; then
     exit 1
   fi
 else

@@ -7,7 +7,6 @@ Run benchmarks in various configurations for each defined datastore.
 """
 
 import argparse
-import logging
 import os
 import subprocess
 import time
@@ -20,9 +19,8 @@ import cimetrics.upload  # type: ignore
 import common
 import pandas as pd  # type: ignore
 from common import DESIRED_DURATION_S, Store
+from loguru import logger
 from stores import EtcdStore, LSKVStore
-
-logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
 
 
 # pylint: disable=too-many-instance-attributes
@@ -112,14 +110,14 @@ def prefill_datastore(config: EtcdConfig, store: Store, start: int, end: int):
     i = 0
     num_keys = config.prefill_num_keys
     value_size = config.prefill_value_size
-    logging.debug("prefilling %s keys", num_keys)
+    logger.debug("prefilling {} keys", num_keys)
     end_size = len(str(end))
     if num_keys:
         for k in range(start, end, (end - start) // num_keys):
             i += 1
             key = str(k).zfill(end_size)
             value = "v" * value_size
-            logging.debug("prefilling %s", key)
+            logger.debug("prefilling {}", key)
             # pylint: disable=consider-using-with
             proc = Popen(
                 client + ["put", key, value],
@@ -128,7 +126,7 @@ def prefill_datastore(config: EtcdConfig, store: Store, start: int, end: int):
             )
             if proc.wait() != 0:
                 raise Exception("failed to fill datastore")
-    logging.debug("prefilled %s keys", i)
+    logger.debug("prefilled {} keys", i)
 
 
 def run_benchmark(config: EtcdConfig, store: Store, benchmark: EtcdBenchmark) -> str:
@@ -142,21 +140,21 @@ def run_benchmark(config: EtcdConfig, store: Store, benchmark: EtcdBenchmark) ->
             # need to prefill the store with data for it to get
             start = int(config.bench_args[1])
             end = int(config.bench_args[2])
-            logging.info(
-                "prefilling datastore with %s keys in range [%s, %s)",
+            logger.info(
+                "prefilling datastore with {} keys in range [{}, {})",
                 config.prefill_num_keys,
                 start,
                 end,
             )
             prefill_datastore(config, store, start, end)
 
-        logging.info("starting benchmark")
+        logger.info("starting benchmark")
         timings_file = os.path.join(config.output_dir(), "timings.csv")
 
         run_cmd = benchmark.run_cmd(store)
         common.run(run_cmd, "bench", config.output_dir())
 
-        logging.info("stopping benchmark for %s", config.to_str())
+        logger.info("stopping benchmark for {}", config.to_str())
 
     return timings_file
 
@@ -167,7 +165,7 @@ def run_metrics(name: str, cmd: str, file: str):
     Run metric gathering.
     """
     if not os.path.exists(file):
-        logging.warning("no metrics file found at %s", file)
+        logger.warning("no metrics file found at {}", file)
         return
     data = pd.read_csv(file)
 
@@ -183,13 +181,13 @@ def run_metrics(name: str, cmd: str, file: str):
     latency_p99 = latencies.quantile(0.99)
     latency_p999 = latencies.quantile(0.999)
 
-    logging.info("             count: %s", count)
-    logging.info("         total (s): %s", total)
-    logging.info("throughput (req/s): %s", thput)
-    logging.info("  p50 latency (ms): %s", latency_p50)
-    logging.info("  p90 latency (ms): %s", latency_p90)
-    logging.info("  p99 latency (ms): %s", latency_p99)
-    logging.info("p99.9 latency (ms): %s", latency_p999)
+    logger.info("             count: {}", count)
+    logger.info("         total (s): {}", total)
+    logger.info("throughput (req/s): {}", thput)
+    logger.info("  p50 latency (ms): {}", latency_p50)
+    logger.info("  p90 latency (ms): {}", latency_p90)
+    logger.info("  p99 latency (ms): {}", latency_p99)
+    logger.info("p99.9 latency (ms): {}", latency_p999)
 
     group = name
     with cimetrics.upload.metrics(complete=False) as metrics:
@@ -303,23 +301,23 @@ def make_configurations(args: argparse.Namespace) -> List[EtcdConfig]:
 
     # pylint: disable=too-many-nested-blocks
     for bench_args in args.bench_args:
-        logging.debug("adding bench-args: %s", bench_args)
+        logger.debug("adding bench-args: {}", bench_args)
         for clients in args.clients:
-            logging.debug("adding clients: %s", clients)
+            logger.debug("adding clients: {}", clients)
             for conns in args.connections:
-                logging.debug("adding connections: %s", conns)
+                logger.debug("adding connections: {}", conns)
                 for prefill_num_keys in get_prefill_num_keys(
                     bench_args, args.prefill_num_keys
                 ):
-                    logging.debug("adding prefill_num_keys: %s", prefill_num_keys)
+                    logger.debug("adding prefill_num_keys: {}", prefill_num_keys)
                     for prefill_value_size in get_prefill_num_keys(
                         bench_args, args.prefill_value_size
                     ):
-                        logging.debug(
-                            "adding prefill_value_size: %s", prefill_value_size
+                        logger.debug(
+                            "adding prefill_value_size: {}", prefill_value_size
                         )
                         for rate in args.rate:
-                            logging.debug("adding rate: %s", rate)
+                            logger.debug("adding rate: {}", rate)
 
                             for common_config in common.make_common_configurations(
                                 args
