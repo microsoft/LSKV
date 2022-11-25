@@ -28,6 +28,8 @@ from cryptography.x509 import load_pem_x509_certificate
 from google.protobuf.json_format import MessageToDict, ParseDict
 from loguru import logger
 
+from lskv import governance  # type: ignore
+
 
 class Sandbox:
     """
@@ -119,7 +121,7 @@ class Sandbox:
                 "w",
                 encoding="utf-8",
             ) as err:
-                libargs = ["build/liblskv.virtual.so"]
+                libargs = ["build/liblskv.virtual.so", "-e", "virtual", "-t", "virtual"]
                 env = os.environ.copy()
                 env["VENV_DIR"] = os.path.join(os.getcwd(), ".venv")
                 nodes = []
@@ -170,6 +172,18 @@ class Sandbox:
         """
         return f"{self.workspace()}/sandbox_common/user0_privk.pem"
 
+    def member0_cert(self) -> str:
+        """
+        Return the path to the CA certificate.
+        """
+        return f"{self.workspace()}/sandbox_common/member0_cert.pem"
+
+    def member0_key(self) -> str:
+        """
+        Return the path to the CA certificate.
+        """
+        return f"{self.workspace()}/sandbox_common/member0_privk.pem"
+
     def etcdctl_client(self) -> List[str]:
         """
         Get the etcdctl client command for this datastore.
@@ -196,6 +210,27 @@ def fixture_sandbox():
     with sandbox:
         ready = sandbox.wait_for_ready()
         if ready:
+            # setup new constitution
+            # this is needed since the ccf sandbox doesn't take a set of constitution files yet
+            gov_client = governance.Client(
+                "127.0.0.1:8000",
+                sandbox.cacert(),
+                sandbox.member0_key(),
+                sandbox.member0_cert(),
+            )
+            proposal = governance.Proposal()
+            proposal.set_constitution(
+                [
+                    "constitution/actions.js",
+                    "constitution/apply.js",
+                    "constitution/resolve.js",
+                    "constitution/validate.js",
+                ]
+            )
+            res = gov_client.propose(proposal)
+            if res.state != "Accepted":
+                gov_client.accept(res.proposal_id)
+
             yield sandbox
         else:
             raise Exception("failed to prepare the sandbox")
@@ -224,6 +259,19 @@ def fixture_http1_client_unauthenticated(sandbox):
         http2=False, verify=cacert, base_url="https://127.0.0.1:8000"
     ) as client:
         yield HttpClient(client)
+
+
+@pytest.fixture(name="governance_client", scope="module")
+def fixture_governance_client(sandbox):
+    """
+    Make a governance client for the sandbox.
+    """
+    return governance.Client(
+        "127.0.0.1:8000",
+        sandbox.cacert(),
+        sandbox.member0_key(),
+        sandbox.member0_cert(),
+    )
 
 
 def b64encode(in_str: str) -> str:
@@ -255,11 +303,10 @@ class HttpClient:
         """
         Wait for a commit to be successful.
         """
-        txid = f"{term}.{rev}"
         i = 0
         while True:
             i += 1
-            tx_status = self.tx_status(txid)
+            tx_status = self.tx_status(term, rev)
             logger.debug("tx_status: {}", tx_status)
             if tx_status.status_code == HTTPStatus.OK:
                 body = tx_status.json()
@@ -419,6 +466,14 @@ class HttpClient:
             check_response(res)
             proto = ParseDict(res.json(), etcd_pb2.LeaseKeepAliveResponse())
         return (res, proto)
+
+    def tx_status(self, term: int, rev: int):
+        """
+        Check the status of a transaction.
+        """
+        logger.info("TxStatus: {} {}", term, rev)
+        j: Dict[str, Any] = {"raftTerm": term, "revision": rev}
+        return self.client.post("/v3/maintenance/tx_status", json=j)
 
     def status(self):
         """

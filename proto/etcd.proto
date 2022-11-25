@@ -2,6 +2,13 @@ syntax = "proto3";
 
 package etcdserverpb;
 
+service KV
+{
+  rpc Put(PutRequest) returns (PutResponse) {}
+  rpc Range(RangeRequest) returns (RangeResponse) {}
+  rpc DeleteRange(DeleteRangeRequest) returns (DeleteRangeResponse) {}
+}
+
 message KeyValue
 {
   // key is the key in bytes. An empty key is not allowed.

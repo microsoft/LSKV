@@ -2,14 +2,14 @@
 # Licensed under the MIT License.
 
 # Build
-FROM mcr.microsoft.com/ccf/app/dev:3.0.0-rc1-virtual as builder
+FROM mcr.microsoft.com/ccf/app/dev:4.0.0-dev0-virtual as builder
 
 COPY . /src/
 WORKDIR /build
 RUN CC=$(command -v clang-10) CXX=$(command -v clang++-10) cmake -GNinja -DCOMPILE_TARGET=virtual /src && ninja
 
 # Run
-FROM mcr.microsoft.com/ccf/app/run:3.0.0-rc1-virtual
+FROM mcr.microsoft.com/ccf/app/run:4.0.0-dev0-virtual
 
 LABEL org.opencontainers.image.source=https://github.com/microsoft/lskv
 LABEL org.opencontainers.image.description="LSKV virtual node"

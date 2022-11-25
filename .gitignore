@@ -1,4 +1,4 @@
-build/**
+build/
 *.deb
 /.venv_ccf_sandbox/
 workspace/
@@ -20,6 +20,7 @@ bin/
 /plots/
 
 *.pyc
+*.egg-info
 
 *.out
 *.err
@@ -28,3 +29,5 @@ bin/
 *_pb2.pyi
 
 /docker-workspace/
+
+/*.parquet

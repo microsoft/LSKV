@@ -11,6 +11,7 @@ concurrency:
 jobs:
   benchmark:
     runs-on: ubuntu-20.04
+    container: mcr.microsoft.com/ccf/app/dev:4.0.0-dev0-virtual
 
     steps:
       - name: Checkout repository
@@ -46,11 +47,14 @@ jobs:
       - name: Build k6
         run: export PATH=$HOME/.local/go/bin:$PATH && make bin/k6
 
-      - name: Build images
-        run: make build-docker
-
       - name: Install venv
         run: sudo apt install -y python3.8-venv
+
+      - name: Install pip
+        run: sudo apt install -y python3-pip
+
+      - name: Upgrade pip
+        run: pip3 install --upgrade pip
 
       - name: Make .venv
         run: make .venv
@@ -76,9 +80,9 @@ jobs:
         run: |
           set -x
           git checkout -- benchmark
-          git checkout ci-plots 
+          git checkout ci-plots
           git pull origin ci-plots
-          mkdir ${{ github.sha }} 
+          mkdir ${{ github.sha }}
           mv plots/* ${{ github.sha }}/.
           rm -f ${{ github.sha }}/**/*.svg
           git add ${{ github.sha }}/**/*.jpg
