@@ -11,7 +11,7 @@ concurrency:
 jobs:
   benchmark:
     runs-on: ubuntu-20.04
-    container: mcr.microsoft.com/ccf/app/dev:3.0.0-rc2-virtual
+    container: mcr.microsoft.com/ccf/app/dev:4.0.0-dev0-virtual
 
     steps:
       - name: Checkout repository
@@ -83,9 +83,9 @@ jobs:
         run: |
           set -x
           git checkout -- benchmark
-          git checkout ci-plots 
+          git checkout ci-plots
           git pull origin ci-plots
-          mkdir ${{ github.sha }} 
+          mkdir ${{ github.sha }}
           mv plots/* ${{ github.sha }}/.
           rm -f ${{ github.sha }}/**/*.svg
           git add ${{ github.sha }}/**/*.jpg
