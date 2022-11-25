@@ -7,7 +7,7 @@
   ccf,
   pythonRelaxDepsHook,
 }: let
-  ccf-virtual = ccf.virtual;
+  ccf-virtual = ccf.override {platform = "virtual";};
 in
   buildPythonPackage {
     inherit (ccf-virtual) version src;

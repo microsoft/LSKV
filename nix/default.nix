@@ -25,22 +25,22 @@ pkgs.lib.makeScope pkgs.newScope (
       ccf = self.callPackage ./ccf.nix {
         stdenv = pkgs.llvmPackages_10.libcxxStdenv;
       };
-      ccf-virtual = ccf.virtual;
-      ccf-sgx = ccf.sgx;
+      ccf-virtual = ccf.override {platform = "virtual";};
+      ccf-sgx = ccf.override {platform = "sgx";};
 
       ccf-sandbox = self.callPackage ./ccf-sandbox.nix {};
-      ccf-sandbox-virtual = ccf-sandbox.virtual;
-      ccf-sandbox-sgx = ccf-sandbox.sgx;
+      ccf-sandbox-virtual = ccf-sandbox.override {platform = "virtual";};
+      ccf-sandbox-sgx = ccf-sandbox.override {platform = "sgx";};
 
       lskv = self.callPackage ./lskv.nix {
         stdenv = pkgs.llvmPackages_10.libcxxStdenv;
       };
-      lskv-virtual = lskv.virtual;
-      lskv-sgx = lskv.sgx;
+      lskv-virtual = lskv.override {platform = "virtual";};
+      lskv-sgx = lskv.override {platform = "sgx";};
 
       lskv-sandbox = self.callPackage ./lskv-sandbox.nix {};
-      lskv-sandbox-virtual = lskv-sandbox.virtual;
-      lskv-sandbox-sgx = lskv-sandbox.sgx;
+      lskv-sandbox-virtual = lskv-sandbox.override {platform = "virtual";};
+      lskv-sandbox-sgx = lskv-sandbox.override {platform = "sgx";};
 
       ci-checks = self.callPackage ./ci-checks.nix {};
 
