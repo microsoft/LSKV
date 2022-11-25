@@ -4,7 +4,7 @@
 }:
 pkgs.lib.makeScope pkgs.newScope (
   self: let
-    lib =
+    lskvlib =
       pkgs.callPackage ./lib.nix {};
     ccf = self.callPackage ./ccf.nix {
       stdenv = pkgs.llvmPackages_10.libcxxStdenv;
@@ -15,18 +15,18 @@ pkgs.lib.makeScope pkgs.newScope (
       stdenv = pkgs.llvmPackages_10.libcxxStdenv;
     };
     lskv-sandbox = self.callPackage ./lskv-sandbox.nix {inherit ccf-sandbox lskv;};
-    packages = lib.forAllPlatforms {
+    packages = lskvlib.forAllPlatforms {
       inherit ccf ccf-sandbox lskv lskv-sandbox;
     };
     ci-checks-pkgs = pkgs.callPackage ./ci-checks.nix {};
-    ci-checks' = lib.ciChecks ci-checks-pkgs.checks;
-    ci-fixes' = lib.ciFixes ci-checks-pkgs.fixes;
+    ci-checks = lskvlib.ciChecks ci-checks-pkgs.checks;
+    ci-fixes = lskvlib.ciFixes ci-checks-pkgs.fixes;
   in
     rec {
-      ci-checks = ci-checks';
-      ci-fixes = ci-fixes';
-      ci-check-all = lib.ciChecksAll ci-checks-pkgs.checks;
-      ci-fix-all = lib.ciFixesAll ci-checks-pkgs.fixes;
+      inherit lskvlib ci-checks ci-fixes;
+
+      ci-check-all = lskvlib.ciChecksAll ci-checks-pkgs.checks;
+      ci-fix-all = lskvlib.ciFixesAll ci-checks-pkgs.fixes;
 
       az-dcap = self.callPackage ./az-dcap.nix {};
       sgx-dcap = self.callPackage ./sgx-dcap.nix {};
@@ -72,7 +72,7 @@ pkgs.lib.makeScope pkgs.newScope (
           }
           // args);
     }
-    // ci-checks'
-    // ci-fixes'
+    // ci-checks
+    // ci-fixes
     // packages
 )

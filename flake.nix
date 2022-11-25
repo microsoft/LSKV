@@ -13,7 +13,7 @@
   }: let
     system = "x86_64-linux";
     pkgs = import nixpkgs {
-      system = system;
+      inherit system;
       overlays = [nix-filter.overlays.default];
     };
     nix = import ./nix {
@@ -23,8 +23,7 @@
     packages.${system} =
       flake-utils.lib.filterPackages system nix;
 
-    overlays.default = final: prev:
-      ((nix.lib.forAllPlatforms {
+    overlays.default = final: prev: ((nix.lib.forAllPlatforms {
         inherit (self.packages.${system}) ccf ccf-sandbox lskv lskv-sandbox;
       })
       // {
@@ -40,7 +39,7 @@
         lskv-sandbox-sgx = self.packages.${system}.lskv-sandbox-sgx;
       };
 
-    lib = nix.lib;
+    lib = nix.lskvlib;
 
     formatter.${system} = pkgs.alejandra;
 
