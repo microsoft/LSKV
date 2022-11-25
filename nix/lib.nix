@@ -14,4 +14,10 @@
 
   # generate a set of derivations for all supported platforms
   forAllPlatforms = forPlatforms platforms;
+
+  ciChecks = pkgs:
+    lib.attrsets.mapAttrs' (name: value: lib.attrsets.nameValuePair "ci-check-${name}" value) pkgs;
+
+  ciFixes = pkgs:
+    lib.attrsets.mapAttrs' (name: value: lib.attrsets.nameValuePair "ci-fix-${name}" value) pkgs;
 }

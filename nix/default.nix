@@ -18,8 +18,14 @@ pkgs.lib.makeScope pkgs.newScope (
     packages = lib.forAllPlatforms {
       inherit ccf ccf-sandbox lskv lskv-sandbox;
     };
+    ci-checks-pkgs = pkgs.callPackage ./ci-checks.nix {};
+    ci-checks' = lib.ciChecks ci-checks-pkgs.checks;
+    ci-fixes' = lib.ciFixes ci-checks-pkgs.fixes;
   in
     rec {
+      ci-checks = ci-checks';
+      ci-fixes = ci-fixes';
+
       az-dcap = self.callPackage ./az-dcap.nix {};
       sgx-dcap = self.callPackage ./sgx-dcap.nix {};
 
@@ -36,8 +42,6 @@ pkgs.lib.makeScope pkgs.newScope (
         # Openenclave doesn't build with libcxx, for some reason.
         stdenv = pkgs.llvmPackages_10.stdenv;
       };
-
-      ci-checks = self.callPackage ./ci-checks.nix {};
 
       # A python3 derivation that is extended with some CC related
       # packages.
@@ -66,10 +70,7 @@ pkgs.lib.makeScope pkgs.newScope (
           }
           // args);
     }
-    // (
-      pkgs.lib.attrsets.mapAttrs'
-      (name: value: pkgs.lib.attrsets.nameValuePair ("ci-checks-" + name) value)
-      (pkgs.callPackage ./ci-checks.nix {})
-    )
+    // ci-checks'
+    // ci-fixes'
     // packages
 )

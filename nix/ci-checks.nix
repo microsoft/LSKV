@@ -18,108 +18,111 @@
     typing-extensions
   ];
 in {
-  shellcheck =
-    runCommand "shellcheck"
-    {
-      buildInputs = [shellcheck];
-    } ''
-      find ${../.} -name '*.sh' ! -name "3rdparty" | xargs shellcheck -s bash -e SC2044,SC2002,SC1091,SC2181
-      mkdir $out
-    '';
+  checks = {
+    shellcheck =
+      runCommand "shellcheck"
+      {
+        buildInputs = [shellcheck];
+      } ''
+        find ${../.} -name '*.sh' ! -name "3rdparty" | xargs shellcheck -s bash -e SC2044,SC2002,SC1091,SC2181
+        mkdir $out
+      '';
 
-  prettier =
-    runCommand "prettier"
-    {
-      buildInputs = [nodePackages.prettier];
-    } ''
-      for e in ts js md yaml yml json; do
-        find ${../.} -name "*.$e" ! -name "3rdparty" | xargs prettier --check
-      done
-      mkdir $out
-    '';
+    prettier =
+      runCommand "prettier"
+      {
+        buildInputs = [nodePackages.prettier];
+      } ''
+        for e in ts js md yaml yml json; do
+          find ${../.} -name "*.$e" ! -name "3rdparty" | xargs prettier --check
+        done
+        mkdir $out
+      '';
 
-  prettier-fix =
-    writeShellScriptBin "prettier"
-    ''
-      git ls-files -- . ':!:3rdparty/' | grep -e '\.ts$' -e '\.js$' -e '\.md$' -e '\.yaml$' -e '\.yml$' -e '\.json$' | xargs npx ${nodePackages.prettier}/bin/prettier --write
-    '';
+    black =
+      runCommand "black"
+      {
+        buildInputs = [python3Packages.black];
+      } ''
+        find ${../.} -name '*.py' ! -name "3rdparty" | xargs black --check
+        mkdir $out
+      '';
 
-  black =
-    runCommand "black"
-    {
-      buildInputs = [python3Packages.black];
-    } ''
-      find ${../.} -name '*.py' ! -name "3rdparty" | xargs black --check
-      mkdir $out
-    '';
+    pylint =
+      runCommand "pylint"
+      {
+        buildInputs = [python3Packages.pylint] ++ pythonDeps;
+      } ''
+        find ${../.} -name '*.py' ! -name "3rdparty" | xargs pylint --ignored-modules "*_pb2"
+        mkdir $out
+      '';
 
-  black-fix =
-    writeShellScriptBin "black"
-    ''
-      git ls-files -- . ':!:3rdparty/' | grep -e '\.py$' | xargs ${python3Packages.black}/bin/black
-    '';
+    mypy =
+      runCommand "mypy"
+      {
+        buildInputs = [python3Packages.mypy] ++ pythonDeps;
+      } ''
+        find ${../.} -name '*.py' ! -name "3rdparty" | xargs mypy
+        mkdir $out
+      '';
 
-  pylint =
-    runCommand "pylint"
-    {
-      buildInputs = [python3Packages.pylint] ++ pythonDeps;
-    } ''
-      find ${../.} -name '*.py' ! -name "3rdparty" | xargs pylint --ignored-modules "*_pb2"
-      mkdir $out
-    '';
+    cpplint =
+      runCommand "cpplint"
+      {
+        buildInputs = [cpplint];
+      } ''
+        cpplint --filter=-whitespace/braces,-whitespace/indent,-whitespace/comments,-whitespace/newline,-build/include_order,-build/include_subdir,-runtime/references,-runtime/indentation_namespace ${../.}/src/**/*.cpp ${../.}/src/**/*.h
+        mkdir $out
+      '';
 
-  mypy =
-    runCommand "mypy"
-    {
-      buildInputs = [python3Packages.mypy] ++ pythonDeps;
-    } ''
-      find ${../.} -name '*.py' ! -name "3rdparty" | xargs mypy
-      mkdir $out
-    '';
+    nixfmt =
+      runCommand "nixfmt"
+      {
+        buildInputs = [alejandra];
+      } ''
+        alejandra --check ${../.}/**/*.nix
+        mkdir $out
+      '';
 
-  cpplint =
-    runCommand "cpplint"
-    {
-      buildInputs = [cpplint];
-    } ''
-      cpplint --filter=-whitespace/braces,-whitespace/indent,-whitespace/comments,-whitespace/newline,-build/include_order,-build/include_subdir,-runtime/references,-runtime/indentation_namespace ${../.}/src/**/*.cpp ${../.}/src/**/*.h
-      mkdir $out
-    '';
+    deadnix =
+      runCommand "deadnix"
+      {
+        buildInputs = [deadnix];
+      } ''
+        deadnix --fail ${./.}
+        mkdir $out
+      '';
 
-  nixfmt =
-    runCommand "nixfmt"
-    {
-      buildInputs = [alejandra];
-    } ''
-      alejandra --check ${../.}/**/*.nix
-      mkdir $out
-    '';
+    shfmt =
+      runCommand "shfmt" {}
+      ''
+        find ${./.} -name '*.sh' ! -name "3rdparty" | xargs ${shfmt}/bin/shfmt --diff --simplify --case-indent --indent 2
+        mkdir $out
+      '';
+  };
+  fixes = {
+    prettier =
+      writeShellScriptBin "prettier"
+      ''
+        git ls-files -- . ':!:3rdparty/' | grep -e '\.ts$' -e '\.js$' -e '\.md$' -e '\.yaml$' -e '\.yml$' -e '\.json$' | xargs npx ${nodePackages.prettier}/bin/prettier --write
+      '';
 
-  nixfmt-fix =
-    writeShellScriptBin "nixfmt"
-    ''
-      git ls-files -- . ':!:3rdparty/' | grep -e '\.nix$' | xargs ${alejandra}/bin/alejandra
-    '';
+    black =
+      writeShellScriptBin "black"
+      ''
+        git ls-files -- . ':!:3rdparty/' | grep -e '\.py$' | xargs ${python3Packages.black}/bin/black
+      '';
 
-  deadnix =
-    runCommand "deadnix"
-    {
-      buildInputs = [deadnix];
-    } ''
-      deadnix --fail ${./.}
-      mkdir $out
-    '';
+    nixfmt =
+      writeShellScriptBin "nixfmt"
+      ''
+        git ls-files -- . ':!:3rdparty/' | grep -e '\.nix$' | xargs ${alejandra}/bin/alejandra
+      '';
 
-  shfmt-fix =
-    writeShellScriptBin "shfmt"
-    ''
-      git ls-files -- . ':!:3rdparty/' | grep -e '\.sh$'| xargs ${shfmt}/bin/shfmt --write --simplify --case-indent --indent 2
-    '';
-
-  shfmt =
-    runCommand "shfmt" {}
-    ''
-      find ${./.} -name '*.sh' ! -name "3rdparty" | xargs ${shfmt}/bin/shfmt --diff --simplify --case-indent --indent 2
-      mkdir $out
-    '';
+    shfmt =
+      writeShellScriptBin "shfmt"
+      ''
+        git ls-files -- . ':!:3rdparty/' | grep -e '\.sh$'| xargs ${shfmt}/bin/shfmt --write --simplify --case-indent --indent 2
+      '';
+  };
 }
