@@ -34,7 +34,7 @@ stdenv.mkDerivation rec {
 
   cmakeFlags = [
     "-DCOMPILE_TARGET=${platform}"
-    "-DLVI_MITIGATIONS=OFF"
+    (if platform == "sgx" then "-DLVI_MITIGATIONS=OFF" else null)
   ];
 
   LSKV_VERSION = version;
