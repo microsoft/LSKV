@@ -23,9 +23,13 @@
     packages.${system} =
       flake-utils.lib.filterPackages system nix;
 
-    overlays.${system}.default = final: prev: {
-      ccf = self.packages.${system}.ccf;
-    };
+    overlays.${system}.default = final: prev:
+      (nix.lib.forAllPlatforms {
+        inherit (self.packages.${system}) ccf ccf-sandbox lskv lskv-sandbox;
+      })
+      // {
+        inherit (self.packages.${system}) openenclave az-dcap sgx-dcap;
+      };
 
     checks.${system} =
       pkgs.lib.attrsets.filterAttrs
