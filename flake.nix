@@ -74,6 +74,11 @@
         drv = self.packages.${system}.lskv-sandbox-sgx;
         exePath = "/bin/lskv-sandbox.sh";
       };
+
+      oesign = flake-utils.lib.mkApp {
+        drv = self.packages.${system}.openenclave;
+        exePath = "/bin/oesign";
+      };
     };
 
     devShells.${system}.default = pkgs.mkShell {
