@@ -47,9 +47,6 @@ jobs:
       - name: Build k6
         run: export PATH=$HOME/.local/go/bin:$PATH && make bin/k6
 
-      - name: Build images
-        run: make build-docker
-
       - name: Install venv
         run: sudo apt install -y python3.8-venv
 
