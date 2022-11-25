@@ -1,5 +1,4 @@
 {
-  fetchFromGitHub,
   fetchzip,
   stdenv,
   openenclave-version,

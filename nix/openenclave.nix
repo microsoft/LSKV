@@ -2,7 +2,6 @@
   stdenv,
   fetchurl,
   fetchzip,
-  fetchFromGitHub,
   openenclave-version,
   openenclave-src,
   lvi-mitigation,
