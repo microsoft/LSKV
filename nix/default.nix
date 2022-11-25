@@ -5,7 +5,7 @@
 pkgs.lib.makeScope pkgs.newScope (
   self: let
     lib =
-      import ./lib.nix {lib = pkgs.lib;};
+      pkgs.callPackage ./lib.nix {};
     ccf = self.callPackage ./ccf.nix {
       stdenv = pkgs.llvmPackages_10.libcxxStdenv;
     };
@@ -25,6 +25,8 @@ pkgs.lib.makeScope pkgs.newScope (
     rec {
       ci-checks = ci-checks';
       ci-fixes = ci-fixes';
+      ci-check-all = lib.ciChecksAll ci-checks-pkgs.checks;
+      ci-fix-all = lib.ciFixesAll ci-checks-pkgs.fixes;
 
       az-dcap = self.callPackage ./az-dcap.nix {};
       sgx-dcap = self.callPackage ./sgx-dcap.nix {};

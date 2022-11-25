@@ -19,24 +19,9 @@
     nix = import ./nix {
       inherit pkgs;
     };
-    ci-checks-all = pkgs.symlinkJoin {
-      name = "ci-checks-all";
-      paths = with nix.ci-checks; [shellcheck prettier black pylint mypy cpplint nixfmt];
-    };
-    ci-checks-all-fix =
-      pkgs.writeShellScriptBin
-      "ci-checks-all"
-      ''
-        ${nix.ci-checks.prettier-fix}/bin/prettier
-        ${nix.ci-checks.black-fix}/bin/black
-        ${nix.ci-checks.nixfmt-fix}/bin/nixfmt
-      '';
   in {
     packages.${system} =
-      (flake-utils.lib.filterPackages system nix)
-      // {
-        inherit ci-checks-all ci-checks-all-fix;
-      };
+      flake-utils.lib.filterPackages system nix;
 
     overlays.${system}.default = final: prev: {
       ccf = self.packages.${system}.ccf;
@@ -47,7 +32,6 @@
       (name: value: name != "override" && name != "overrideDerivation")
       nix.ci-checks
       // {
-        inherit ci-checks-all ci-checks-all-fix;
         lskv-sandbox-virtual = self.packages.${system}.lskv-sandbox-virtual;
         lskv-sandbox-sgx = self.packages.${system}.lskv-sandbox-sgx;
       };
