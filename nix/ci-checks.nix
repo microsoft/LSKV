@@ -8,6 +8,7 @@
   alejandra,
   deadnix,
   shfmt,
+  cmake-format,
 }: let
   pythonDeps = with python3Packages; [
     loguru
@@ -25,6 +26,15 @@ in {
         buildInputs = [shellcheck];
       } ''
         find ${../.} -name '*.sh' ! -name "3rdparty" | xargs shellcheck -s bash -e SC2044,SC2002,SC1091,SC2181
+        mkdir $out
+      '';
+
+    cmake-format =
+      runCommand "cmake-format"
+      {
+        buildInputs = [cmake-format];
+      } ''
+        find ${../.} -name '*.cmake' -name '*.CMakeLists.txt' ! -name "3rdparty" | xargs cmake-format --check
         mkdir $out
       '';
 
@@ -123,6 +133,12 @@ in {
       writeShellScriptBin "shfmt"
       ''
         git ls-files -- . ':!:3rdparty/' | grep -e '\.sh$'| xargs ${shfmt}/bin/shfmt --write --simplify --case-indent --indent 2
+      '';
+
+    cmake-format =
+      writeShellScriptBin "cmake-format"
+      ''
+        git ls-files -- . ':!:3rdparty/' | grep -e '\.cmake$' -e '^CMakeLists.txt' | xargs ${cmake-format}/bin/cmake-format --in-place
       '';
   };
 }
