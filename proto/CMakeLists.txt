@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the
 # MIT License.
 
-find_program(PROTOC_BINARY_PATH "protoc")
+find_program(PROTOC_BINARY_PATH "protoc" HINTS /opt/protoc/bin)
 
 if(EXISTS ${PROTOC_BINARY_PATH})
   message(STATUS "Found protobuf compiler: ${PROTOC_BINARY_PATH}")
