@@ -42,6 +42,7 @@ class PerfBenchmark(common.Benchmark):
     def __init__(self, config: PerfConfig):
         self.config = config
 
+    # pylint: disable=duplicate-code
     def run_cmd(self, store: Store) -> List[str]:
         """
         Return the command to run the benchmark for the given store.

@@ -37,6 +37,7 @@ class Config:
     Store of config to setup and run a benchmark instance.
     """
 
+    # pylint: disable=duplicate-code
     store: str
     port: int
     tls: bool
@@ -91,6 +92,7 @@ class Store(abc.ABC):
     The base store for running benchmarks against.
     """
 
+    # pylint: disable=duplicate-code
     def __init__(self, config: Config):
         self.config = config
         self.proc = None

@@ -17,6 +17,7 @@ import pytest
 import typing_extensions
 from loguru import logger
 
+# pylint: disable=import-error
 from lskv import governance  # type: ignore
 
 
@@ -57,6 +58,7 @@ class Sandbox:
         """
         return self._wait_for_ready(self.port)
 
+    # pylint: disable=duplicate-code
     def _wait_for_ready(self, port: int, tries=60) -> bool:
         client = self.etcdctl_client()
         client += ["get", "missing key"]
@@ -208,6 +210,7 @@ def fixture_sandbox():
                 sandbox.member0_cert(),
             )
             proposal = governance.Proposal()
+            # pylint: disable=duplicate-code
             proposal.set_constitution(
                 [
                     "constitution/actions.js",
