@@ -10,6 +10,7 @@
   sgx-psw,
   makeWrapper,
   protobuf,
+  openssl,
   arrow-cpp,
   platform ? "virtual",
 }:
@@ -54,6 +55,9 @@ stdenv.mkDerivation rec {
   postInstall = ''
     wrapProgram $out/bin/cchost \
       --suffix LD_LIBRARY_PATH ':' "${az-dcap}/lib:${sgx-psw}/lib:${sgx-dcap}/lib"
+
+    wrapProgram $out/bin/keygenerator.sh \
+      --prefix PATH ':' "${openssl}/bin"
 
     # These are signed with a randomly generated key, which makes the build non-reproducible
     rm -f $out/lib/libjs_generic.enclave.so.debuggable \
