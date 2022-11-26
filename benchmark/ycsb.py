@@ -63,6 +63,8 @@ class YCSBenchmark(common.Benchmark):
             f"etcd.endpoints={self.config.scheme()}://127.0.0.1:{self.config.port}",
             "--property_file",
             self.path_to_workload(),
+            "--interval",
+            "1",
         ]
         if self.config.tls:
             bench += [

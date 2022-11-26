@@ -29,6 +29,7 @@ class K6Config(common.Config):
     rate: int
     vus: int
     func: str
+    content_type: str
 
     def bench_name(self) -> str:
         """
@@ -63,6 +64,8 @@ class K6Benchmark(common.Benchmark):
             f"WORKSPACE={workspace}",
             "--env",
             f"FUNC={self.config.func}",
+            "--env",
+            f"CONTENT_TYPE={self.config.content_type}",
             "--env",
             f"PRE_ALLOCATED_VUS={self.config.vus}",
             "--env",
@@ -133,6 +136,15 @@ def get_arguments():
         default=[],
         help="Functions to run",
     )
+    parser.add_argument(
+        "--content-type",
+        action="extend",
+        nargs="+",
+        type=int,
+        choices=["json", "grpc"],
+        default=[],
+        help="content type payload to use",
+    )
 
     args = parser.parse_args()
 
@@ -142,6 +154,8 @@ def get_arguments():
         args.vus = [100]
     if not args.func:
         args.func = ["put_single"]
+    if not args.content_type:
+        args.content_type = ["json"]
 
     return args
 
@@ -182,13 +196,16 @@ def make_configurations(args: argparse.Namespace) -> List[K6Config]:
                 logger.debug("adding vus: {}", vus)
                 for func in args.func:
                     logger.debug("adding func: {}", func)
-                    conf = K6Config(
-                        **asdict(common_config),
-                        rate=rate,
-                        vus=vus,
-                        func=func,
-                    )
-                    configs.append(conf)
+                    for content_type in args.content_type:
+                        logger.debug("adding content_type: {}", content_type)
+                        conf = K6Config(
+                            **asdict(common_config),
+                            rate=rate,
+                            vus=vus,
+                            func=func,
+                            content_type=content_type,
+                        )
+                        configs.append(conf)
 
     return configs
 

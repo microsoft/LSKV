@@ -30,3 +30,5 @@ bin/
 /.direnv/
 
 /result
+
+/*.parquet

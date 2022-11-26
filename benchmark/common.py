@@ -40,7 +40,7 @@ class Config:
     store: str
     port: int
     tls: bool
-    sgx: bool
+    enclave: str
     nodes: int
     worker_threads: int
     sig_tx_interval: int
@@ -242,8 +242,14 @@ def get_argument_parser() -> argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(description="Benchmark")
     parser.add_argument("-v", "--verbose", action="store_true", help="verbose output")
-    parser.add_argument("--sgx", action="store_true")
-    parser.add_argument("--virtual", action="store_true")
+    parser.add_argument(
+        "--enclave",
+        type=str,
+        choices=["virtual", "sgx"],
+        action="extend",
+        nargs="+",
+        help="enclave to use",
+    )
     parser.add_argument("--etcd", action="store_true")
     parser.add_argument("--http1", action="store_true")
     parser.add_argument("--http2", action="store_true")
@@ -326,7 +332,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                     store="etcd",
                     port=port,
                     tls=False,
-                    sgx=False,
+                    enclave="virtual",
                     nodes=nodes,
                     http_version=2,
                     worker_threads=0,
@@ -342,7 +348,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                 store="etcd",
                 port=port,
                 tls=True,
-                sgx=False,
+                enclave="virtual",
                 nodes=nodes,
                 http_version=2,
                 worker_threads=0,
@@ -372,7 +378,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                                 store="lskv",
                                 port=port,
                                 tls=True,
-                                sgx=False,
+                                enclave="virtual",
                                 nodes=nodes,
                                 http_version=1,
                                 worker_threads=worker_threads,
@@ -381,7 +387,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                                 ledger_chunk_bytes=ledger_chunk_bytes,
                                 snapshot_tx_interval=snapshot_tx_interval,
                             )
-                            if args.virtual:
+                            if "virtual" in args.enclave:
                                 lskv_config = copy.deepcopy(lskv_config)
                                 logger.debug("adding virtual lskv")
                                 if args.http1:
@@ -396,10 +402,10 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                                     configs.append(lskv_config)
 
                             # sgx
-                            if args.sgx:
+                            if "sgx" in args.enclave:
                                 logger.debug("adding sgx lskv")
                                 lskv_config = copy.deepcopy(lskv_config)
-                                lskv_config.sgx = True
+                                lskv_config.enclave = "sgx"
                                 if args.http1:
                                     lskv_config = copy.deepcopy(lskv_config)
                                     lskv_config.http_version = 1
