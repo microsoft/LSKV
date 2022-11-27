@@ -129,7 +129,6 @@ jobs:
         run: nix flake check -L
 
       - name: Export Nix store cache
-        if: steps.nix-cache.outputs.cache-hit != 'true'
         run: |
           nix copy --to /tmp/nixcache --no-check-sigs .#lskv-sandbox-virtual
           nix copy --to /tmp/nixcache --no-check-sigs .#lskv-sandbox-sgx
