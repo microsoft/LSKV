@@ -121,11 +121,15 @@ jobs:
 
       - name: Import Nix store cache
         if: steps.nix-cache.outputs.cache-hit == 'true'
-        run: "nix copy --from /tmp/nixcache --no-check-sigs .#lskv-virtual"
+        run: |
+          nix copy --from /tmp/nixcache --no-check-sigs .#lskv-sandbox-virtual
+          nix copy --from /tmp/nixcache --no-check-sigs .#lskv-sandbox-sgx
 
       - name: Check flake
         run: nix flake check -L
 
       - name: Export Nix store cache
         if: steps.nix-cache.outputs.cache-hit != 'true'
-        run: "nix copy --to file:///tmp/nixcache --no-check-sigs .#lskv-virtual"
+        run: |
+          nix copy --to /tmp/nixcache --no-check-sigs .#lskv-sandbox-virtual
+          nix copy --to /tmp/nixcache --no-check-sigs .#lskv-sandbox-sgx
