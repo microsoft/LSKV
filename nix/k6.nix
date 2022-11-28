@@ -4,7 +4,7 @@
   go,
 }:
 buildGoModule {
-  pname = "k6";
+  name = "k6";
   version = "head";
   src = fetchFromGitHub {
     owner = "grafana";
