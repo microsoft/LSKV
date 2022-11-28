@@ -68,9 +68,19 @@
       };
     };
 
-    devShells.${system}.default = pkgs.mkShell {
-      packages = with pkgs; [
-      ];
-    };
+    devShells.${system}.default =
+      pkgs.mkShell.override
+      {
+        stdenv = pkgs.llvmPackages_10.libcxxStdenv;
+      } {
+        packages = with pkgs; [
+          clang-tools_10
+          shellcheck
+          nodePackages.npm
+          nodejs
+          cmake-format
+          python38
+        ];
+      };
   };
 }
