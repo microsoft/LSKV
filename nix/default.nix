@@ -45,6 +45,8 @@ pkgs.lib.makeScope pkgs.newScope (
         stdenv = pkgs.llvmPackages_10.stdenv;
       };
 
+      k6 = self.callPackage ./k6.nix {};
+
       # A python3 derivation that is extended with some CC related
       # packages.
       python3 = pkgs.python3.override {
