@@ -50,7 +50,6 @@ in
       "-DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=ON"
 
       "-DLVI_MITIGATION=ControlFlow"
-      "-DLVI_MITIGATION_BINDIR=/build/source/build/lvi_mitigation_bin"
     ];
 
     preConfigure = ''
@@ -68,6 +67,9 @@ in
 
       substituteInPlace pkgconfig/*.pc --replace \''${prefix}/@CMAKE_INSTALL_LIBDIR@ @CMAKE_INSTALL_LIBDIR@
       substituteInPlace pkgconfig/*.pc --replace \''${prefix}/@CMAKE_INSTALL_INCLUDEDIR@ @CMAKE_INSTALL_INCLUDEDIR@
+
+      # since expansion isn't possible in cmakeFlags
+      cmakeFlags="$cmakeFlags -DLVI_MITIGATION_BINDIR=$PWD/build/lvi_mitigation_bin"
     '';
 
     nativeBuildInputs = [cmake ninja perl];
