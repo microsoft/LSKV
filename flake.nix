@@ -73,14 +73,22 @@
       {
         stdenv = pkgs.llvmPackages_10.libcxxStdenv;
       } {
-        packages = with pkgs; [
-          clang-tools_10
-          shellcheck
-          nodePackages.npm
-          nodejs
-          cmake-format
-          python38
-        ];
+        packages = with pkgs;
+          [
+            clang-tools_10
+            shellcheck
+            nodePackages.npm
+            nodejs
+            cmake-format
+
+            # for benchmarking
+            python3Packages.pandas
+            python3Packages.loguru
+          ]
+          ++ [
+            nix.python3.pkgs.cimetrics
+            nix.lskv-sandbox-virtual
+          ];
       };
   };
 }
