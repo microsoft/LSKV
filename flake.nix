@@ -69,10 +69,8 @@
     };
 
     devShells.${system}.default =
-      pkgs.mkShell.override
+      pkgs.mkShell
       {
-        stdenv = pkgs.llvmPackages_10.libcxxStdenv;
-      } {
         packages = with pkgs;
           [
             clang-tools_10
@@ -89,6 +87,7 @@
             nix.python3.pkgs.cimetrics
             nix.lskv-sandbox-virtual
           ];
+        inputsFrom = [nix.lskv-virtual];
       };
   };
 }
