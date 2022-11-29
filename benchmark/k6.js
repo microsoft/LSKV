@@ -13,10 +13,35 @@ const maxVUs = __ENV.MAX_VUS;
 const func = __ENV.FUNC;
 const content_type = __ENV.CONTENT_TYPE;
 
-const duration_s = 10;
+const duration_s = 5;
+const stageCount = 5;
 
 const grpc_client = new grpc.Client();
 grpc_client.load(["definitions"], "../../proto/etcd.proto");
+
+function getStages() {
+    // start with a warm up
+    let stages = [{target: 100, duration: '1s'}]
+    // ramp up
+    for (let i = 0; i < stageCount; i++) {
+        const target = Math.floor(rate * (i+1/stageCount))
+        // initial quick ramp up
+        stages.push({target: target, duration: `1s`})
+        // followed by steady state for a bit
+        stages.push({target: target, duration: `${duration_s}s`})
+    }
+    // ramp down
+    for (let i = stageCount-1; i >= 0; i--) {
+        const target = Math.floor(rate * (i+1/stageCount))
+        // initial quick ramp down
+        stages.push({target: target, duration: `1s`})
+        // followed by steady state for a bit
+        stages.push({target: target, duration: `${duration_s}s`})
+    }
+    // end with a cool-down
+    stages.push({target: 100, duration: '1s'});
+    return stages
+}
 
 export let options = {
   tlsAuth: [
@@ -28,13 +53,13 @@ export let options = {
   insecureSkipTLSVerify: true,
   scenarios: {
     default: {
-      executor: "constant-arrival-rate",
+      executor: "ramping-arrival-rate",
       exec: func,
-      rate: rate,
-      duration: `${duration_s}s`,
+      startRate: 100,
       timeUnit: "1s",
       preAllocatedVUs: preAllocatedVUs,
       maxVUs: maxVUs,
+      stages: getStages(),
     },
   },
 };
