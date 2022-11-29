@@ -82,6 +82,7 @@
             # for benchmarking
             python3Packages.pandas
             python3Packages.loguru
+            jupyter
           ]
           ++ [
             nix.python3.pkgs.cimetrics
