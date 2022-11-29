@@ -7,12 +7,12 @@ Analysis utils.
 """
 
 import json
-import numpy as np
 import os
 import textwrap
 from typing import List, Tuple
 
 import common
+import numpy as np
 import pandas as pd  # type: ignore
 import seaborn as sns  # type: ignore
 
@@ -457,6 +457,64 @@ class Analyser:
 
         return plot
 
+    def plot_percentile_latency_over_time(
+        self, data: pd.DataFrame,row=None,col=None,
+        # pylint: disable=dangerous-default-value
+        ignore_vars=[],
+        filename="",
+        interval = 1000,
+        percentile=.99,
+    ):
+        """
+        Plot throughput throughout the experiment duration.
+        """
+        x_column = "mid"
+        y_column = "latency_ms"
+        hue = "vars"
+
+        var, invariant_vars = condense_vars(
+            data, [x_column, y_column, row, col, hue] + ignore_vars
+        )
+        data[hue] = var
+        # fill in missing values so that groupby works
+        data[hue].fillna("", inplace=True)
+
+        end = data["start_ms"].max()
+        group_cols = [pd.cut(data["start_ms"], np.arange(0, end, interval)), hue]
+        if row:
+            group_cols.append(row)
+        if col:
+            group_cols.append(col)
+        grouped = data.groupby(group_cols)
+
+        latencies = grouped.quantile(percentile)
+        mid = latencies.index.map(lambda x : (x[0].left + x[0].right) // 2)
+        latencies[x_column] = mid
+
+        throughput_data = grouped.first()
+        throughput_data[x_column] = latencies[x_column]
+        throughput_data[y_column] = latencies[y_column]
+
+        plot = sns.relplot(
+            kind="line", data=throughput_data, x=x_column, y=y_column, hue=hue, row=row, col=col
+        )
+
+        plot.figure.subplots_adjust(top=0.9)
+        plot.figure.suptitle(make_title(invariant_vars))
+
+        # add tick labels to each x axis
+        for axes in plot.axes.flatten():
+            axes.tick_params(labelbottom=True)
+
+        if not filename:
+            filename = f"latency_percentile_over_time-{x_column}-{row}-{col}-{hue}-{percentile}"
+
+        plot.figure.savefig(os.path.join(self.plot_dir(), f"{filename}.svg"))
+        plot.figure.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
+
+        return plot
+
+
     def plot_throughput_over_time(
         self,
         data: pd.DataFrame,
@@ -490,7 +548,7 @@ class Analyser:
             group_cols.append(col)
         grouped = data.groupby(group_cols)
 
-        throughputs = grouped.count() // (interval // 1000)
+        throughputs = grouped.count() // (interval / 1000)
         mid = throughputs.index.map(lambda x : (x[0].left + x[0].right) // 2)
         throughputs[x_column] = mid
 
