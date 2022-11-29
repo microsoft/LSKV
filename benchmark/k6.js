@@ -20,27 +20,27 @@ const grpc_client = new grpc.Client();
 grpc_client.load(["definitions"], "../../proto/etcd.proto");
 
 function getStages() {
-    // start with a warm up
-    let stages = [{target: 100, duration: '1s'}]
-    // ramp up
-    for (let i = 0; i < stageCount; i++) {
-        const target = Math.floor(rate * (i+1/stageCount))
-        // initial quick ramp up
-        stages.push({target: target, duration: `1s`})
-        // followed by steady state for a bit
-        stages.push({target: target, duration: `${duration_s}s`})
-    }
-    // ramp down
-    for (let i = stageCount-1; i >= 0; i--) {
-        const target = Math.floor(rate * (i+1/stageCount))
-        // initial quick ramp down
-        stages.push({target: target, duration: `1s`})
-        // followed by steady state for a bit
-        stages.push({target: target, duration: `${duration_s}s`})
-    }
-    // end with a cool-down
-    stages.push({target: 100, duration: '1s'});
-    return stages
+  // start with a warm up
+  let stages = [{ target: 100, duration: "1s" }];
+  // ramp up
+  for (let i = 0; i < stageCount; i++) {
+    const target = Math.floor(rate * (i + 1 / stageCount));
+    // initial quick ramp up
+    stages.push({ target: target, duration: `1s` });
+    // followed by steady state for a bit
+    stages.push({ target: target, duration: `${duration_s}s` });
+  }
+  // ramp down
+  for (let i = stageCount - 1; i >= 0; i--) {
+    const target = Math.floor(rate * (i + 1 / stageCount));
+    // initial quick ramp down
+    stages.push({ target: target, duration: `1s` });
+    // followed by steady state for a bit
+    stages.push({ target: target, duration: `${duration_s}s` });
+  }
+  // end with a cool-down
+  stages.push({ target: 100, duration: "1s" });
+  return stages;
 }
 
 export let options = {
