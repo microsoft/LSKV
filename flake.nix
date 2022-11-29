@@ -82,6 +82,7 @@
             # for benchmarking
             python3Packages.pandas
             python3Packages.loguru
+            python3Packages.seaborn
             jupyter
           ]
           ++ [
