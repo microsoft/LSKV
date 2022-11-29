@@ -40,6 +40,7 @@ function getStages() {
   }
   // end with a cool-down
   stages.push({ target: 100, duration: "1s" });
+  console.log(stages)
   return stages;
 }
 
