@@ -458,12 +458,15 @@ class Analyser:
         return plot
 
     def plot_percentile_latency_over_time(
-        self, data: pd.DataFrame,row=None,col=None,
+        self,
+        data: pd.DataFrame,
+        row=None,
+        col=None,
         # pylint: disable=dangerous-default-value
         ignore_vars=[],
         filename="",
-        interval = 1000,
-        percentile=.99,
+        interval=1000,
+        percentile=0.99,
     ):
         """
         Plot throughput throughout the experiment duration.
@@ -488,7 +491,7 @@ class Analyser:
         grouped = data.groupby(group_cols)
 
         latencies = grouped.quantile(percentile)
-        mid = latencies.index.map(lambda x : (x[0].left + x[0].right) // 2)
+        mid = latencies.index.map(lambda x: (x[0].left + x[0].right) // 2)
         latencies[x_column] = mid
 
         throughput_data = grouped.first()
@@ -496,7 +499,13 @@ class Analyser:
         throughput_data[y_column] = latencies[y_column]
 
         plot = sns.relplot(
-            kind="line", data=throughput_data, x=x_column, y=y_column, hue=hue, row=row, col=col
+            kind="line",
+            data=throughput_data,
+            x=x_column,
+            y=y_column,
+            hue=hue,
+            row=row,
+            col=col,
         )
 
         plot.figure.subplots_adjust(top=0.9)
@@ -514,7 +523,6 @@ class Analyser:
 
         return plot
 
-
     def plot_throughput_over_time(
         self,
         data: pd.DataFrame,
@@ -523,7 +531,7 @@ class Analyser:
         # pylint: disable=dangerous-default-value
         ignore_vars=[],
         filename="",
-        interval = 1000,
+        interval=1000,
     ):
         """
         Plot throughput throughout the experiment duration.
@@ -531,7 +539,6 @@ class Analyser:
         x_column = "mid"
         y_column = "latency_ms"
         hue = "vars"
-
 
         var, invariant_vars = condense_vars(
             data, [x_column, y_column, row, col, hue] + ignore_vars
@@ -549,7 +556,7 @@ class Analyser:
         grouped = data.groupby(group_cols)
 
         throughputs = grouped.count() // (interval / 1000)
-        mid = throughputs.index.map(lambda x : (x[0].left + x[0].right) // 2)
+        mid = throughputs.index.map(lambda x: (x[0].left + x[0].right) // 2)
         throughputs[x_column] = mid
 
         throughput_data = grouped.first()
@@ -557,7 +564,13 @@ class Analyser:
         throughput_data[y_column] = throughputs[y_column]
 
         plot = sns.relplot(
-            kind="line", data=throughput_data, x=x_column, y=y_column, hue=hue, row=row, col=col
+            kind="line",
+            data=throughput_data,
+            x=x_column,
+            y=y_column,
+            hue=hue,
+            row=row,
+            col=col,
         )
 
         plot.figure.subplots_adjust(top=0.9)
