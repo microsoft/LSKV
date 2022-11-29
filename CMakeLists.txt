@@ -32,8 +32,6 @@ if(NOT TARGET ${CCF})
   find_package(${CCF} REQUIRED)
 endif()
 
-find_package(${CCF} REQUIRED)
-
 add_subdirectory(proto)
 
 option(PUBLIC_LEASES
