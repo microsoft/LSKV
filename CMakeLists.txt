@@ -42,8 +42,6 @@ option(VERBOSE_LOGGING "enable verbose logging" OFF)
 
 add_compile_definitions(LSKV_VERSION="${LSKV_VERSION}")
 
-message(STATUS "CCF_DIR: ${CCF_DIR}")
-
 add_ccf_app(
   lskv
   SRCS
