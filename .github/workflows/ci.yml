@@ -99,3 +99,18 @@ jobs:
         run: ./scripts/check-issues.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  nix:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v18
+
+      - name: Run ci checks
+        run: nix build .#ci-check-all -L
