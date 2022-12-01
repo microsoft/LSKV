@@ -87,7 +87,6 @@
           ]
           ++ [
             nix.python3.pkgs.cimetrics
-            nix.lskv-sandbox-virtual
           ];
         inputsFrom = [nix.lskv-virtual];
       };
