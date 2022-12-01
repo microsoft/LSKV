@@ -320,17 +320,15 @@ namespace app
           ccf::endpoints::CommandEndpointContext& ctx,
           etcdserverpb::WatchRequest&& payload,
           ccf::grpc::StreamPtr<etcdserverpb::WatchResponse>&& out_stream) {
-          static bool is_streaming = true;
-          if (!is_streaming)
+          // TODO: For now, CCF accepts incomplete client stream payloads so
+          // simply ignore those for now
+          if (!payload.has_create_request())
           {
-            return ccf::grpc::make_success();
+            return ccf::grpc::make_pending();
           }
-          this->watch_impl(
-            ctx,
-            std::move(payload),
-            ccf::grpc::detach_stream(std::move(out_stream)));
-          return ccf::grpc::make_success();
-          is_streaming = false;
+          watch_stream = ccf::grpc::detach_stream(std::move(out_stream));
+          this->watch_impl(ctx, std::move(payload));
+          return ccf::grpc::make_pending();
         };
       make_command_endpoint(
         "/etcdserverpb.Watch/Watch",
@@ -342,35 +340,45 @@ namespace app
         .install();
     }
 
+    ccf::grpc::DetachedStreamPtr<etcdserverpb::WatchResponse> watch_stream;
+
     void watch_impl(
       ccf::endpoints::CommandEndpointContext& ctx,
-      etcdserverpb::WatchRequest&& payload,
-      ccf::grpc::DetachedStreamPtr<etcdserverpb::WatchResponse>&& stream)
+      etcdserverpb::WatchRequest&& payload)
     {
       CCF_APP_INFO("Watch");
       CCF_APP_INFO("Watch request received {}", payload.DebugString());
 
       CCF_APP_INFO("Made detached stream");
 
-      if (!payload.has_create_request())
-      {
-        auto error = ccf::grpc::make_error<etcdserverpb::WatchResponse>(
-          GRPC_STATUS_FAILED_PRECONDITION, "non-create request first");
-        return;
-      }
-
-      // TODO: create a watch id
       const auto watch_id = 20;
 
       // notify the client of creation
-      etcdserverpb::WatchResponse response;
-      response.set_watch_id(watch_id);
-      response.set_created(true);
-      auto committed = last_committed_txid();
-      fill_header(*response.mutable_header(), committed);
+      {
+        etcdserverpb::WatchResponse response;
+        response.set_watch_id(watch_id);
+        response.set_created(true);
 
-      stream->stream_msg(response);
-      CCF_APP_INFO("Sent response");
+        auto committed = last_committed_txid();
+        fill_header(*response.mutable_header(), committed);
+        watch_stream->stream_msg(response);
+      }
+
+      // Stream first message
+      {
+        etcdserverpb::WatchResponse response;
+        response.set_watch_id(watch_id);
+        // response.set_created(true);
+        auto* event = response.add_events();
+        event->set_type(etcdserverpb::Event::PUT);
+        auto* kv = event->mutable_kv();
+        kv->set_key("my_key");
+        kv->set_value("my_value");
+
+        auto committed = last_committed_txid();
+        fill_header(*response.mutable_header(), committed);
+        watch_stream->stream_msg(response);
+      }
 
       // TODO: add the watch to the store
 
