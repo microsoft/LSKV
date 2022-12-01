@@ -74,8 +74,19 @@ class LSKVStore(Store):
                 "w",
                 encoding="utf-8",
             ) as err:
+                package = "build/liblskv"
+                if self.config.enclave == "sgx":
+                    package += ".enclave.so.signed"
+                else:
+                    package += ".virtual.so"
                 lskv_cmd = [
-                    f"lskv-sandbox.sh",
+                    f"sandbox.sh", # expect to find the sandbox in the path
+                    "--enclave-type",
+                    "virtual" if self.config.enclave == "virtual" else "release",
+                    "--enclave-platform",
+                    self.config.enclave,
+                    "--package",
+                    package,
                     "--verbose",
                     "--worker-threads",
                     str(self.config.worker_threads),
