@@ -16,7 +16,7 @@ bin/
 /.venv/
 /certs/
 
-/.ipynb_checkpoints/
+.ipynb_checkpoints/
 /plots/
 
 *.pyc
