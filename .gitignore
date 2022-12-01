@@ -1,4 +1,4 @@
-build/**
+build/
 *.deb
 /.venv_ccf_sandbox/
 workspace/
@@ -20,8 +20,11 @@ bin/
 /plots/
 
 *.pyc
+*.egg-info
 
 *.out
 *.err
 
 /docker-workspace/
+
+/*.parquet

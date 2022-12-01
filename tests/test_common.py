@@ -17,6 +17,8 @@ import pytest
 import typing_extensions
 from loguru import logger
 
+from lskv import governance  # type: ignore
+
 
 class Sandbox:
     """
@@ -108,7 +110,7 @@ class Sandbox:
                 "w",
                 encoding="utf-8",
             ) as err:
-                libargs = ["build/liblskv.virtual.so"]
+                libargs = ["build/liblskv.virtual.so", "-e", "virtual", "-t", "virtual"]
                 env = os.environ.copy()
                 env["VENV_DIR"] = os.path.join(os.getcwd(), ".venv")
                 nodes = []
@@ -159,6 +161,18 @@ class Sandbox:
         """
         return f"{self.workspace()}/sandbox_common/user0_privk.pem"
 
+    def member0_cert(self) -> str:
+        """
+        Return the path to the CA certificate.
+        """
+        return f"{self.workspace()}/sandbox_common/member0_cert.pem"
+
+    def member0_key(self) -> str:
+        """
+        Return the path to the CA certificate.
+        """
+        return f"{self.workspace()}/sandbox_common/member0_privk.pem"
+
     def etcdctl_client(self) -> List[str]:
         """
         Get the etcdctl client command for this datastore.
@@ -185,6 +199,27 @@ def fixture_sandbox():
     with sandbox:
         ready = sandbox.wait_for_ready()
         if ready:
+            # setup new constitution
+            # this is needed since the ccf sandbox doesn't take a set of constitution files yet
+            gov_client = governance.Client(
+                "127.0.0.1:8000",
+                sandbox.cacert(),
+                sandbox.member0_key(),
+                sandbox.member0_cert(),
+            )
+            proposal = governance.Proposal()
+            proposal.set_constitution(
+                [
+                    "constitution/actions.js",
+                    "constitution/apply.js",
+                    "constitution/resolve.js",
+                    "constitution/validate.js",
+                ]
+            )
+            res = gov_client.propose(proposal)
+            if res.state != "Accepted":
+                gov_client.accept(res.proposal_id)
+
             yield sandbox
         else:
             raise Exception("failed to prepare the sandbox")
@@ -213,6 +248,19 @@ def fixture_http1_client_unauthenticated(sandbox):
         http2=False, verify=cacert, base_url="https://127.0.0.1:8000"
     ) as client:
         yield HttpClient(client)
+
+
+@pytest.fixture(name="governance_client", scope="module")
+def fixture_governance_client(sandbox):
+    """
+    Make a governance client for the sandbox.
+    """
+    return governance.Client(
+        "127.0.0.1:8000",
+        sandbox.cacert(),
+        sandbox.member0_key(),
+        sandbox.member0_cert(),
+    )
 
 
 def b64encode(in_str: str) -> str:

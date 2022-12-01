@@ -335,6 +335,21 @@ function updateServiceConfig(new_config) {
   }
 }
 
+const publicRecordsMapName = "public:records";
+const privateRecordsMapName = "records";
+const publicPrefixMapName = "public:ccf.gov.public_prefixes";
+
+function setPublicPrefix(public_prefix) {
+  // set the prefix name
+  const prefix_buf = ccf.strToBuf(public_prefix);
+  ccf.kv[publicPrefixMapName].set(prefix_buf, new ArrayBuffer(0));
+}
+
+function removePublicPrefix(public_prefix) {
+  // delete the prefix name
+  ccf.kv[publicPrefixMapName].delete(ccf.strToBuf(public_prefix));
+}
+
 const actions = new Map([
   [
     "set_constitution",
@@ -641,136 +656,6 @@ const actions = new Map([
             : undefined;
         const next_identity = ccf.strToBuf(args.next_service_identity);
         ccf.node.transitionServiceToOpen(previous_identity, next_identity);
-      }
-    ),
-  ],
-  [
-    "set_js_app",
-    new Action(
-      function (args) {
-        const bundle = args.bundle;
-        checkType(bundle, "object", "bundle");
-
-        let prefix = "bundle.modules";
-        checkType(bundle.modules, "array", prefix);
-        for (const [i, module] of bundle.modules.entries()) {
-          checkType(module, "object", `${prefix}[${i}]`);
-          checkType(module.name, "string", `${prefix}[${i}].name`);
-          checkType(module.module, "string", `${prefix}[${i}].module`);
-        }
-
-        prefix = "bundle.metadata";
-        checkType(bundle.metadata, "object", prefix);
-        checkType(bundle.metadata.endpoints, "object", `${prefix}.endpoints`);
-        for (const [url, endpoint] of Object.entries(
-          bundle.metadata.endpoints
-        )) {
-          checkType(endpoint, "object", `${prefix}.endpoints["${url}"]`);
-          for (const [method, info] of Object.entries(endpoint)) {
-            const prefix2 = `${prefix}.endpoints["${url}"]["${method}"]`;
-            checkType(info, "object", prefix2);
-            checkType(info.js_module, "string", `${prefix2}.js_module`);
-            checkType(info.js_function, "string", `${prefix2}.js_function`);
-            checkEnum(
-              info.mode,
-              ["readwrite", "readonly", "historical"],
-              `${prefix2}.mode`
-            );
-            checkEnum(
-              info.forwarding_required,
-              ["sometimes", "always", "never"],
-              `${prefix2}.forwarding_required`
-            );
-            checkType(info.openapi, "object?", `${prefix2}.openapi`);
-            checkType(
-              info.openapi_hidden,
-              "boolean?",
-              `${prefix2}.openapi_hidden`
-            );
-            checkType(
-              info.authn_policies,
-              "array",
-              `${prefix2}.authn_policies`
-            );
-            for (const [i, policy] of info.authn_policies.entries()) {
-              checkType(policy, "string", `${prefix2}.authn_policies[${i}]`);
-            }
-            if (!bundle.modules.some((m) => m.name === info.js_module)) {
-              throw new Error(`module '${info.js_module}' not found in bundle`);
-            }
-          }
-        }
-
-        checkType(
-          args.disable_bytecode_cache,
-          "boolean?",
-          "disable_bytecode_cache"
-        );
-      },
-      function (args) {
-        const modulesMap = ccf.kv["public:ccf.gov.modules"];
-        const modulesQuickJsBytecodeMap =
-          ccf.kv["public:ccf.gov.modules_quickjs_bytecode"];
-        const modulesQuickJsVersionVal =
-          ccf.kv["public:ccf.gov.modules_quickjs_version"];
-        const endpointsMap = ccf.kv["public:ccf.gov.endpoints"];
-        modulesMap.clear();
-        endpointsMap.clear();
-
-        const bundle = args.bundle;
-        for (const module of bundle.modules) {
-          const path = "/" + module.name;
-          const pathBuf = ccf.strToBuf(path);
-          const moduleBuf = ccf.strToBuf(module.module);
-          modulesMap.set(pathBuf, moduleBuf);
-        }
-
-        if (args.disable_bytecode_cache) {
-          modulesQuickJsBytecodeMap.clear();
-          modulesQuickJsVersionVal.clear();
-        } else {
-          ccf.refreshAppBytecodeCache();
-        }
-
-        for (const [url, endpoint] of Object.entries(
-          bundle.metadata.endpoints
-        )) {
-          for (const [method, info] of Object.entries(endpoint)) {
-            const key = `${method.toUpperCase()} ${url}`;
-            const keyBuf = ccf.strToBuf(key);
-
-            info.js_module = "/" + info.js_module;
-            const infoBuf = ccf.jsonCompatibleToBuf(info);
-            endpointsMap.set(keyBuf, infoBuf);
-          }
-        }
-      }
-    ),
-  ],
-  [
-    "remove_js_app",
-    new Action(
-      function (args) {},
-      function (args) {
-        const modulesMap = ccf.kv["public:ccf.gov.modules"];
-        const modulesQuickJsBytecodeMap =
-          ccf.kv["public:ccf.gov.modules_quickjs_bytecode"];
-        const modulesQuickJsVersionVal =
-          ccf.kv["public:ccf.gov.modules_quickjs_version"];
-        const endpointsMap = ccf.kv["public:ccf.gov.endpoints"];
-        modulesMap.clear();
-        modulesQuickJsBytecodeMap.clear();
-        modulesQuickJsVersionVal.clear();
-        endpointsMap.clear();
-      }
-    ),
-  ],
-  [
-    "refresh_js_app_bytecode_cache",
-    new Action(
-      function (args) {},
-      function (args) {
-        ccf.refreshAppBytecodeCache();
       }
     ),
   ],
@@ -1332,6 +1217,34 @@ const actions = new Map([
         }
       },
       function (args) {}
+    ),
+  ],
+  [
+    "set_public_prefix",
+    new Action(
+      // validate
+      function (args) {
+        // TODO(#196): this should probably be a base64 string so it can represent full byte vectors
+        checkType(args.public_prefix, "string", "public_prefix");
+      },
+      // apply
+      function (args) {
+        setPublicPrefix(args.public_prefix);
+      }
+    ),
+  ],
+  [
+    "remove_public_prefix",
+    new Action(
+      // validate
+      function (args) {
+        // TODO(#196): this should probably be a base64 string so it can represent full byte vectors
+        checkType(args.public_prefix, "string", "public_prefix");
+      },
+      // apply
+      function (args) {
+        removePublicPrefix(args.public_prefix);
+      }
     ),
   ],
 ]);

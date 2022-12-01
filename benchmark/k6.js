@@ -4,14 +4,45 @@ import { check, randomSeed } from "k6";
 import http from "k6/http";
 import encoding from "k6/encoding";
 import exec from "k6/execution";
+import grpc from "k6/net/grpc";
 
 const rate = Number(__ENV.RATE);
 const workspace = __ENV.WORKSPACE;
 const preAllocatedVUs = __ENV.PRE_ALLOCATED_VUS;
 const maxVUs = __ENV.MAX_VUS;
 const func = __ENV.FUNC;
+const content_type = __ENV.CONTENT_TYPE;
 
-const duration_s = 10;
+const duration_s = 5;
+const stageCount = 5;
+
+const grpc_client = new grpc.Client();
+grpc_client.load(["definitions"], "../../proto/etcd.proto");
+
+function getStages() {
+  // start with a warm up
+  let stages = [{ target: 100, duration: "1s" }];
+  // ramp up
+  for (let i = 0; i < stageCount; i++) {
+    const target = Math.floor(rate * (i + 1 / stageCount));
+    // initial quick ramp up
+    stages.push({ target: target, duration: `1s` });
+    // followed by steady state for a bit
+    stages.push({ target: target, duration: `${duration_s}s` });
+  }
+  // ramp down
+  for (let i = stageCount - 1; i >= 0; i--) {
+    const target = Math.floor(rate * (i + 1 / stageCount));
+    // initial quick ramp down
+    stages.push({ target: target, duration: `1s` });
+    // followed by steady state for a bit
+    stages.push({ target: target, duration: `${duration_s}s` });
+  }
+  // end with a cool-down
+  stages.push({ target: 100, duration: "1s" });
+  console.log(stages);
+  return stages;
+}
 
 export let options = {
   tlsAuth: [
@@ -23,13 +54,13 @@ export let options = {
   insecureSkipTLSVerify: true,
   scenarios: {
     default: {
-      executor: "constant-arrival-rate",
+      executor: "ramping-arrival-rate",
       exec: func,
-      rate: rate,
-      duration: `${duration_s}s`,
+      startRate: 100,
       timeUnit: "1s",
       preAllocatedVUs: preAllocatedVUs,
       maxVUs: maxVUs,
+      stages: getStages(),
     },
   },
 };
@@ -39,25 +70,25 @@ function key(i) {
 }
 const val0 = encoding.b64encode("value0");
 
-const json_header_params = {
-  headers: {
-    "Content-Type": "application/json",
-  },
-};
+const addr = "127.0.0.1:8000";
+const host = `https://${addr}`;
 
-const host = "https://127.0.0.1:8000";
 const total_requests = rate * duration_s;
 const prefill_keys = total_requests / 2;
 
 export function setup() {
   randomSeed(123);
 
+  if (content_type == "grpc") {
+    grpc_client.connect(addr, {});
+  }
+
   let receipt_txids = [];
   var txid = "";
   // trigger getting some cached ones too (maybe)
   for (let i = 0; i < prefill_keys; i++) {
     // issue some writes so we have things to get receipts for
-    txid = put_single(i);
+    txid = put_single(i, "setup");
     receipt_txids.push(txid);
   }
   return receipt_txids;
@@ -77,22 +108,52 @@ function check_committed(status) {
 }
 
 // perform a single put request at a preset key
-export function put_single(i = 0) {
-  let payload = JSON.stringify({
-    key: key(i),
-    value: val0,
-  });
+export function put_single(i = 0, tag = "put_single") {
+  if (content_type == "grpc") {
+    if (tag != "setup" && exec.vu.iterationInInstance == 0) {
+      grpc_client.connect(addr, {});
+    }
+    const payload = {
+      key: key(i),
+      value: val0,
+    };
+    const response = grpc_client.invoke("etcdserverpb.KV/Put", payload);
 
-  let response = http.post(`${host}/v3/kv/put`, payload, json_header_params);
+    check(response, {
+      "status is 200": (r) => r && r.status === grpc.StatusOK,
+    });
 
-  check_success(response);
+    const res = response.message;
+    const header = res["header"];
+    const term = header["raftTerm"];
+    const rev = header["revision"];
+    const txid = `${term}.${rev}`;
+    return txid;
+  } else {
+    let payload = JSON.stringify({
+      key: key(i),
+      value: val0,
+    });
+    let params = {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      tags: {
+        caller: tag,
+      },
+    };
 
-  const res = response.json();
-  const header = res["header"];
-  const term = header["raftTerm"];
-  const rev = header["revision"];
-  const txid = `${term}.${rev}`;
-  return txid;
+    let response = http.post(`${host}/v3/kv/put`, payload, params);
+
+    check_success(response);
+
+    const res = response.json();
+    const header = res["header"];
+    const term = header["raftTerm"];
+    const rev = header["revision"];
+    const txid = `${term}.${rev}`;
+    return txid;
+  }
 }
 
 // check the status of a transaction id with the service
@@ -115,56 +176,125 @@ function wait_for_committed(txid) {
 
 // perform a single put request but poll until it is committed
 export function put_single_wait(i = 0) {
-  const txid = put_single(i);
+  const txid = put_single(i, "put_single_wait");
   wait_for_committed(txid);
 }
 
 // perform a single get request at a preset key
-export function get_single(i = 0) {
-  let payload = JSON.stringify({
-    key: key(i),
-  });
+export function get_single(i = 0, tag = "get_single") {
+  if (content_type == "grpc") {
+    if (tag != "setup" && exec.vu.iterationInInstance == 0) {
+      grpc_client.connect(addr, {});
+    }
+    const payload = {
+      key: key(i),
+    };
+    const response = grpc_client.invoke("etcdserverpb.KV/Range", payload);
 
-  let response = http.post("${host}/v3/kv/range", payload, json_header_params);
+    check(response, {
+      "status is 200": (r) => r && r.status === grpc.StatusOK,
+    });
+  } else {
+    let payload = JSON.stringify({
+      key: key(i),
+    });
+    let params = {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      tags: {
+        caller: tag,
+      },
+    };
 
-  check_success(response);
+    let response = http.post(`${host}/v3/kv/range`, payload, params);
+
+    check_success(response);
+  }
 }
 
 // perform a single get request at a preset key
-export function get_range(i = 0) {
+export function get_range(i = 0, tag = "get_range") {
   let payload = JSON.stringify({
     key: key(i),
     range_end: key(i + 1000),
   });
+  let params = {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    tags: {
+      caller: tag,
+    },
+  };
 
-  let response = http.post("${host}/v3/kv/range", payload, json_header_params);
+  let response = http.post(`${host}/v3/kv/range`, payload, params);
 
   check_success(response);
 }
 
 // perform a single delete request at a preset key
-export function delete_single(i = 0) {
-  let payload = JSON.stringify({
-    key: key(i),
-  });
+export function delete_single(i = 0, tag = "delete_single") {
+  if (content_type == "grpc") {
+    if (tag != "setup" && exec.vu.iterationInInstance == 0) {
+      grpc_client.connect(addr, {});
+    }
+    const payload = {
+      key: key(i),
+    };
+    const response = grpc_client.invoke("etcdserverpb.KV/DeleteRange", payload);
 
-  let response = http.post(
-    `${host}/v3/kv/delete_range`,
-    payload,
-    json_header_params
-  );
+    check(response, {
+      "status is 200": (r) => r && r.status === grpc.StatusOK,
+    });
+  } else {
+    let payload = JSON.stringify({
+      key: key(i),
+    });
+    let params = {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      tags: {
+        caller: tag,
+      },
+    };
 
-  check_success(response);
+    let response = http.post(`${host}/v3/kv/delete_range`, payload, params);
+
+    check_success(response);
+  }
+}
+
+export function put_get_delete(i = 0) {
+  put_single(i);
+  get_single(i);
+  delete_single(i);
 }
 
 // perform a single delete request but poll until it is committed
 export function delete_single_wait(i = 0) {
-  const txid = delete_single(i);
+  const txid = delete_single(i, "delete_single_wait");
   wait_for_committed(txid);
 }
 
 // Randomly select a request type to run
 export function mixed_single() {
+  const rnd = Math.random();
+  if (rnd >= 0 && rnd < 0.6) {
+    // 60% reads
+    get_single();
+  } else if (rnd >= 0.6 && rnd < 0.9) {
+    // 30% writes
+    put_single();
+  } else {
+    // 10% deletes
+    delete_single();
+  }
+}
+
+// Randomly select a request type to run
+export function mixed_single_wait() {
   const rnd = Math.random();
   if (rnd >= 0 && rnd < 0.6) {
     // 60% reads
@@ -184,7 +314,7 @@ export function mixed_single() {
   }
 }
 
-export function get_receipt(receipt_txids) {
+export function get_receipt(receipt_txids, tag = "get_receipt") {
   const txid =
     receipt_txids[exec.scenario.iterationInTest % receipt_txids.length];
 
@@ -193,11 +323,15 @@ export function get_receipt(receipt_txids) {
     revision: revision,
     raftTerm: raftTerm,
   });
+  let params = {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    tags: {
+      caller: tag,
+    },
+  };
 
-  const response = http.post(
-    `${host}/v3/receipt/get_receipt`,
-    payload,
-    json_header_params
-  );
+  const response = http.post(`${host}/v3/receipt/get_receipt`, payload, params);
   check_success(response);
 }

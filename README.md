@@ -19,10 +19,10 @@ make install-ccf-virtual
 Or
 
 ```bash
-$ wget https://github.com/microsoft/CCF/releases/download/ccf-3.0.0-rc2/ccf_virtual_3.0.0_rc2_amd64.deb
-$ sudo dpkg -i ccf_virtual_3.0.0_rc2_amd64.deb # Installs CCF under /opt/ccf_virtual
+$ wget https://github.com/microsoft/CCF/releases/download/ccf-4.0.0-dev0/ccf_virtual_4.0.0_dev0_amd64.deb
+$ sudo dpkg -i ccf_virtual_4.0.0_dev0_amd64.deb # Installs CCF under /opt/ccf_virtual
 $ cat /opt/ccf_virtual/share/VERSION_LONG
-ccf-3.0.0-rc2
+ccf-4.0.0-dev0
 $ /opt/ccf_virtual/getting_started/setup_vm/run.sh /opt/ccf_virtual/getting_started/setup_vm/app-dev.yml  # Install dependencies
 ```
 
@@ -73,7 +73,7 @@ The cmake build can be configured with the following lskv-specific options:
 
 - `COMPILE_TARGET`: build LSKV for a specific deployment target, one of [virtual;sgx;snp], defaults to virtual
   - **Note**: this requires the corresponding `ccf_${COMPILE_TARGET}` package to be installed
-- `PUBLIC_MAPS`: store data in public maps (publicly visible in the ledger)
+- `PUBLIC_LEASES`: store lease data in public maps (publicly visible in the ledger)
 - `VERBOSE_LOGGING`: enable verbose logging which may output private data to logs
 
 ## Testing

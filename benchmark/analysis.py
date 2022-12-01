@@ -8,11 +8,21 @@ Analysis utils.
 
 import json
 import os
+import textwrap
 from typing import List, Tuple
 
 import common
+import numpy as np
 import pandas as pd  # type: ignore
 import seaborn as sns  # type: ignore
+
+
+def make_title(invariant_vars: List[str]) -> str:
+    """
+    Make a title for the plot.
+    """
+    alltogether = " ".join(invariant_vars)
+    return textwrap.fill(alltogether, 80)
 
 
 class Analyser:
@@ -20,17 +30,18 @@ class Analyser:
     Analyser for helper functions.
     """
 
-    def __init__(self, benchmark: str):
+    def __init__(self, benchmark: str, bench_results: str = common.BENCH_DIR):
         """
         Initialise analyser.
         """
         self.benchmark = benchmark
+        self.bench_results = bench_results
 
     def bench_dir(self) -> str:
         """
         Return the bench directory where results are stored.
         """
-        return os.path.join("..", common.BENCH_DIR, self.benchmark)
+        return os.path.join("..", self.bench_results, self.benchmark)
 
     def plot_dir(self) -> str:
         """
@@ -61,14 +72,18 @@ class Analyser:
             data.drop(["timestamp_us"], axis=1, inplace=True)
             return data, 0
         if self.benchmark == "perf":
-            start = data["start_us"].min()
-            data["start_us"] -= start
-            data["start_ms"] = data["start_us"] / 1000
-            data.drop(["start_us"], axis=1, inplace=True)
-            return data, 0
+            start = data["sendTime"].min()
+            data["sendTime"] -= start
+            data["start_ms"] = data["sendTime"] * 1000
+            data.drop(["sendTime"], axis=1, inplace=True)
+            return data, start
         if self.benchmark == "k6":
             starts = data["timestamp"]
-            start = starts.min()
+            reqs = data[
+                data["metric_name"].isin(["http_req_duration", "grpc_req_duration"])
+            ]
+            reqs = reqs[reqs["group"] != "::setup"]
+            start = reqs["timestamp"].min()
             starts -= start
             data["start_ms"] = starts / 1000
             data.drop(["timestamp"], axis=1, inplace=True)
@@ -88,7 +103,9 @@ class Analyser:
             data["end_ms"] = data["start_ms"] + (data["latency_us"] / 1000)
             return data
         if self.benchmark == "perf":
-            data["end_ms"] = data["start_ms"] + (data["latency_us"] / 1000)
+            data["receiveTime"] -= start
+            data["end_ms"] = data["receiveTime"] * 1000
+            data.drop(["receiveTime"], axis=1, inplace=True)
             return data
         if self.benchmark == "k6":
             data["end_ms"] = data["start_ms"] + data["metric_value"]
@@ -107,8 +124,7 @@ class Analyser:
             data.drop(["latency_us"], axis=1, inplace=True)
             return data
         if self.benchmark == "perf":
-            data["latency_ms"] = data["latency_us"] / 1000
-            data.drop(["latency_us"], axis=1, inplace=True)
+            data["latency_ms"] = data["end_ms"] - data["start_ms"]
             return data
         if self.benchmark == "k6":
             data["latency_ms"] = data["metric_value"]
@@ -133,10 +149,27 @@ class Analyser:
             ) as config_f:
                 config = json.loads(config_f.read())
 
-            file = os.path.join(bench_dir, config_hash, "timings.csv")
+            if self.benchmark == "perf":
+                file = os.path.join(bench_dir, config_hash, "responses.parquet")
+            else:
+                file = os.path.join(bench_dir, config_hash, "timings.csv")
+
             if not os.path.exists(file):
                 continue
-            dataframe = pd.read_csv(file)
+
+            if self.benchmark == "perf":
+                dataframe = pd.read_parquet(file)
+            else:
+                dataframe = pd.read_csv(file)
+
+            if self.benchmark == "perf":
+                # parse the send dataframe too and store that
+                file = os.path.join(bench_dir, config_hash, "requests.parquet")
+                if not os.path.exists(file):
+                    continue
+                df2 = pd.read_parquet(file)
+                assert len(dataframe) == len(df2)
+                dataframe = dataframe.join(df2.set_index("messageID"), on="messageID")
 
             dataframe, start = self.make_start_ms(dataframe)
             dataframe = self.make_end_ms(dataframe, start)
@@ -186,7 +219,7 @@ class Analyser:
         )
 
         plot.figure.subplots_adjust(top=0.9)
-        plot.figure.suptitle(",".join(invariant_vars))
+        plot.figure.suptitle(make_title(invariant_vars))
 
         # add tick labels to each x axis
         for axes in plot.axes.flatten():
@@ -234,7 +267,7 @@ class Analyser:
         )
 
         plot.figure.subplots_adjust(top=0.9)
-        plot.figure.suptitle(",".join(invariant_vars))
+        plot.figure.suptitle(make_title(invariant_vars))
 
         # add tick labels to each x axis
         for axes in plot.axes.flatten():
@@ -255,6 +288,7 @@ class Analyser:
     def plot_throughput_bar(
         self,
         data: pd.DataFrame,
+        x_column="rate",
         row=None,
         col=None,
         # pylint: disable=dangerous-default-value
@@ -265,20 +299,21 @@ class Analyser:
         Plot a bar graph of throughput.
         """
         hue = "vars"
-        x_column = "rate"
         y_column = "achieved_throughput_ratio"
 
         var, invariant_vars = condense_vars(
             data, [x_column, y_column, row, col, hue] + ignore_vars
         )
         data[hue] = var
+        # fill in missing values so that groupby works
+        data[hue].fillna("", inplace=True)
 
-        group_cols = ["rate", hue]
+        group_cols = [x_column, hue]
         if row:
             group_cols.append(row)
         if col:
             group_cols.append(col)
-        data["rate2"] = data["rate"]
+        data["rate2"] = data[x_column]
         grouped = data.groupby(group_cols)
         throughputs = grouped.first()
 
@@ -286,9 +321,7 @@ class Analyser:
         counts = grouped["start_ms"].count()
         achieved_throughput = counts / durations
 
-        throughputs["achieved_throughput_ratio"] = (
-            achieved_throughput / throughputs["rate2"]
-        )
+        throughputs[y_column] = achieved_throughput / throughputs["rate2"]
 
         throughputs.reset_index(inplace=True)
 
@@ -299,11 +332,11 @@ class Analyser:
             y=y_column,
             row=row,
             col=col,
-            hue=hue,
+            hue=hue if not var.empty else None,
         )
 
         plot.figure.subplots_adjust(top=0.9)
-        plot.figure.suptitle(",".join(invariant_vars))
+        plot.figure.suptitle(make_title(invariant_vars))
 
         # add tick labels to each x axis
         for axes in plot.axes.flatten():
@@ -322,8 +355,10 @@ class Analyser:
     def plot_achieved_throughput_bar(
         self,
         data: pd.DataFrame,
+        x_column="vars",
         row=None,
         col=None,
+        hue=None,
         # pylint: disable=dangerous-default-value
         ignore_vars=[],
         filename="",
@@ -331,20 +366,21 @@ class Analyser:
         """
         Plot a bar graph of achieved throughput.
         """
-        x_column = "vars"
         y_column = "achieved_throughput"
 
         var, invariant_vars = condense_vars(
-            data, [x_column, y_column, row, col] + ignore_vars
+            data, [x_column, y_column, row, col, hue] + ignore_vars
         )
-        data[x_column] = var
+        data["vars"] = var
 
         group_cols = [x_column]
         if row:
             group_cols.append(row)
         if col:
             group_cols.append(col)
-        grouped = data.groupby(group_cols)
+        if hue:
+            group_cols.append(hue)
+        grouped = data.groupby(group_cols, dropna=False)
         throughputs = grouped.first()
 
         durations = (grouped["end_ms"].max() - grouped["start_ms"].min()) / 1000
@@ -364,7 +400,7 @@ class Analyser:
         )
 
         plot.figure.subplots_adjust(top=0.9)
-        plot.figure.suptitle(",".join(invariant_vars))
+        plot.figure.suptitle(make_title(invariant_vars))
 
         # add tick labels to each x axis
         for axes in plot.axes.flatten():
@@ -407,7 +443,7 @@ class Analyser:
         )
 
         plot.figure.subplots_adjust(top=0.9)
-        plot.figure.suptitle(",".join(invariant_vars))
+        plot.figure.suptitle(make_title(invariant_vars))
 
         # add tick labels to each x axis
         for axes in plot.axes.flatten():
@@ -415,6 +451,137 @@ class Analyser:
 
         if not filename:
             filename = f"target_throughput_latency_line-{x_column}-{row}-{col}-{hue}"
+
+        plot.figure.savefig(os.path.join(self.plot_dir(), f"{filename}.svg"))
+        plot.figure.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
+
+        return plot
+
+    def plot_percentile_latency_over_time(
+        self,
+        data: pd.DataFrame,
+        row=None,
+        col=None,
+        # pylint: disable=dangerous-default-value
+        ignore_vars=[],
+        filename="",
+        interval=1000,
+        percentile=0.99,
+    ):
+        """
+        Plot throughput throughout the experiment duration.
+        """
+        x_column = "mid"
+        y_column = "latency_ms"
+        hue = "vars"
+
+        var, invariant_vars = condense_vars(
+            data, [x_column, y_column, row, col, hue] + ignore_vars
+        )
+        data[hue] = var
+        # fill in missing values so that groupby works
+        data[hue].fillna("", inplace=True)
+
+        end = data["start_ms"].max()
+        group_cols = [pd.cut(data["start_ms"], np.arange(0, end, interval)), hue]
+        if row:
+            group_cols.append(row)
+        if col:
+            group_cols.append(col)
+        grouped = data.groupby(group_cols)
+
+        latencies = grouped.quantile(percentile)
+        mid = latencies.index.map(lambda x: (x[0].left + x[0].right) // 2)
+        latencies[x_column] = mid
+
+        throughput_data = grouped.first()
+        throughput_data[x_column] = latencies[x_column]
+        throughput_data[y_column] = latencies[y_column]
+
+        plot = sns.relplot(
+            kind="line",
+            data=throughput_data,
+            x=x_column,
+            y=y_column,
+            hue=hue,
+            row=row,
+            col=col,
+        )
+
+        plot.figure.subplots_adjust(top=0.9)
+        plot.figure.suptitle(make_title(invariant_vars))
+
+        # add tick labels to each x axis
+        for axes in plot.axes.flatten():
+            axes.tick_params(labelbottom=True)
+
+        if not filename:
+            filename = f"latency_percentile_over_time-{x_column}-{row}-{col}-{hue}-{percentile}"
+
+        plot.figure.savefig(os.path.join(self.plot_dir(), f"{filename}.svg"))
+        plot.figure.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
+
+        return plot
+
+    def plot_throughput_over_time(
+        self,
+        data: pd.DataFrame,
+        row=None,
+        col=None,
+        # pylint: disable=dangerous-default-value
+        ignore_vars=[],
+        filename="",
+        interval=1000,
+    ):
+        """
+        Plot throughput throughout the experiment duration.
+        """
+        x_column = "mid"
+        y_column = "latency_ms"
+        hue = "vars"
+
+        var, invariant_vars = condense_vars(
+            data, [x_column, y_column, row, col, hue] + ignore_vars
+        )
+        data[hue] = var
+        # fill in missing values so that groupby works
+        data[hue].fillna("", inplace=True)
+
+        end = data["start_ms"].max()
+        group_cols = [pd.cut(data["start_ms"], np.arange(0, end, interval)), hue]
+        if row:
+            group_cols.append(row)
+        if col:
+            group_cols.append(col)
+        grouped = data.groupby(group_cols)
+
+        throughputs = grouped.count() // (interval / 1000)
+        mid = throughputs.index.map(lambda x: (x[0].left + x[0].right) // 2)
+        throughputs[x_column] = mid
+
+        throughput_data = grouped.first()
+        throughput_data[x_column] = throughputs[x_column]
+        throughput_data[y_column] = throughputs[y_column]
+
+        plot = sns.relplot(
+            kind="line",
+            data=throughput_data,
+            x=x_column,
+            y=y_column,
+            hue=hue,
+            row=row,
+            col=col,
+        )
+
+        plot.figure.subplots_adjust(top=0.9)
+        plot.figure.suptitle(make_title(invariant_vars))
+
+        # add tick labels to each x axis
+        for axes in plot.axes.flatten():
+            axes.tick_params(labelbottom=True)
+
+        if not filename:
+            filename = f"throughput_over_time-{x_column}-{row}-{col}-{hue}"
 
         plot.figure.savefig(os.path.join(self.plot_dir(), f"{filename}.svg"))
         plot.figure.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
@@ -438,7 +605,13 @@ def condense_vars(all_data, without) -> Tuple[pd.Series, List[str]]:
         if name == "store":
             return all_data[name].astype(str)
         if name == "tls":
-            return all_data[name].map(lambda t: "tls" if t else "notls")
+            return all_data[name].map(lambda t: "tls" if t else "plain")
+        if name == "content_type":
+            return all_data[name].astype(str)
+        if name == "enclave":
+            return all_data[name].astype(str)
+        if name == "http_version":
+            return "http" + all_data[name].astype(str)
         return f"{name}=" + all_data[name].astype(str)
 
     invariant_columns = []

@@ -18,10 +18,10 @@ H_FILES=$(wildcard src/**/*.h)
 
 BIN_DIR=bin
 
-CCF_VER=ccf-3.0.0-rc2
-CCF_VER_LOWER=ccf_virtual_3.0.0_rc2
-CCF_SGX_VER_LOWER=ccf_sgx_3.0.0_rc2
-CCF_SGX_UNSAFE_VER_LOWER=ccf_sgx_unsafe_3.0.0_rc2
+CCF_VER=ccf-4.0.0-dev0
+CCF_VER_LOWER=ccf_virtual_4.0.0_dev0
+CCF_SGX_VER_LOWER=ccf_sgx_4.0.0_dev0
+CCF_SGX_UNSAFE_VER_LOWER=ccf_sgx_unsafe_4.0.0_dev0
 
 .PHONY: install-ccf-virtual
 install-ccf-virtual:
@@ -77,23 +77,23 @@ debug-dockerignore:
 
 .PHONY: run-virtual
 run-virtual: build-virtual
-	VENV_DIR=.venv $(CCF_PREFIX_VIRTUAL)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2
+	VENV_DIR=.venv $(CCF_PREFIX_VIRTUAL)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so -e virtual -t virtual --http2
 
 .PHONY: run-virtual-verbose
 run-virtual-verbose: build-virtual-verbose
-	VENV_DIR=.venv $(CCF_PREFIX_VIRTUAL)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so --http2
+	VENV_DIR=.venv $(CCF_PREFIX_VIRTUAL)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so -e virtual -t virtual --http2
 
 .PHONY: run-virtual-http1
 run-virtual-http1: build-virtual
-	VENV_DIR=.venv $(CCF_PREFIX_VIRTUAL)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so
+	VENV_DIR=.venv $(CCF_PREFIX_VIRTUAL)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so -e virtual -t virtual
 
 .PHONY: run-virtual-verbose-http1
 run-virtual-verbose-http1: build-virtual-verbose
-	VENV_DIR=.venv $(CCF_PREFIX_VIRTUAL)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so
+	VENV_DIR=.venv $(CCF_PREFIX_VIRTUAL)/bin/sandbox.sh -p $(BUILD)/liblskv.virtual.so -e virtual -t virtual
 
 .PHONY: run-sgx
 run-sgx: build-sgx
-	VENV_DIR=.venv $(CCF_PREFIX_SGX)/bin/sandbox.sh -p $(BUILD)/liblskv.enclave.so.signed -e release --http2
+	VENV_DIR=.venv $(CCF_PREFIX_SGX)/bin/sandbox.sh -p $(BUILD)/liblskv.enclave.so.signed -e release -t sgx --http2
 
 .PHONY: test-virtual
 test-virtual: build-virtual patched-etcd
