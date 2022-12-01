@@ -23,7 +23,7 @@
     packages.${system} =
       flake-utils.lib.filterPackages system nix;
 
-    overlays.default = final: prev: ((nix.lib.forAllPlatforms {
+    overlays.default = _final: _prev: ((nix.lib.forAllPlatforms {
         inherit (self.packages.${system}) ccf ccf-sandbox lskv lskv-sandbox;
       })
       // {
@@ -32,7 +32,7 @@
 
     checks.${system} =
       pkgs.lib.attrsets.filterAttrs
-      (name: value: name != "override" && name != "overrideDerivation")
+      (name: _value: name != "override" && name != "overrideDerivation")
       nix.ci-checks
       // {
         inherit (self.packages.${system}) lskv-sandbox-virtual lskv-sandbox-sgx;
