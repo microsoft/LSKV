@@ -28,6 +28,7 @@ bin/
 /docker-workspace/
 
 /.direnv/
+/.envrc
 
 /result
 
