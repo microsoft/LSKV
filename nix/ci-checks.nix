@@ -100,7 +100,7 @@ in {
       {
         buildInputs = [deadnix];
       } ''
-        deadnix --fail ${./.}
+        deadnix --fail ${../.}
         mkdir $out
       '';
 
@@ -109,7 +109,7 @@ in {
       {
         buildInputs = [statix];
       } ''
-        statix check ${./.}
+        statix check ${../.}
         mkdir $out
       '';
 
