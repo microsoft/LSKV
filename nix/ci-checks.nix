@@ -7,6 +7,7 @@
   cpplint,
   alejandra,
   deadnix,
+  statix,
   shfmt,
   cmake-format,
 }: let
@@ -103,6 +104,15 @@ in {
         mkdir $out
       '';
 
+    statix =
+      runCommand "statix"
+      {
+        buildInputs = [statix];
+      } ''
+        statix check ${./.}
+        mkdir $out
+      '';
+
     shfmt =
       runCommand "shfmt" {}
       ''
@@ -139,6 +149,12 @@ in {
       writeShellScriptBin "cmake-format"
       ''
         git ls-files -- . ':!:3rdparty/' | grep -e '\.cmake$' -e '^CMakeLists.txt' | xargs ${cmake-format}/bin/cmake-format --in-place
+      '';
+
+    statix =
+      writeShellScriptBin "statix"
+      ''
+        statix fix .
       '';
   };
 }
