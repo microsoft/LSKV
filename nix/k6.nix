@@ -1,7 +1,6 @@
 {
   buildGoModule,
   fetchFromGitHub,
-  go,
 }:
 buildGoModule {
   name = "k6";

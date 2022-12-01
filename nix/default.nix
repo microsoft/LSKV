@@ -24,6 +24,7 @@ pkgs.lib.makeScope pkgs.newScope (
   in
     rec {
       inherit lskvlib ci-checks ci-fixes;
+      inherit (python3.pkgs) python-ccf;
 
       ci-check-all = lskvlib.ciChecksAll ci-checks-pkgs.checks;
       ci-fix-all = lskvlib.ciFixesAll ci-checks-pkgs.fixes;
@@ -42,7 +43,7 @@ pkgs.lib.makeScope pkgs.newScope (
       lvi-mitigation = self.callPackage ./lvi-mitigation.nix {};
       openenclave = self.callPackage ./openenclave.nix {
         # Openenclave doesn't build with libcxx, for some reason.
-        stdenv = pkgs.llvmPackages_10.stdenv;
+        inherit (pkgs.llvmPackages_10) stdenv;
       };
 
       k6 = self.callPackage ./k6.nix {};
@@ -64,8 +65,6 @@ pkgs.lib.makeScope pkgs.newScope (
           python-ccf-infra = pself.callPackage ./python/python-ccf-infra.nix {};
         };
       };
-
-      python-ccf = python3.pkgs.python-ccf;
 
       mkShell = args:
         (pkgs.mkShell.override {

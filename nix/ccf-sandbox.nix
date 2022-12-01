@@ -5,7 +5,7 @@
   stdenv,
   platform ? "virtual",
 }: let
-  infra = python3.pkgs.toPythonApplication (python3.pkgs.python-ccf-infra);
+  infra = python3.pkgs.toPythonApplication python3.pkgs.python-ccf-infra;
   c = ccf.override {inherit platform;};
 in
   stdenv.mkDerivation {

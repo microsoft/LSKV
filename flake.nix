@@ -35,8 +35,7 @@
       (name: value: name != "override" && name != "overrideDerivation")
       nix.ci-checks
       // {
-        lskv-sandbox-virtual = self.packages.${system}.lskv-sandbox-virtual;
-        lskv-sandbox-sgx = self.packages.${system}.lskv-sandbox-sgx;
+        inherit (self.packages.${system}) lskv-sandbox-virtual lskv-sandbox-sgx;
       };
 
     lib = nix.lskvlib;

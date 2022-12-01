@@ -7,8 +7,7 @@
   platforms = ["virtual" "sgx" "snp"];
 
   # create a set of per-platform derivations with the name "$pkgname-$platform"
-  forPlatform = platform: pkgs:
-    lib.attrsets.mapAttrs' (name: value: lib.attrsets.nameValuePair "${name}-${platform}" (value.override {inherit platform;})) pkgs;
+  forPlatform = platform: lib.attrsets.mapAttrs' (name: value: lib.attrsets.nameValuePair "${name}-${platform}" (value.override {inherit platform;}));
 
   # generate a set of derivations for each platform
   forPlatforms = platforms: pkgs:
@@ -19,11 +18,11 @@
   # generate a set of derivations for all supported platforms
   forAllPlatforms = forPlatforms platforms;
 
-  ciChecks = pkgs:
-    lib.attrsets.mapAttrs' (name: value: lib.attrsets.nameValuePair "ci-check-${name}" value) pkgs;
+  ciChecks =
+    lib.attrsets.mapAttrs' (name: lib.attrsets.nameValuePair "ci-check-${name}");
 
-  ciFixes = pkgs:
-    lib.attrsets.mapAttrs' (name: value: lib.attrsets.nameValuePair "ci-fix-${name}" value) pkgs;
+  ciFixes =
+    lib.attrsets.mapAttrs' (name: lib.attrsets.nameValuePair "ci-fix-${name}");
 
   ciChecksAll = pkgs: let
     ci-checks = ciChecks pkgs;
