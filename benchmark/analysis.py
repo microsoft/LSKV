@@ -7,7 +7,6 @@ Analysis utils.
 """
 
 import json
-import numpy as np
 import os
 import textwrap
 from typing import List, Tuple
