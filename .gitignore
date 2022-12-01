@@ -16,7 +16,7 @@ bin/
 /.venv/
 /certs/
 
-/.ipynb_checkpoints/
+.ipynb_checkpoints/
 /plots/
 
 *.pyc
@@ -26,5 +26,10 @@ bin/
 *.err
 
 /docker-workspace/
+
+/.direnv/
+/.envrc
+
+/result
 
 /*.parquet

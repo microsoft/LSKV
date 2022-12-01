@@ -9,6 +9,7 @@ import os
 import re
 from http import HTTPStatus
 
+# pylint: disable=import-error
 import ccf.ledger  # type: ignore
 from loguru import logger
 
@@ -22,6 +23,7 @@ from test_common import (
     fixture_sandbox,
 )
 
+# pylint: disable=import-error
 from lskv import governance  # type: ignore
 
 

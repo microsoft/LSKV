@@ -494,13 +494,13 @@ class Analyser:
         mid = latencies.index.map(lambda x: (x[0].left + x[0].right) // 2)
         latencies[x_column] = mid
 
-        throughput_data = grouped.first()
-        throughput_data[x_column] = latencies[x_column]
-        throughput_data[y_column] = latencies[y_column]
+        latencies_data = grouped.first()
+        latencies_data[x_column] = latencies[x_column]
+        latencies_data[y_column] = latencies[y_column]
 
         plot = sns.relplot(
             kind="line",
-            data=throughput_data,
+            data=latencies_data,
             x=x_column,
             y=y_column,
             hue=hue,
