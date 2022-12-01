@@ -16,7 +16,6 @@
 #include "endpoints/grpc/stream.h" // TODO(#22): private header
 #include "etcd.pb.h"
 #include "grpc.h"
-#include "http/http2_types.h" // TODO(#22): private header
 #include "index.h"
 #include "json_grpc.h"
 #include "kvstore.h"
