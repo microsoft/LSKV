@@ -25,13 +25,13 @@
 in
   stdenv.mkDerivation rec {
     pname = "ccf-${platform}";
-    version = "4.0.0-dev0";
+    version = "4.0.0-dev2";
     src = fetchFromGitHub {
       owner = "microsoft";
       repo = "CCF";
       name = "ccf-${version}";
       rev = "ccf-${version}";
-      hash = "sha256-pnopMvATNoQxEJ68wA+A6eLqFVnxBHkdOUNcJXi+Abs=";
+      hash = "sha256-ttTkZU0frEH0PsMtIcvz+MQ6kbt/NLdRIzS1QvEjPcw=";
     };
     patches = [
       patches/ccf-no-python.diff
