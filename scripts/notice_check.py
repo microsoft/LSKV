@@ -77,6 +77,11 @@ def git_ls_files() -> List[str]:
         "proto/etcd.proto",  # mostly not ours
         "proto/status.proto",  # mostly not ours
         ".github/workflows",  # not source files
+        "nix/",  # just build files
+        "flake.nix",  # just build files
+        "flake.lock",  # just build files
+        ".envrc",  # just build files
+        "*.parquet",  # binary
     ]
     excluded = [f":!:{e}" for e in excluded]
     cmd = ["git", "ls-files", "--", "."] + excluded

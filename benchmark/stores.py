@@ -80,7 +80,7 @@ class LSKVStore(Store):
                 else:
                     package += ".virtual.so"
                 lskv_cmd = [
-                    f"/opt/ccf_{self.config.enclave}/bin/sandbox.sh",
+                    "sandbox.sh",  # expect to find the sandbox in the path
                     "--enclave-type",
                     "virtual" if self.config.enclave == "virtual" else "release",
                     "--enclave-platform",
