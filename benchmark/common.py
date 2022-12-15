@@ -119,7 +119,7 @@ class Store(abc.ABC):
             self.proc.wait()
             logger.info("stopped {}", self.config.to_str())
             logger.info("killing cchost")
-            subprocess.run(["pkill", "cchost"], check=True)
+            subprocess.run(["pkill", "cchost"], check=False)
 
         self.cleanup()
         return False
