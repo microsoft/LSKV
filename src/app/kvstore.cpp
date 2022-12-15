@@ -38,6 +38,18 @@ namespace app::kvstore
     return std::string(data.begin(), data.end());
   }
 
+  void Value::hydrate(uint64_t revision)
+  {
+    // if this was the first insert then we need to set the creation revision.
+    if (create_revision == 0)
+    {
+      create_revision = revision;
+    }
+
+    // and always set the mod_revision
+    mod_revision = revision;
+  }
+
   /// @brief Check whether the given key is public
   /// @param key
   /// @return whether the key is public
@@ -236,13 +248,6 @@ namespace app::kvstore
     // this shouldn't be nullopt though.
     uint64_t revision = version_opt.value_or(0);
 
-    // if this was the first insert then we need to set the creation revision.
-    if (value.create_revision == 0)
-    {
-      value.create_revision = revision;
-    }
-
-    // and always set the mod_revision
-    value.mod_revision = revision;
+    value.hydrate(revision);
   }
 }; // namespace app::kvstore

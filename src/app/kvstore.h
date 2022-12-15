@@ -41,6 +41,9 @@ namespace app::kvstore
     Value();
 
     std::string get_data();
+
+    // Hydrate the value with the given revision.
+    void hydrate(uint64_t revision);
   };
 
   DECLARE_JSON_TYPE(Value);
