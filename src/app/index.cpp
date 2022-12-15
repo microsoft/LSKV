@@ -48,12 +48,7 @@ namespace app::index
           auto value =
             app::kvstore::KVStore::VSerialiser::from_serialised(v.value());
 
-          // hydrate value
-          if (value.create_revision == 0)
-          {
-            value.create_revision = revision;
-          }
-          value.mod_revision = revision;
+          value.hydrate(revision);
 
           revisions_to_key[revision].push_back(key);
           keys_to_values[key].push_back(value);
