@@ -24,7 +24,14 @@ namespace app::kvstore
     lease = lease_id;
   }
 
-  Value::Value() = default;
+  Value::Value()
+  {
+    data = std::vector<uint8_t>();
+    create_revision = 0;
+    mod_revision = 0;
+    version = 0;
+    lease = 0;
+  }
 
   std::string Value::get_data()
   {
