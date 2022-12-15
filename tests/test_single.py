@@ -151,8 +151,8 @@ def test_kv_historical(http1_client):
     # but we can't see it in the historical thing anymore
     res = http1_client.get("fooh", rev=deleted_rev)
     check_response(res)
-    assert res.json()["count"] == 0
-    assert res.json()["kvs"] == []
+    assert "kvs" not in res.json()  # fields with default values are not included
+    assert "count" not in res.json()  # fields with default values are not included
 
 
 def test_status_version(http1_client):
