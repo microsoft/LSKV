@@ -150,6 +150,7 @@ def test_kv_historical(http1_client):
 
     # but we can't see it in the historical thing anymore
     res = http1_client.get("fooh", rev=deleted_rev)
+    check_response(res)
     assert res.json()["count"] == 0
     assert res.json()["kvs"] == []
 
