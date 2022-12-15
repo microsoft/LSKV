@@ -43,6 +43,10 @@ namespace app::kvstore
     std::string get_data();
   };
 
+  DECLARE_JSON_TYPE(Value);
+  DECLARE_JSON_REQUIRED_FIELDS(
+    Value, data, create_revision, mod_revision, version, lease);
+
   class KVStore
   {
   public:

@@ -31,10 +31,6 @@ namespace app::kvstore
     return std::string(data.begin(), data.end());
   }
 
-  DECLARE_JSON_TYPE(Value);
-  DECLARE_JSON_REQUIRED_FIELDS(
-    Value, data, create_revision, mod_revision, version, lease);
-
   /// @brief Check whether the given key is public
   /// @param key
   /// @return whether the key is public
