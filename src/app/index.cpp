@@ -62,7 +62,6 @@ namespace app::index
 
           // make a deleted value
           app::kvstore::Value value;
-          value.create_revision = 0;
           value.mod_revision = revision;
 
           keys_to_values[key].push_back(value);
