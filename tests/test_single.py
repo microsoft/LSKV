@@ -154,6 +154,33 @@ def test_kv_historical(http1_client):
     assert "kvs" not in res.json()  # fields with default values are not included
     assert "count" not in res.json()  # fields with default values are not included
 
+# pylint: disable=redefined-outer-name
+def test_kv_compaction(http1_client):
+    """
+    Test that compacted entries aren't accessible.
+    """
+    revisions = []
+    for i in range(5):
+        res = http1_client.put("foocompact", f"bar{i}")
+        check_response(res)
+        rev = int(res.json()["header"]["revision"])
+        term = int(res.json()["header"]["raftTerm"])
+        revisions.append((rev, term))
+
+    # should probably wait for commit to do this
+    rev, term = revisions[-1]
+    http1_client.wait_for_commit(term, rev)
+
+    # remove earlier items
+    http1_client.compact(revisions[2])
+
+    # check that we can't access all of them
+    for i in range(5):
+        res = http1_client.get("foocompact", f"bar{i}", revision=revisions[i])
+        status = HTTPStatus.OK if revisions[i] >= revisions[2] else HTTPStatus.NOT_ACCEPTABLE
+        check_response(res, status=status)
+
+
 
 def test_status_version(http1_client):
     """
@@ -330,12 +357,12 @@ def test_public_prefix(governance_client, http1_client, sandbox):
     assert len(public_domain.get_tables()) == 0
 
 
-def check_response(res):
+def check_response(res, status=HTTPStatus.OK):
     """
     Check a response to be success.
     """
     logger.info("res: {} {}", res.status_code, res.text)
-    assert res.status_code == HTTPStatus.OK
+    assert res.status_code == status
     check_header(res.json())
 
 
@@ -349,3 +376,4 @@ def check_header(body):
     assert "memberId" in header
     assert "revision" in header
     assert "raftTerm" in header
+
