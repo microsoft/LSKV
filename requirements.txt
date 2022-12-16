@@ -10,5 +10,5 @@ pytest==7.2.0
 types-protobuf==3.20.4.2
 mypy-protobuf==3.4.0
 grpcio-tools==1.50.0
-ccf==4.0.0dev0
+ccf==4.0.0dev2
 ./python

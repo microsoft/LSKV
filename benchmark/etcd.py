@@ -14,6 +14,7 @@ from dataclasses import asdict, dataclass, field
 from subprocess import Popen
 from typing import List
 
+# pylint: disable=import-error
 import cimetrics.upload  # type: ignore
 import common
 import pandas as pd  # type: ignore
@@ -260,6 +261,7 @@ def get_arguments():
     if not args.rate:
         args.rate = [1000]
 
+    # pylint: disable=no-member
     args.bench_args = [s.split() for s in args.bench_args]
     if not args.bench_args:
         args.bench_args = [

@@ -28,6 +28,7 @@ from cryptography.x509 import load_pem_x509_certificate
 from google.protobuf.json_format import MessageToDict, ParseDict
 from loguru import logger
 
+# pylint: disable=import-error
 from lskv import governance  # type: ignore
 
 
@@ -68,6 +69,7 @@ class Sandbox:
         """
         return self._wait_for_ready(self.port)
 
+    # pylint: disable=duplicate-code
     def _wait_for_ready(self, port: int, tries=60) -> bool:
         client = self.etcdctl_client()
         client += ["get", "missing key"]
@@ -219,6 +221,7 @@ def fixture_sandbox():
                 sandbox.member0_cert(),
             )
             proposal = governance.Proposal()
+            # pylint: disable=duplicate-code
             proposal.set_constitution(
                 [
                     "constitution/actions.js",
@@ -431,6 +434,14 @@ class HttpClient:
         check_response(res)
         proto = ParseDict(res.json(), lskvserver_pb2.GetReceiptResponse())
         return (res, proto)
+
+    def compact(self, rev: int):
+        """
+        Compact the KV store at the given revision
+        """
+        logger.info("Compact: {}", rev)
+        j = {"revision": rev}
+        return self.client.post("/v3/kv/compact", json=j)
 
     def lease_grant(self, ttl: int = 60):
         """

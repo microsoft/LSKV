@@ -11,14 +11,15 @@ import argparse
 import copy
 import json
 import os
+import subprocess
 import sys
 import time
 from dataclasses import asdict, dataclass
 from hashlib import sha256
 from subprocess import Popen
-import subprocess
 from typing import Callable, List, TypeVar
 
+# pylint: disable=import-error
 import cimetrics.upload  # type: ignore
 import typing_extensions
 from loguru import logger
@@ -36,6 +37,7 @@ class Config:
     Store of config to setup and run a benchmark instance.
     """
 
+    # pylint: disable=duplicate-code
     store: str
     port: int
     tls: bool
@@ -90,6 +92,7 @@ class Store(abc.ABC):
     The base store for running benchmarks against.
     """
 
+    # pylint: disable=duplicate-code
     def __init__(self, config: Config):
         self.config = config
         self.proc = None
@@ -115,6 +118,8 @@ class Store(abc.ABC):
                 self.proc.kill()
             self.proc.wait()
             logger.info("stopped {}", self.config.to_str())
+            logger.info("killing cchost")
+            subprocess.run(["pkill", "cchost"], check=True)
 
         self.cleanup()
         return False
