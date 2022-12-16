@@ -6,6 +6,8 @@
 #include "ccf/app_interface.h"
 #include "kvstore.h"
 
+#include <set>
+
 namespace app::index
 {
   // Index to handle two types of historical query: (1) range at specific
@@ -86,14 +88,17 @@ namespace app::index
     {
       if (value.mod_revision > at)
       { // we've gone into the future, stop
+        CCF_APP_DEBUG("Found a value in the future");
         break;
       }
       if (value.create_revision == 0)
       { // found a deleted value
+        CCF_APP_DEBUG("Found a deleted value");
         val = std::nullopt;
       }
       else
       {
+        CCF_APP_DEBUG("Found value with mod revision {}", value.mod_revision);
         val = value;
       }
     }
@@ -160,6 +165,64 @@ namespace app::index
 
   void KVIndexer::compact(int64_t at)
   {
-    // TODO(#63): compact entries before `at`
+    std::shared_lock lock(mutex);
+
+    // get the first revision still in the index
+    auto start_revision = revisions_to_key.begin()->first;
+    CCF_APP_DEBUG("Compacting index from {} to {}", start_revision, at);
+
+    std::set<K> keys_compacted;
+
+    // for each revision to be removed, remove it and collect the keys that it
+    // touches
+    auto it = revisions_to_key.begin();
+    while (it != revisions_to_key.end())
+    {
+      if (it->first >= at)
+      {
+        // don't compact past the requested revision
+        break;
+      }
+
+      auto keys = it->second;
+      for (const auto& key : keys)
+      {
+        CCF_APP_DEBUG(
+          "Adding compacted key from revision {}: {}", it->first, key);
+        keys_compacted.insert(key);
+      }
+      it = revisions_to_key.erase(it);
+    }
+
+    CCF_APP_DEBUG("Collected {} keys to remove", keys_compacted.size());
+
+    // go through the compacted keys and remove extra values
+    for (const auto& key : keys_compacted)
+    {
+      CCF_APP_DEBUG(
+        "Removing values for key {} for compaction revision {}", key, at);
+      auto& values = keys_to_values.at(key);
+      auto it = values.begin();
+      while (it != values.end())
+      {
+        if (it->mod_revision < at)
+        {
+          CCF_APP_DEBUG(
+            "Removing compacted value for key {} at {}", key, it->mod_revision);
+          it = values.erase(it);
+        }
+        else
+        {
+          // the values are stored in order of mod revisions so we can stop
+          CCF_APP_DEBUG(
+            "Finished removing values for key {} for compaction revision {}",
+            key,
+            at);
+          break;
+        }
+      }
+    }
+
+    CCF_APP_DEBUG("Finished compacting at revision {}", at);
   }
 }; // namespace app::index
