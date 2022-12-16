@@ -12,7 +12,7 @@ import os
 import time
 from http import HTTPStatus
 from subprocess import PIPE, Popen
-from typing import List
+from typing import List, Dict, Any
 
 import ccf.receipt  # type: ignore
 
@@ -24,7 +24,7 @@ import httpx
 import lskvserver_pb2  # type: ignore
 import pytest
 import typing_extensions
-from cryptography.x509 import load_pem_x509_certificate
+from cryptography.x509 import load_pem_x509_certificate  # type: ignore
 from google.protobuf.json_format import MessageToDict, ParseDict
 from loguru import logger
 
@@ -327,12 +327,6 @@ class HttpClient:
             if i > tries:
                 raise Exception("failed to wait for commit")
             time.sleep(0.1)
-
-    def tx_status(self, txid: str):
-        """
-        Get the status of a transaction id.
-        """
-        return self.client.get(f"/app/tx?transaction_id={txid}")
 
     def get(self, key: str, range_end: str = "", rev: int = 0, check=True):
         """
