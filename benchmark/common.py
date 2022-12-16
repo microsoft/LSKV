@@ -165,7 +165,7 @@ class Store(abc.ABC):
                 proc = subprocess.run(client, capture_output=True, check=True)
                 if proc.returncode == 0:
                     result = proc.stdout.decode("utf-8")
-                    logger.info(
+                    logger.debug(
                         "successfully ran wait check and got response {}", result
                     )
                     result_j = json.loads(result)
