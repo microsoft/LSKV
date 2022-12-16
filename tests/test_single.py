@@ -169,7 +169,6 @@ def test_kv_compaction(http1_client):
         term = int(hdr["raftTerm"])
         revisions.append((rev, term))
 
-    # should probably wait for commit to do this
     rev, term = revisions[-1]
     http1_client.wait_for_commit(term, rev)
 
