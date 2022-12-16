@@ -18,6 +18,7 @@
     seaborn
     pytest
     typing-extensions
+    types-protobuf
   ];
 in {
   checks = {
@@ -154,7 +155,7 @@ in {
     statix =
       writeShellScriptBin "statix"
       ''
-        statix fix .
+        ${statix}/bin/statix fix .
       '';
   };
 }
