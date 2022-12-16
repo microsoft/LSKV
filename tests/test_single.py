@@ -207,7 +207,7 @@ def test_lease_kv(http1_client):
 
     # then get the key to check it has the lease id set
     res = http1_client.get(key)
-    assert res.json()["kvs"][0]["lease"] == lease_id
+    assert int(res.json()["kvs"][0]["lease"]) == lease_id
 
     # revoke the lease
     http1_client.lease_revoke(lease_id)
