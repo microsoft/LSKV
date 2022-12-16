@@ -10,6 +10,7 @@
   statix,
   shfmt,
   cmake-format,
+  python-ccf,
 }: let
   pythonDeps = with python3Packages; [
     loguru
@@ -19,6 +20,7 @@
     pytest
     typing-extensions
     types-protobuf
+    python-ccf
   ];
 in {
   checks = {
