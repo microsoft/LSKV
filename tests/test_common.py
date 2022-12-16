@@ -429,13 +429,16 @@ class HttpClient:
         proto = ParseDict(res.json(), lskvserver_pb2.GetReceiptResponse())
         return (res, proto)
 
-    def compact(self, rev: int):
+    def compact(self, rev: int, check=True):
         """
         Compact the KV store at the given revision
         """
         logger.info("Compact: {}", rev)
         j = {"revision": rev}
-        return self.client.post("/v3/kv/compact", json=j)
+        res = self.client.post("/v3/kv/compact", json=j)
+        if check:
+            check_response(res)
+        return res
 
     def lease_grant(self, ttl: int = 60):
         """
@@ -472,13 +475,16 @@ class HttpClient:
             proto = ParseDict(res.json(), etcd_pb2.LeaseKeepAliveResponse())
         return (res, proto)
 
-    def tx_status(self, term: int, rev: int):
+    def tx_status(self, term: int, rev: int, check=True):
         """
         Check the status of a transaction.
         """
         logger.info("TxStatus: {} {}", term, rev)
         j: Dict[str, Any] = {"raftTerm": term, "revision": rev}
-        return self.client.post("/v3/maintenance/tx_status", json=j)
+        res = self.client.post("/v3/maintenance/tx_status", json=j)
+        if check:
+            check_response(res)
+        return res
 
     def status(self):
         """
@@ -520,7 +526,6 @@ class HttpClient:
         ]
         leaf = hashlib.sha256(b"".join(leaf_parts)).hexdigest()
 
-        proof = tx_receipt.proof
         signature = receipt.signature
         cert = receipt.cert
         node_cert = load_pem_x509_certificate(cert.encode())
