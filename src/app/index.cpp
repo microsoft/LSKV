@@ -222,7 +222,8 @@ namespace app::index
           break;
         }
       }
-      if (values.empty()) {
+      if (values.empty())
+      {
         // nothing left for this key so remove it from being tracked at all
         keys_to_values.erase(key);
       }
