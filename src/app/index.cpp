@@ -30,7 +30,6 @@ namespace app::index
   {
     std::unique_lock lock(mutex);
 
-    // TODO(#47): handle deleted kvs
     CCF_APP_DEBUG("index: handling committed transaction {}", tx_id.seqno);
     current_txid = tx_id;
     auto revision = tx_id.seqno;
