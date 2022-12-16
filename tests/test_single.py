@@ -164,8 +164,9 @@ def test_kv_compaction(http1_client):
     for i in range(5):
         res = http1_client.put("foocompact", f"bar{i}")
         check_response(res)
-        rev = int(res.json()["header"]["revision"])
-        term = int(res.json()["header"]["raftTerm"])
+        hdr = res.json()["header"]
+        rev = int(hdr["revision"])
+        term = int(hdr["raftTerm"])
         revisions.append((rev, term))
 
     # should probably wait for commit to do this
