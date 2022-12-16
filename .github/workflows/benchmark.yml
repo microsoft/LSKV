@@ -63,7 +63,7 @@ jobs:
         run: make certs
 
       - name: Run benchmark
-        run: export PATH=$HOME/.local/go/bin:$PATH && . .venv/bin/activate && env PATH=$PATH:/opt/ccf_virtual/bin python3 benchmark/ci.py
+        run: export PATH=$HOME/.local/go/bin:$PATH && . .venv/bin/activate && env PATH=$PATH:/opt/ccf_virtual/bin python3 benchmark/ci.py -v
 
       - name: Plot results
         run: make execute-notebook
