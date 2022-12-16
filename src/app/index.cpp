@@ -31,18 +31,44 @@ namespace app::index
     // TODO(#47): handle deleted kvs
     CCF_APP_DEBUG("index: handling committed transaction {}", tx_id.seqno);
     current_txid = tx_id;
-    auto tx = store_ptr->create_read_only_tx();
-    auto kvs = kvstore::KVStore(tx);
     auto revision = tx_id.seqno;
 
-    kvs.foreach([this, &revision](const auto& k, const auto& v) {
-      CCF_APP_DEBUG("index: updating key {}", k);
-      revisions_to_key[revision].push_back(k);
+    auto tx_diff = store_ptr->create_tx_diff();
+    auto private_kv_map =
+      tx_diff.diff<app::kvstore::KVStore::MT>(app::kvstore::RECORDS);
 
-      keys_to_values[k].push_back(v);
+    private_kv_map->foreach(
+      [this, &revision, &private_kv_map](const auto& k, const auto& v) {
+        auto key = app::kvstore::KVStore::KSerialiser::from_serialised(k);
+        if (v.has_value())
+        {
+          CCF_APP_DEBUG(
+            "index: updating key {} from diff at revision {}", k, revision);
 
-      return true;
-    });
+          auto value =
+            app::kvstore::KVStore::VSerialiser::from_serialised(v.value());
+
+          value.hydrate(revision);
+
+          revisions_to_key[revision].push_back(key);
+          keys_to_values[key].push_back(value);
+        }
+        else
+        {
+          CCF_APP_DEBUG(
+            "index: deleting key {} from diff at revision {}", k, revision);
+
+          revisions_to_key[revision].push_back(key);
+
+          // make a deleted value
+          app::kvstore::Value value;
+          value.mod_revision = revision;
+
+          keys_to_values[key].push_back(value);
+        }
+
+        return true;
+      });
     CCF_APP_DEBUG("finished handling committed transaction {}", tx_id.seqno);
   }
 
@@ -62,7 +88,14 @@ namespace app::index
       { // we've gone into the future, stop
         break;
       }
-      val = value;
+      if (value.create_revision == 0)
+      { // found a deleted value
+        val = std::nullopt;
+      }
+      else
+      {
+        val = value;
+      }
     }
     return val;
   }
