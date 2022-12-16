@@ -42,19 +42,19 @@ class EtcdStore(Store):
         """
         Return the path to the CA certificate.
         """
-        return "certs/ca.pem"
+        return f"{os.getcwd()}/certs/ca.pem"
 
     def cert(self) -> str:
         """
         Return the path to the client certificate.
         """
-        return "certs/client.pem"
+        return f"{os.getcwd()}/certs/client.pem"
 
     def key(self) -> str:
         """
         Return the path to the key for the client certificate.
         """
-        return "certs/client-key.pem"
+        return f"{os.getcwd()}/certs/client-key.pem"
 
     def cleanup(self):
         shutil.rmtree("default.etcd", ignore_errors=True)
