@@ -154,6 +154,7 @@ def test_kv_historical(http1_client):
     assert "kvs" not in res.json()  # fields with default values are not included
     assert "count" not in res.json()  # fields with default values are not included
 
+
 # pylint: disable=redefined-outer-name
 def test_kv_compaction(http1_client):
     """
@@ -172,14 +173,18 @@ def test_kv_compaction(http1_client):
     http1_client.wait_for_commit(term, rev)
 
     # remove earlier items
-    http1_client.compact(revisions[2])
+    res = http1_client.compact(revisions[2][0])
+    check_response(res)
 
     # check that we can't access all of them
     for i in range(5):
-        res = http1_client.get("foocompact", f"bar{i}", revision=revisions[i])
-        status = HTTPStatus.OK if revisions[i] >= revisions[2] else HTTPStatus.NOT_ACCEPTABLE
-        check_response(res, status=status)
-
+        res = http1_client.get("foocompact", rev=revisions[i][0])
+        success = revisions[i][0] >= revisions[2][0]
+        check_response(res)
+        if success:
+            assert int(res.json()["count"]) == 1
+        else:
+            assert "count" not in res.json()
 
 
 def test_status_version(http1_client):
@@ -376,4 +381,3 @@ def check_header(body):
     assert "memberId" in header
     assert "revision" in header
     assert "raftTerm" in header
-

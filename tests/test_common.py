@@ -349,12 +349,12 @@ class HttpClient:
             j["range_end"] = b64encode(range_end)
         return self.client.post("/v3/kv/delete_range", json=j)
 
-    def compact(self, at: int):
+    def compact(self, rev: int):
         """
         Compact the KV store at the given revision
         """
-        logger.info("Compact: {}", at)
-        j = {"revision": at}
+        logger.info("Compact: {}", rev)
+        j = {"revision": rev}
         return self.client.post("/v3/kv/compact", json=j)
 
     def lease_grant(self, ttl: int = 60):
