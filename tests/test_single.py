@@ -148,7 +148,7 @@ def test_kv_historical(http1_client):
         assert kvs[0]["modRevision"] == str(rev)
         assert kvs[0]["version"] == str(i + 1)
 
-    # but we can't see it in the historical thing anymore
+    # but we can't see it in the historical keyspace anymore
     res = http1_client.get("fooh", rev=deleted_rev)
     check_response(res)
     assert "kvs" not in res.json()  # fields with default values are not included
