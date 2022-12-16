@@ -201,6 +201,8 @@ namespace app::index
       CCF_APP_DEBUG(
         "Removing values for key {} for compaction revision {}", key, at);
       auto& values = keys_to_values.at(key);
+      // TODO(#204): Should be able to remove multiple values from a key's
+      // vector at once to avoid multiple copyings of the elements.
       auto it = values.begin();
       while (it != values.end())
       {
