@@ -2,14 +2,14 @@
 # Licensed under the MIT License.
 
 # Build
-FROM mcr.microsoft.com/ccf/app/dev:3.0.0-rc2-sgx as builder
+FROM mcr.microsoft.com/ccf/app/dev:4.0.0-dev2-sgx as builder
 
 COPY . /src/
 WORKDIR /build
 RUN CC="/opt/oe_lvi/clang-10" CXX="/opt/oe_lvi/clang++-10" cmake -GNinja -DCOMPILE_TARGET=sgx /src && ninja
 
 # Run
-FROM mcr.microsoft.com/ccf/app/run:3.0.0-rc2-sgx
+FROM mcr.microsoft.com/ccf/app/run:4.0.0-dev2-sgx
 
 LABEL org.opencontainers.image.source=https://github.com/microsoft/lskv
 LABEL org.opencontainers.image.description="LSKV SGX node"

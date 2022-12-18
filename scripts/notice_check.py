@@ -44,15 +44,20 @@ def has_notice(path: str) -> bool:
     """
     Check that the given file has a notice.
     """
-    with open(path, "r", encoding="utf-8") as file:
-        lines = file.readlines()
-        license_lines = extract_potential_license(lines)
-        if LICENSE_HEADER in license_lines:
-            return True
-        logger.debug("   found: {}", license_lines)
-        logger.debug("expected: {}", LICENSE_HEADER)
+    try:
+        with open(path, "r", encoding="utf-8") as file:
+            lines = file.readlines()
+            license_lines = extract_potential_license(lines)
+            if LICENSE_HEADER in license_lines:
+                return True
+            logger.debug("   found: {}", license_lines)
+            logger.debug("expected: {}", LICENSE_HEADER)
 
-    return False
+        return False
+    except UnicodeDecodeError:
+        logger.warning("Failed to read file (not utf-8): {}", path)
+        # treat as ok
+        return True
 
 
 def git_ls_files() -> List[str]:
@@ -72,6 +77,11 @@ def git_ls_files() -> List[str]:
         "proto/etcd.proto",  # mostly not ours
         "proto/status.proto",  # mostly not ours
         ".github/workflows",  # not source files
+        "nix/",  # just build files
+        "flake.nix",  # just build files
+        "flake.lock",  # just build files
+        ".envrc",  # just build files
+        "*.parquet",  # binary
     ]
     excluded = [f":!:{e}" for e in excluded]
     cmd = ["git", "ls-files", "--", "."] + excluded

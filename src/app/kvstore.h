@@ -8,17 +8,20 @@
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
 #include "kv/untyped_map.h" // TODO(#22): private header
+#include "service/tables/service.h"
 
 #include <string>
 #include <vector>
 
 namespace app::kvstore
 {
-#ifdef PUBLIC_MAPS
-  static constexpr auto RECORDS = "public:records";
-#else
+  // default all data to private table
   static constexpr auto RECORDS = "records";
-#endif
+  // public data gets duplicated here
+  static constexpr auto PUBLIC_RECORDS = "public:records";
+
+  // public prefix map
+  static constexpr auto PUBLIC_PREFIXES = "public:ccf.gov.public_prefixes";
 
   struct Value
   {
@@ -38,7 +41,14 @@ namespace app::kvstore
     Value();
 
     std::string get_data();
+
+    // Hydrate the value with the given revision.
+    void hydrate(uint64_t revision);
   };
+
+  DECLARE_JSON_TYPE(Value);
+  DECLARE_JSON_REQUIRED_FIELDS(
+    Value, data, create_revision, mod_revision, version, lease);
 
   class KVStore
   {
@@ -48,6 +58,9 @@ namespace app::kvstore
     using KSerialiser = kv::serialisers::BlitSerialiser<K>;
     using VSerialiser = kv::serialisers::JsonSerialiser<V>;
     using MT = kv::untyped::Map;
+
+    using PP = kv::TypedMap<K, K, KSerialiser, KSerialiser>;
+
     explicit KVStore(kv::Tx& tx);
     explicit KVStore(kv::ReadOnlyTx& tx);
     /// @brief get retrieves the value stored for the given key. It hydrates the
@@ -82,7 +95,13 @@ namespace app::kvstore
     std::optional<V> remove(const K& key);
 
   private:
-    MT::Handle* inner_map;
+    MT::Handle* private_map;
+    MT::Handle* public_map;
+
+    // reference to the
+    PP::ReadOnlyHandle* public_prefixes_map;
+
     void hydrate_value(const K& key, V& value);
+    bool is_public(const K& key);
   };
 }; // namespace app::kvstore
