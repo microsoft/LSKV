@@ -335,6 +335,21 @@ function updateServiceConfig(new_config) {
   }
 }
 
+const publicRecordsMapName = "public:records";
+const privateRecordsMapName = "records";
+const publicPrefixMapName = "public:ccf.gov.public_prefixes";
+
+function setPublicPrefix(public_prefix) {
+  // set the prefix name
+  const prefix_buf = ccf.strToBuf(public_prefix);
+  ccf.kv[publicPrefixMapName].set(prefix_buf, new ArrayBuffer(0));
+}
+
+function removePublicPrefix(public_prefix) {
+  // delete the prefix name
+  ccf.kv[publicPrefixMapName].delete(ccf.strToBuf(public_prefix));
+}
+
 const actions = new Map([
   [
     "set_constitution",
@@ -1202,6 +1217,34 @@ const actions = new Map([
         }
       },
       function (args) {}
+    ),
+  ],
+  [
+    "set_public_prefix",
+    new Action(
+      // validate
+      function (args) {
+        // TODO(#196): this should probably be a base64 string so it can represent full byte vectors
+        checkType(args.public_prefix, "string", "public_prefix");
+      },
+      // apply
+      function (args) {
+        setPublicPrefix(args.public_prefix);
+      }
+    ),
+  ],
+  [
+    "remove_public_prefix",
+    new Action(
+      // validate
+      function (args) {
+        // TODO(#196): this should probably be a base64 string so it can represent full byte vectors
+        checkType(args.public_prefix, "string", "public_prefix");
+      },
+      // apply
+      function (args) {
+        removePublicPrefix(args.public_prefix);
+      }
     ),
   ],
 ]);

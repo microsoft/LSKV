@@ -6,19 +6,26 @@ Test a single node
 """
 
 import json
+import os
 import re
 from http import HTTPStatus
 
+# pylint: disable=import-error
+import ccf.ledger  # type: ignore
 from loguru import logger
 
 # pylint: disable=unused-import
 # pylint: disable=no-name-in-module
 from test_common import (
     b64decode,
+    fixture_governance_client,
     fixture_http1_client,
     fixture_http1_client_unauthenticated,
     fixture_sandbox,
 )
+
+# pylint: disable=import-error
+from lskv import governance  # type: ignore
 
 
 # pylint: disable=redefined-outer-name
@@ -129,6 +136,7 @@ def test_kv_historical(http1_client):
 
     res = http1_client.delete("fooh")
     check_response(res)
+    deleted_rev = int(res.json()["header"]["revision"])
 
     for i, (rev, term) in enumerate(revisions):
         # still there
@@ -140,6 +148,44 @@ def test_kv_historical(http1_client):
         assert kvs[0]["createRevision"] == str(create_rev)
         assert kvs[0]["modRevision"] == str(rev)
         assert kvs[0]["version"] == str(i + 1)
+
+    # but we can't see it in the historical keyspace anymore
+    res = http1_client.get("fooh", rev=deleted_rev)
+    check_response(res)
+    assert "kvs" not in res.json()  # fields with default values are not included
+    assert "count" not in res.json()  # fields with default values are not included
+
+
+# pylint: disable=redefined-outer-name
+def test_kv_compaction(http1_client):
+    """
+    Test that compacted entries aren't accessible.
+    """
+    revisions = []
+    for i in range(5):
+        res = http1_client.put("foocompact", f"bar{i}")
+        check_response(res)
+        hdr = res.json()["header"]
+        rev = int(hdr["revision"])
+        term = int(hdr["raftTerm"])
+        revisions.append((rev, term))
+
+    rev, term = revisions[-1]
+    http1_client.wait_for_commit(term, rev)
+
+    # remove earlier items
+    res = http1_client.compact(revisions[2][0])
+    check_response(res)
+
+    # check that we can't access all of them
+    for i in range(5):
+        res = http1_client.get("foocompact", rev=revisions[i][0])
+        success = revisions[i][0] >= revisions[2][0]
+        check_response(res)
+        if success:
+            assert int(res.json()["count"]) == 1
+        else:
+            assert "count" not in res.json()
 
 
 def test_status_version(http1_client):
@@ -221,6 +267,7 @@ def test_tx_status(http1_client):
     j = res.json()
     term = j["header"]["raftTerm"]
     rev = j["header"]["revision"]
+    http1_client.wait_for_commit(term, rev)
 
     res = http1_client.tx_status(term, rev)
     check_response(res)
@@ -263,12 +310,89 @@ def test_openapi(http1_client):
     )
 
 
-def check_response(res):
+def test_public_prefix(governance_client, http1_client, sandbox):
+    """
+    Test the constitution action for public prefixes.
+    """
+    prefix = "mysecretprefix"
+    res = http1_client.put(f"{prefix}/test", "my secret")
+    check_response(res)
+    term = int(res.json()["header"]["raftTerm"])
+    rev = int(res.json()["header"]["revision"])
+    http1_client.wait_for_commit(term, rev)
+
+    ledger = ccf.ledger.Ledger(
+        [os.path.join(sandbox.workspace(), "sandbox_0", "0.ledger")],
+        committed_only=False,
+    )
+    txn = ledger.get_transaction(rev)
+    public_domain = txn.get_public_domain()
+    assert len(public_domain.get_tables()) == 0
+
+    # set a secret prefix
+    proposal = governance.Proposal()
+    proposal.set_public_prefix(prefix)
+    res = governance_client.propose(proposal)
+    proposal_id = res.proposal_id
+    governance_client.accept(proposal_id)
+
+    res = http1_client.put(f"{prefix}/test", "my secret")
+    check_response(res)
+    term = int(res.json()["header"]["raftTerm"])
+    rev = int(res.json()["header"]["revision"])
+    http1_client.wait_for_commit(term, rev)
+
+    ledger = ccf.ledger.Ledger(
+        [os.path.join(sandbox.workspace(), "sandbox_0", "0.ledger")],
+        committed_only=False,
+    )
+    txn = ledger.get_transaction(rev)
+    public_domain = txn.get_public_domain()
+    assert len(public_domain.get_tables()) == 1
+
+    # setting an existing prefix is ok
+    proposal = governance.Proposal()
+    proposal.set_public_prefix(prefix)
+    res = governance_client.propose(proposal)
+    proposal_id = res.proposal_id
+    governance_client.accept(proposal_id)
+
+    # removing an existing prefix is ok
+    proposal = governance.Proposal()
+    proposal.remove_public_prefix(prefix)
+    res = governance_client.propose(proposal)
+    proposal_id = res.proposal_id
+    governance_client.accept(proposal_id)
+
+    # and removing one that doesn't exist is ok too
+    proposal = governance.Proposal()
+    proposal.remove_public_prefix(prefix)
+    res = governance_client.propose(proposal)
+    proposal_id = res.proposal_id
+    governance_client.accept(proposal_id)
+
+    # setting a new key now doesn't end up public
+    res = http1_client.put(f"{prefix}/test", "my secret")
+    check_response(res)
+    term = int(res.json()["header"]["raftTerm"])
+    rev = int(res.json()["header"]["revision"])
+    http1_client.wait_for_commit(term, rev)
+
+    ledger = ccf.ledger.Ledger(
+        [os.path.join(sandbox.workspace(), "sandbox_0", "0.ledger")],
+        committed_only=False,
+    )
+    txn = ledger.get_transaction(rev)
+    public_domain = txn.get_public_domain()
+    assert len(public_domain.get_tables()) == 0
+
+
+def check_response(res, status=HTTPStatus.OK):
     """
     Check a response to be success.
     """
     logger.info("res: {} {}", res.status_code, res.text)
-    assert res.status_code == HTTPStatus.OK
+    assert res.status_code == status
     check_header(res.json())
 
 

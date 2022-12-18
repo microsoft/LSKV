@@ -11,14 +11,15 @@ import argparse
 import copy
 import json
 import os
+import subprocess
 import sys
 import time
 from dataclasses import asdict, dataclass
 from hashlib import sha256
 from subprocess import Popen
-import subprocess
 from typing import Callable, List, TypeVar
 
+# pylint: disable=import-error
 import cimetrics.upload  # type: ignore
 import typing_extensions
 from loguru import logger
@@ -36,10 +37,11 @@ class Config:
     Store of config to setup and run a benchmark instance.
     """
 
+    # pylint: disable=duplicate-code
     store: str
     port: int
     tls: bool
-    sgx: bool
+    enclave: str
     nodes: int
     worker_threads: int
     sig_tx_interval: int
@@ -90,6 +92,7 @@ class Store(abc.ABC):
     The base store for running benchmarks against.
     """
 
+    # pylint: disable=duplicate-code
     def __init__(self, config: Config):
         self.config = config
         self.proc = None
@@ -115,6 +118,8 @@ class Store(abc.ABC):
                 self.proc.kill()
             self.proc.wait()
             logger.info("stopped {}", self.config.to_str())
+            logger.info("killing cchost")
+            subprocess.run(["pkill", "cchost"], check=True)
 
         self.cleanup()
         return False
@@ -241,8 +246,14 @@ def get_argument_parser() -> argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(description="Benchmark")
     parser.add_argument("-v", "--verbose", action="store_true", help="verbose output")
-    parser.add_argument("--sgx", action="store_true")
-    parser.add_argument("--virtual", action="store_true")
+    parser.add_argument(
+        "--enclave",
+        type=str,
+        choices=["virtual", "sgx"],
+        action="extend",
+        nargs="+",
+        help="enclave to use",
+    )
     parser.add_argument("--etcd", action="store_true")
     parser.add_argument("--http1", action="store_true")
     parser.add_argument("--http2", action="store_true")
@@ -325,7 +336,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                     store="etcd",
                     port=port,
                     tls=False,
-                    sgx=False,
+                    enclave="virtual",
                     nodes=nodes,
                     http_version=2,
                     worker_threads=0,
@@ -341,7 +352,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                 store="etcd",
                 port=port,
                 tls=True,
-                sgx=False,
+                enclave="virtual",
                 nodes=nodes,
                 http_version=2,
                 worker_threads=0,
@@ -371,7 +382,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                                 store="lskv",
                                 port=port,
                                 tls=True,
-                                sgx=False,
+                                enclave="virtual",
                                 nodes=nodes,
                                 http_version=1,
                                 worker_threads=worker_threads,
@@ -380,7 +391,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                                 ledger_chunk_bytes=ledger_chunk_bytes,
                                 snapshot_tx_interval=snapshot_tx_interval,
                             )
-                            if args.virtual:
+                            if "virtual" in args.enclave:
                                 lskv_config = copy.deepcopy(lskv_config)
                                 logger.debug("adding virtual lskv")
                                 if args.http1:
@@ -395,10 +406,10 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                                     configs.append(lskv_config)
 
                             # sgx
-                            if args.sgx:
+                            if "sgx" in args.enclave:
                                 logger.debug("adding sgx lskv")
                                 lskv_config = copy.deepcopy(lskv_config)
-                                lskv_config.sgx = True
+                                lskv_config.enclave = "sgx"
                                 if args.http1:
                                     lskv_config = copy.deepcopy(lskv_config)
                                     lskv_config.http_version = 1

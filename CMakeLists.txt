@@ -34,10 +34,9 @@ endif()
 
 add_subdirectory(proto)
 
-option(
-  PUBLIC_MAPS
-  "If enabled, all keys and values are recorded in plaintext in the ledger (insecure!)"
-  OFF)
+option(PUBLIC_LEASES
+       "If enabled, leases are recorded in plaintext in the ledger (insecure!)"
+       OFF)
 
 option(VERBOSE_LOGGING "enable verbose logging" OFF)
 
@@ -62,14 +61,9 @@ add_ccf_app(
   etcd.virtual
   lskvserver.virtual
   status.virtual
-  protobuf.virtual)
-
-if(PUBLIC_MAPS)
-  message(STATUS "Using public maps")
-  add_compile_definitions(PUBLIC_MAPS)
-else()
-  message(STATUS "Using private maps")
-endif()
+  protobuf.virtual
+  INSTALL_LIBS
+  ON)
 
 if(VERBOSE_LOGGING)
   message(STATUS "Using verbose logging")
@@ -87,4 +81,4 @@ add_custom_target(app_signing_key ALL
                   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/signing_key.pem)
 
 sign_app_library(lskv.enclave ${CMAKE_CURRENT_SOURCE_DIR}/oe_sign.conf
-                 ${CMAKE_CURRENT_BINARY_DIR}/signing_key.pem)
+                 ${CMAKE_CURRENT_BINARY_DIR}/signing_key.pem INSTALL_LIBS ON)

@@ -9,15 +9,11 @@ This benchmark is primarily for comparing http1 and http2 performance of LSKV ov
 """
 
 import argparse
-import base64
-import csv
 import os
-import time
 from dataclasses import asdict, dataclass
-from typing import Dict, List
+from typing import List
 
 import common
-import httpx
 from common import Store
 from loguru import logger
 from stores import LSKVStore
@@ -25,18 +21,14 @@ from stores import LSKVStore
 BENCH_DIR = os.path.join(common.BENCH_DIR, "perf")
 
 
-def b64encode(in_str: str) -> str:
-    """
-    Base64 encode a string.
-    """
-    return base64.b64encode(in_str.encode("utf-8")).decode("utf-8")
-
-
 @dataclass
 class PerfConfig(common.Config):
     """
     Benchmark configuration.
     """
+
+    workload: str
+    max_inflight_requests: int
 
     def bench_name(self) -> str:
         return "perf"
@@ -50,80 +42,30 @@ class PerfBenchmark(common.Benchmark):
     def __init__(self, config: PerfConfig):
         self.config = config
 
-    def submit_requests(self, store: Store):
+    # pylint: disable=duplicate-code
+    def run_cmd(self, store: Store) -> List[str]:
         """
-        Submit the requests to the datastore.
+        Return the command to run the benchmark for the given store.
         """
-        timings_file = os.path.join(self.config.output_dir(), "timings.csv")
-        with open(timings_file, "w", encoding="utf-8") as timings:
-            csv_writer = csv.writer(timings)
-            csv_writer.writerow(["start_us", "latency_us", "path", "status"])
-
-            address = f"{self.config.scheme()}://127.0.0.1:{self.config.port}"
-
-            def send_request(
-                client: httpx.Client,
-                responses,
-                path: str,
-                body: Dict[str, str],
-                i: int,
-            ):
-                logger.debug(
-                    "sending post request {} to {} data={}",
-                    i,
-                    address + path,
-                    body,
-                )
-                start_ns = time.time_ns()
-                resp = client.post(address + path, json=body)
-                if resp.status_code != 200:
-                    logger.warning("request failed: {}", resp.text)
-                end_ns = time.time_ns()
-                status = resp.status_code
-                start_us = start_ns / 1000
-                latency_us = (end_ns - start_ns) / 1000
-                responses.writerow([start_us, latency_us, path, status])
-
-            cacert = store.cacert()
-            client_cert = (store.cert(), store.key())
-            with httpx.Client(
-                http2=self.config.http_version == 2, verify=cacert, cert=client_cert
-            ) as client:
-                for i in range(100):
-                    send_request(
-                        client,
-                        csv_writer,
-                        "/v3/kv/range",
-                        {"key": b64encode(f"key{i}")},
-                        i,
-                    )
-                for i in range(100):
-                    send_request(
-                        client,
-                        csv_writer,
-                        "/v3/kv/put",
-                        {
-                            "key": b64encode(f"key{i}"),
-                            "value": b64encode(f"value{i}"),
-                        },
-                        i,
-                    )
-                for i in range(100):
-                    send_request(
-                        client,
-                        csv_writer,
-                        "/v3/kv/range",
-                        {"key": b64encode(f"key{i}")},
-                        i,
-                    )
-                for i in range(100):
-                    send_request(
-                        client,
-                        csv_writer,
-                        "/v3/kv/delete_range",
-                        {"key": b64encode(f"key{i}")},
-                        i,
-                    )
+        ccf_bin = f"/opt/ccf_{self.config.enclave}/bin"
+        bench = [
+            f"{ccf_bin}/submit",
+            "--send-filepath",
+            os.path.join(self.config.output_dir(), "requests.parquet"),
+            "--response-filepath",
+            os.path.join(self.config.output_dir(), "responses.parquet"),
+            "--generator-filepath",
+            self.config.workload,
+            "--max-inflight-requests",
+            str(self.config.max_inflight_requests),
+            "--cacert",
+            store.cacert(),
+            "--cert",
+            store.cert(),
+            "--key",
+            store.key(),
+        ]
+        return bench
 
 
 def run_benchmark(config: PerfConfig, store: Store, benchmark: PerfBenchmark) -> str:
@@ -133,14 +75,13 @@ def run_benchmark(config: PerfConfig, store: Store, benchmark: PerfBenchmark) ->
     with store:
         store.wait_for_ready()
 
-        logger.info("submit requests")
-        benchmark.submit_requests(store)
-        logger.info("submitted requests")
-
-        timings_file = os.path.join(config.output_dir(), "timings.csv")
+        logger.info("starting benchmark")
+        run_cmd = benchmark.run_cmd(store)
+        common.run(run_cmd, "bench", config.output_dir())
+        logger.info("stopping benchmark")
 
     # pylint: disable=duplicate-code
-    return timings_file
+    return ""
 
 
 # pylint: disable=duplicate-code
@@ -161,7 +102,25 @@ def get_arguments():
     """
     parser = common.get_argument_parser()
 
+    parser.add_argument(
+        "--workloads",
+        type=str,
+        action="extend",
+        nargs="+",
+        help="The workload files to submit",
+    )
+    parser.add_argument(
+        "--max-inflight-requests",
+        type=int,
+        action="extend",
+        nargs="+",
+        help="Number of outstanding requests to allow",
+    )
+
     args = parser.parse_args()
+
+    if not args.max_inflight_requests:
+        args.max_inflight_requests = [0]
 
     return args
 
@@ -196,11 +155,20 @@ def make_configurations(args: argparse.Namespace) -> List[PerfConfig]:
     """
     configs = []
 
-    for common_config in common.make_common_configurations(args):
-        conf = PerfConfig(
-            **asdict(common_config),
-        )
-        configs.append(conf)
+    for workload in args.workloads:
+        logger.debug("Adding configuration for workload {}", workload)
+        for max_inflight_requests in args.max_inflight_requests:
+            logger.debug(
+                "Adding configuration for max_inflight_requests {}",
+                max_inflight_requests,
+            )
+            for common_config in common.make_common_configurations(args):
+                conf = PerfConfig(
+                    **asdict(common_config),
+                    workload=workload,
+                    max_inflight_requests=max_inflight_requests,
+                )
+                configs.append(conf)
 
     return configs
 

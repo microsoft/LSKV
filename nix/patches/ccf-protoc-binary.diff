@@ -1,0 +1,13 @@
+diff --git a/src/apps/external_executor/protobuf/CMakeLists.txt b/src/apps/external_executor/protobuf/CMakeLists.txt
+index 9be12ed3..e695e810 100644
+--- a/src/apps/external_executor/protobuf/CMakeLists.txt
++++ b/src/apps/external_executor/protobuf/CMakeLists.txt
+@@ -2,7 +2,7 @@
+ # Licensed under the Apache 2.0 License.
+
+ # protoc should be installed under /opt/protoc
+-set(PROTOC_BINARY_PATH "/opt/protoc/bin/protoc")
++find_program(PROTOC_BINARY_PATH "protoc")
+
+ if(EXISTS ${PROTOC_BINARY_PATH})
+   message(STATUS "Found protobuf compiler: ${PROTOC_BINARY_PATH}")

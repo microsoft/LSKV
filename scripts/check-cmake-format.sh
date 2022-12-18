@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
@@ -15,22 +15,22 @@ while getopts ":f:" opt; do
     f)
       fix=true
       shift
-    ;;
-    \?) echo "Invalid option -$OPTARG" >&2
+      ;;
+    \?)
+      echo "Invalid option -$OPTARG" >&2
       exit
-    ;;
+      ;;
   esac
 done
 
-if $fix ; then
+if $fix; then
   echo "Formatting files in" "$@"
 else
   echo "Checking file format in" "$@"
 fi
 
-if [ ! -f "scripts/env/bin/activate" ]
-    then
-        python3.8 -m venv scripts/env
+if [ ! -f "scripts/env/bin/activate" ]; then
+  python3.8 -m venv scripts/env
 fi
 
 source scripts/env/bin/activate
@@ -39,9 +39,9 @@ pip install cmake_format==0.6.11 1>/dev/null
 
 unformatted_files=""
 for file in $(git ls-files "$@" | grep -e '\.cmake$' -e 'CMakeLists\.txt$'); do
-  cmake-format --check "$file" > /dev/null
+  cmake-format --check "$file" >/dev/null
   d=$?
-  if $fix ; then
+  if $fix; then
     cmake-format -i "$file"
   fi
   if [ $d -ne 0 ]; then
@@ -53,7 +53,7 @@ for file in $(git ls-files "$@" | grep -e '\.cmake$' -e 'CMakeLists\.txt$'); do
 done
 
 if [ "$unformatted_files" != "" ]; then
-  if $fix ; then
+  if $fix; then
     echo "Formatted files:"
   else
     echo "Fix formatting:"
