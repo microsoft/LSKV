@@ -148,6 +148,9 @@
         "properties": {
           "transaction_id": {
             "$ref": "#/components/schemas/TransactionId"
+          },
+          "view_history": {
+            "$ref": "#/components/schemas/TransactionId_array"
           }
         },
         "required": ["transaction_id"],
@@ -317,6 +320,12 @@
         "pattern": "^[0-9]+\\.[0-9]+$",
         "type": "string"
       },
+      "TransactionId_array": {
+        "items": {
+          "$ref": "#/components/schemas/TransactionId"
+        },
+        "type": "array"
+      },
       "TxStatus": {
         "enum": ["Unknown", "Pending", "Committed", "Invalid"],
         "type": "string"
@@ -367,7 +376,7 @@
   "info": {
     "description": "Sample Key-Value store built on CCF",
     "title": "CCF Sample C++ Key-Value Store",
-    "version": "0.0.1"
+    "version": "0.0.1-42-g3f91939-dirty"
   },
   "openapi": "3.0.0",
   "paths": {
@@ -388,6 +397,7 @@
             "$ref": "#/components/responses/default"
           }
         },
+        "summary": "OpenAPI schema",
         "x-ccf-forwarding": {
           "$ref": "#/components/x-ccf-forwarding/sometimes"
         }
@@ -410,6 +420,7 @@
             "$ref": "#/components/responses/default"
           }
         },
+        "summary": "Usage metrics for endpoints",
         "x-ccf-forwarding": {
           "$ref": "#/components/x-ccf-forwarding/sometimes"
         }
@@ -417,6 +428,7 @@
     },
     "/app/code": {
       "get": {
+        "description": "Intel SGX enclave code identity values that are permitted for new nodes joining the network.",
         "responses": {
           "200": {
             "content": {
@@ -432,6 +444,7 @@
             "$ref": "#/components/responses/default"
           }
         },
+        "summary": "Permitted SGX code identities",
         "x-ccf-forwarding": {
           "$ref": "#/components/x-ccf-forwarding/sometimes"
         }
@@ -439,6 +452,25 @@
     },
     "/app/commit": {
       "get": {
+        "description": "Latest transaction ID that has been committed on the service",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "view_history",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "view_history_since",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/uint64"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -454,6 +486,7 @@
             "$ref": "#/components/responses/default"
           }
         },
+        "summary": "Current commit level",
         "x-ccf-forwarding": {
           "$ref": "#/components/x-ccf-forwarding/sometimes"
         }
@@ -788,40 +821,9 @@
         }
       }
     },
-    "/app/local_tx": {
-      "get": {
-        "parameters": [
-          {
-            "in": "query",
-            "name": "transaction_id",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/TransactionId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetTxStatus__Out"
-                }
-              }
-            },
-            "description": "Default response description"
-          },
-          "default": {
-            "$ref": "#/components/responses/default"
-          }
-        },
-        "x-ccf-forwarding": {
-          "$ref": "#/components/x-ccf-forwarding/sometimes"
-        }
-      }
-    },
     "/app/receipt": {
       "get": {
+        "description": "A signed statement from the service over a transaction entry in the ledger",
         "parameters": [
           {
             "in": "query",
@@ -847,6 +849,7 @@
             "$ref": "#/components/responses/default"
           }
         },
+        "summary": "Receipt for a transaction",
         "x-ccf-forwarding": {
           "$ref": "#/components/x-ccf-forwarding/sometimes"
         }
@@ -854,6 +857,7 @@
     },
     "/app/snp/host_data": {
       "get": {
+        "description": "AMD SEV-SNP attestation host data values that are permitted for new nodes joining the network.",
         "parameters": [
           {
             "in": "query",
@@ -879,6 +883,7 @@
             "$ref": "#/components/responses/default"
           }
         },
+        "summary": "Permitted SNP attestation host data",
         "x-ccf-forwarding": {
           "$ref": "#/components/x-ccf-forwarding/sometimes"
         }
@@ -886,6 +891,7 @@
     },
     "/app/snp/measurements": {
       "get": {
+        "description": "AMD SEV-SNP attestation measurement values that are permitted for new nodes joining the network.",
         "responses": {
           "200": {
             "content": {
@@ -901,6 +907,7 @@
             "$ref": "#/components/responses/default"
           }
         },
+        "summary": "Permitted SNP attestation measurements",
         "x-ccf-forwarding": {
           "$ref": "#/components/x-ccf-forwarding/sometimes"
         }
@@ -908,6 +915,7 @@
     },
     "/app/tx": {
       "get": {
+        "description": "Possible statuses returned are Unknown, Pending, Committed or Invalid.",
         "parameters": [
           {
             "in": "query",
@@ -933,6 +941,7 @@
             "$ref": "#/components/responses/default"
           }
         },
+        "summary": "Current status of a transaction",
         "x-ccf-forwarding": {
           "$ref": "#/components/x-ccf-forwarding/sometimes"
         }
