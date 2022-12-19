@@ -44,7 +44,7 @@
 
     - name: Copy lskv repo over
       ansible.posix.synchronize:
-        src: "{{ playbook_dir }}/../"
+        src: "{{ playbook_dir }}/../../"
         dest: /tmp/lskv
 
     - name: Clone the CCF repo
@@ -100,3 +100,6 @@
         requirements: /tmp/lskv/requirements.txt
         virtualenv: /tmp/lskv/.venv
         virtualenv_command: python3 -m venv
+      args:
+        chdir: /tmp/lskv
+      

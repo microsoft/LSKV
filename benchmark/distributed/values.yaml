@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 ---
 # values for the distributed benchmarking setup
-vm_user: "lskv"
+vm_user: "apj39"
 
-py_ccf_ver: "4.0.0dev0"
-ccf_ver: "4.0.0-dev0"
+py_ccf_ver: "4.0.0dev2"
+ccf_ver: "4.0.0-dev2"
