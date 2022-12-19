@@ -16,6 +16,8 @@ set(PROTO_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/lskvserver.proto
     ${CMAKE_CURRENT_SOURCE_DIR}/status.proto)
 
+option(GENERATE_PYTHON "generate python protobuf and grpc bindings" OFF)
+
 foreach(proto_file ${PROTO_FILES})
   get_filename_component(PROTO_NAME ${proto_file} NAME)
   get_filename_component(PROTO_NAME_WE ${proto_file} NAME_WE)
@@ -31,6 +33,17 @@ foreach(proto_file ${PROTO_FILES})
 
   if(${PROTO_NAME_WE} STREQUAL "lskvserver")
     set(EXTRA_INCLUDES ${CMAKE_CURRENT_BINARY_DIR}/etcd.pb.h)
+  endif()
+
+  if(${GENERATE_PYTHON})
+    add_custom_command(
+      OUTPUT ${CMAKE_SOURCE_DIR}/tests/${PROTO_NAME_WE}_pb2.py
+      COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build.sh ${proto_file}
+              ${CMAKE_SOURCE_DIR}/tests/
+      COMMENT "Generate Python source file from protobuf file ${PROTO_NAME}"
+      DEPENDS ${proto_file})
+    add_custom_target(${PROTO_NAME_WE}_proto_python ALL
+                      DEPENDS ${CMAKE_SOURCE_DIR}/tests/${PROTO_NAME_WE}_pb2.py)
   endif()
 
   if(${COMPILE_TARGET} STREQUAL "sgx")
