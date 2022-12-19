@@ -79,8 +79,11 @@ class LSKVStore(Store):
                     package += ".enclave.signed.so"
                 else:
                     package += ".virtual.so"
+                bin_path = "sandbox.sh"
+                if shutil.which(bin_path) is None:
+                    bin_path = f"/opt/ccf_{self.config.enclave}/bin/sandbox.sh"
                 lskv_cmd = [
-                    "sandbox.sh",  # expect to find the sandbox in the path
+                    bin_path,
                     "--enclave-type",
                     "virtual" if self.config.enclave == "virtual" else "release",
                     "--enclave-platform",
