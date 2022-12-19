@@ -10,6 +10,7 @@
   statix,
   shfmt,
   cmake-format,
+  python-ccf,
 }: let
   pythonDeps = with python3Packages; [
     loguru
@@ -18,6 +19,8 @@
     seaborn
     pytest
     typing-extensions
+    types-protobuf
+    python-ccf
   ];
 in {
   checks = {
@@ -154,7 +157,7 @@ in {
     statix =
       writeShellScriptBin "statix"
       ''
-        statix fix .
+        ${statix}/bin/statix fix .
       '';
   };
 }

@@ -6,15 +6,26 @@ Common utils for testing.
 """
 
 import base64
+import hashlib
+import http
 import os
 import time
 from http import HTTPStatus
 from subprocess import PIPE, Popen
-from typing import Any, Dict, List
+from typing import List, Dict, Any
 
+import ccf.receipt  # type: ignore
+
+# pylint: disable=import-error
+import etcd_pb2  # type: ignore
 import httpx
+
+# pylint: disable=import-error
+import lskvserver_pb2  # type: ignore
 import pytest
 import typing_extensions
+from cryptography.x509 import load_pem_x509_certificate  # type: ignore
+from google.protobuf.json_format import MessageToDict, ParseDict
 from loguru import logger
 
 # pylint: disable=import-error
@@ -317,45 +328,117 @@ class HttpClient:
                 raise Exception("failed to wait for commit")
             time.sleep(0.1)
 
-    def get(self, key: str, range_end: str = "", rev: int = 0):
+    def get(self, key: str, range_end: str = "", rev: int = 0, check=True):
         """
         Perform a get operation on lskv.
         """
         logger.info("Get: {} {} {}", key, range_end, rev)
-        j: Dict[str, Any] = {"key": b64encode(key)}
+        req = etcd_pb2.RangeRequest()
+        req.key = key.encode("utf-8")
         if range_end:
-            j["range_end"] = b64encode(range_end)
+            req.range_end = range_end.encode("utf-8")
         if rev:
-            j["revision"] = rev
-        return self.client.post("/v3/kv/range", json=j)
+            req.revision = rev
+        j = MessageToDict(req)
+        res = self.client.post("/v3/kv/range", json=j)
+        if check:
+            check_response(res)
+        return res
 
-    def put(self, key: str, value: str, lease_id: int = 0):
+    # pylint: disable=too-many-arguments
+    def put(
+        self,
+        key: str,
+        value: str,
+        lease_id: int = 0,
+        wait_for_commit: bool = True,
+        check_receipt=True,
+        check=True,
+    ):
         """
         Perform a put operation on lskv.
         """
-        logger.info("Put: {} {} {}", key, value, lease_id)
-        j: Dict[str, Any] = {"key": b64encode(key), "value": b64encode(value)}
+        logger.info("Put: {} {}", key, value)
+        req = etcd_pb2.PutRequest()
+        req.key = key.encode("utf-8")
+        req.value = value.encode("utf-8")
         if lease_id:
-            j["lease"] = lease_id
-        return self.client.post("/v3/kv/put", json=j)
+            req.lease = lease_id
+        j = MessageToDict(req)
+        res = self.client.post("/v3/kv/put", json=j)
+        if check:
+            check_response(res)
+            if wait_for_commit:
+                rev, term = extract_rev_term(res)
+                self.wait_for_commit(term, rev)
+            if check_receipt:
+                res_pb = ParseDict(res.json(), etcd_pb2.PutResponse())
+                self.check_receipt("put", req, res_pb)
+        return res
 
-    def delete(self, key: str, range_end: str = ""):
+    # pylint: disable=too-many-arguments
+    def delete(
+        self,
+        key: str,
+        range_end: str = "",
+        wait_for_commit: bool = True,
+        check_receipt=True,
+        check=True,
+    ):
         """
         Perform a delete operation on lskv.
         """
         logger.info("Delete: {} {}", key, range_end)
-        j = {"key": b64encode(key)}
+        req = etcd_pb2.DeleteRangeRequest()
+        req.key = key.encode("utf-8")
         if range_end:
-            j["range_end"] = b64encode(range_end)
-        return self.client.post("/v3/kv/delete_range", json=j)
+            req.range_end = range_end.encode("utf-8")
+        j = MessageToDict(req)
+        res = self.client.post("/v3/kv/delete_range", json=j)
+        if check:
+            check_response(res)
+            if wait_for_commit:
+                rev, term = extract_rev_term(res)
+                self.wait_for_commit(term, rev)
+            if check_receipt:
+                res_pb = ParseDict(res.json(), etcd_pb2.DeleteRangeResponse())
+                self.check_receipt("delete_range", req, res_pb)
+        return res
 
-    def compact(self, rev: int):
+    def get_receipt(self, rev: int, term: int):
+        """
+        Get a receipt for a revision and term.
+        """
+        logger.info("GetReceipt: {} {}", rev, term)
+        req = lskvserver_pb2.GetReceiptRequest()
+        req.revision = rev
+        req.raft_term = term
+        j = MessageToDict(req)
+        res = self.client.post(
+            "/v3/receipt/get_receipt",
+            json=j,
+        )
+        if res.status_code == http.HTTPStatus.ACCEPTED:
+            logger.info("GetReceipt: ACCEPTED")
+            # accepted, retry
+            res = self.client.post(
+                "/v3/receipt/get_receipt",
+                json=j,
+            )
+        check_response(res)
+        proto = ParseDict(res.json(), lskvserver_pb2.GetReceiptResponse())
+        return (res, proto)
+
+    def compact(self, rev: int, check=True):
         """
         Compact the KV store at the given revision
         """
         logger.info("Compact: {}", rev)
         j = {"revision": rev}
-        return self.client.post("/v3/kv/compact", json=j)
+        res = self.client.post("/v3/kv/compact", json=j)
+        if check:
+            check_response(res)
+        return res
 
     def lease_grant(self, ttl: int = 60):
         """
@@ -363,7 +446,10 @@ class HttpClient:
         """
         logger.info("LeaseGrant: {}", ttl)
         j = {"TTL": ttl}
-        return self.client.post("/v3/lease/grant", json=j)
+        res = self.client.post("/v3/lease/grant", json=j)
+        check_response(res)
+        proto = ParseDict(res.json(), etcd_pb2.LeaseGrantResponse())
+        return (res, proto)
 
     def lease_revoke(self, lease_id: str):
         """
@@ -371,33 +457,126 @@ class HttpClient:
         """
         logger.info("LeaseRevoke: {}", lease_id)
         j = {"ID": lease_id}
-        return self.client.post("/v3/lease/revoke", json=j)
+        res = self.client.post("/v3/lease/revoke", json=j)
+        check_response(res)
+        proto = ParseDict(res.json(), etcd_pb2.LeaseRevokeResponse())
+        return (res, proto)
 
-    def lease_keep_alive(self, lease_id: str):
+    def lease_keep_alive(self, lease_id: str, check=True):
         """
         Perform a lease keep_alive operation.
         """
         logger.info("LeaseKeepAlive: {}", lease_id)
         j = {"ID": lease_id}
-        return self.client.post("/v3/lease/keepalive", json=j)
+        res = self.client.post("/v3/lease/keepalive", json=j)
+        proto = None
+        if check:
+            check_response(res)
+            proto = ParseDict(res.json(), etcd_pb2.LeaseKeepAliveResponse())
+        return (res, proto)
 
-    def tx_status(self, term: int, rev: int):
+    def tx_status(self, term: int, rev: int, check=True):
         """
         Check the status of a transaction.
         """
         logger.info("TxStatus: {} {}", term, rev)
         j: Dict[str, Any] = {"raftTerm": term, "revision": rev}
-        return self.client.post("/v3/maintenance/tx_status", json=j)
+        res = self.client.post("/v3/maintenance/tx_status", json=j)
+        if check:
+            check_response(res)
+        return res
 
     def status(self):
         """
         Get the status of LSKV.
         """
         logger.info("Status")
-        return self.client.post("/v3/maintenance/status", json={})
+        res = self.client.post("/v3/maintenance/status", json={})
+        check_response(res)
+        return res
 
     def raw(self) -> httpx.Client:
         """
         Get the raw client.
         """
         return self.client
+
+    # pylint: disable=too-many-locals
+    def check_receipt(self, req_type: str, request, response):
+        """
+        Check a receipt for a request and response.
+        """
+        rev, term = extract_rev_term_pb(response)
+        res, proto = self.get_receipt(rev, term)
+
+        receipt = proto.receipt
+        tx_receipt = receipt.tx_receipt
+        leaf_components = tx_receipt.leaf_components
+        claims_digest = leaf_components.claims_digest
+        write_set_digest = leaf_components.write_set_digest
+        commit_evidence = leaf_components.commit_evidence
+
+        response.ClearField("header")
+
+        commit_evidence_digest = hashlib.sha256(commit_evidence.encode()).digest()
+        leaf_parts = [
+            bytes.fromhex(write_set_digest),
+            commit_evidence_digest,
+            bytes.fromhex(claims_digest),
+        ]
+        leaf = hashlib.sha256(b"".join(leaf_parts)).hexdigest()
+
+        signature = receipt.signature
+        cert = receipt.cert
+        node_cert = load_pem_x509_certificate(cert.encode())
+
+        root = ccf.receipt.root(leaf, res.json()["receipt"]["txReceipt"]["proof"])
+
+        signature = base64.b64encode(signature).decode()
+        logger.debug("verifying receipt signature:{}", signature)
+        ccf.receipt.verify(root, signature, node_cert)
+
+        # receipt is valid, check if it matches our claims too
+        claims = lskvserver_pb2.ReceiptClaims()
+        getattr(claims, f"request_{req_type}").CopyFrom(request)
+        getattr(claims, f"response_{req_type}").CopyFrom(response)
+        claims_ser = claims.SerializeToString()
+        claims_digest_calculated = hashlib.sha256(claims_ser).hexdigest()
+        assert claims_digest == claims_digest_calculated
+
+
+def check_response(res):
+    """
+    Check a response to be success.
+    """
+    logger.info("res: {} {}", res.status_code, res.text)
+    assert res.status_code == 200
+    check_header(res.json())
+
+
+def check_header(body):
+    """
+    Check the header is well-formed.
+    """
+    assert "header" in body
+    header = body["header"]
+    assert "clusterId" in header
+    assert "memberId" in header
+    assert "revision" in header
+    assert "raftTerm" in header
+
+
+def extract_rev_term(res):
+    """
+    Extract the revision and term from a response.
+    """
+    header = res.json()["header"]
+    return int(header["revision"]), int(header["raftTerm"])
+
+
+def extract_rev_term_pb(res):
+    """
+    Extract the revision and term from a pb response.
+    """
+    header = res.header
+    return header.revision, header.raft_term
