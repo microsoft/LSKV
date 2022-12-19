@@ -71,7 +71,7 @@ class K6Benchmark(common.Benchmark):
             "--env",
             f"MAX_VUS={self.config.vus}",
             "--env",
-            f"ADDR={self.config.node_ips[0]}:{self.config.port}",
+            f"ADDR={self.config.get_node_addr(0)}",
             "benchmark/k6.js",
         ]
         logger.debug("run cmd: {}", bench)

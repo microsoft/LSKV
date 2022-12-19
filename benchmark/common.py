@@ -40,11 +40,9 @@ class Config:
     # pylint: disable=duplicate-code
     store: str
     distributed: bool
-    port: int
     tls: bool
     enclave: str
-    nodes: int
-    node_ips: List[str]
+    nodes: List[str]
     worker_threads: int
     sig_tx_interval: int
     sig_ms_interval: int
@@ -74,6 +72,9 @@ class Config:
         if self.tls:
             return "https"
         return "http"
+
+    def get_node_addr(self, node:int) -> str:
+        return self.nodes[node].split("://")[-1]
 
     def to_str(self) -> str:
         """
@@ -121,7 +122,7 @@ class Store(abc.ABC):
             self.proc.wait()
             logger.info("stopped {}", self.config.to_str())
             logger.info("killing cchost")
-            subprocess.run(["pkill", "cchost"], check=True)
+            subprocess.run(["pkill", "cchost"], check=False)
 
         self.cleanup()
         return False
@@ -137,15 +138,15 @@ class Store(abc.ABC):
         """
         Wait for the datastore to be ready to accept requests.
         """
-        self._wait_for_ready(self.config.port)
+        self._wait_for_ready()
 
-    def _wait_for_ready(self, port: int, tries=120) -> bool:
+
+    def _wait_for_ready(self, tries=120) -> bool:
         client = self.client()
         client += ["get", "missing key", "-w", "json"]
+        addr = self.config.get_node_addr(0)
         if self.config.http_version == 1:
             scheme = self.config.scheme()
-            ip_addr = self.config.node_ips[0]
-            port = self.config.port
             client = [
                 "curl",
                 "--cacert",
@@ -156,7 +157,7 @@ class Store(abc.ABC):
                 self.key(),
                 "-X",
                 "POST",
-                f"{scheme}://{ip_addr}:{port}/v3/kv/range",
+                f"{scheme}://{addr}/v3/kv/range",
                 "-d",
                 '{"key":"bWlzc2luZyBrZXkK"}',
                 "-H",
@@ -176,14 +177,14 @@ class Store(abc.ABC):
                     result_j = json.loads(result)
                     if "header" in result_j:
                         logger.info(
-                            "finished waiting for port ({}) to be open, try {}", port, i
+                            "finished waiting for node ({}) to be open, try {}", addr, i
                         )
                         return True
             except (subprocess.CalledProcessError, json.JSONDecodeError):
                 pass
-            logger.debug("waiting for port ({}) to be open, try {}", port, i)
+            logger.debug("waiting for node ({}) to be open, try {}", addr, i)
             time.sleep(1)
-        logger.error("took too long waiting for port {} ({}s)", port, tries)
+        logger.error("took too long waiting for node {} ({}s)", addr, tries)
         return False
 
     def cleanup(self):
@@ -221,7 +222,7 @@ class Store(abc.ABC):
         return [
             "bin/etcdctl",
             "--endpoints",
-            f"{self.config.scheme()}://{self.config.node_ips[0]}:{self.config.port}",
+            f"{self.config.scheme()}://{self.config.get_node_addr( 0 )}",
             "--cacert",
             self.cacert(),
             "--cert",
@@ -263,8 +264,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--http1", action="store_true")
     parser.add_argument("--http2", action="store_true")
     parser.add_argument("--insecure", action="store_true")
-    parser.add_argument("--nodes", action="extend", nargs="+", type=int)
-    parser.add_argument("--node-ips", action="extend", nargs="+", type=str)
+    parser.add_argument("--nodes", action="extend", nargs="+", type=str)
     parser.add_argument("--worker-threads", action="extend", nargs="+", type=int)
     parser.add_argument("--sig-tx-intervals", action="extend", nargs="+", type=int)
     parser.add_argument("--sig-ms-intervals", action="extend", nargs="+", type=int)
@@ -275,11 +275,6 @@ def get_argument_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Whether to run in distributed mode",
     )
-    parser.add_argument(
-        "--converged",
-        action="store_true",
-        help="Whether to run in converged mode",
-    )
     return parser
 
 
@@ -288,10 +283,10 @@ def set_default_args(args: argparse.Namespace):
     Set the default arguments for common args.
     """
     # set default if not set
-    if not args.nodes and not args.node_ips:
-        args.nodes = [1]
-    if args.node_ips:
-        args.nodes = [len(args.node_ips)]
+    if not args.nodes:
+        logger.debug("using single node")
+        args.nodes = [f"local://127.0.0.1:8000"]
+
     if not args.worker_threads:
         args.worker_threads = [0]
     if not args.sig_tx_intervals:
@@ -343,40 +338,17 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
     """
     Make the common configurations to run benchmarks against.
     """
-    port = 8000
     configs = []
     # pylint: disable=too-many-nested-blocks
-    for nodes in args.nodes:
-        logger.debug("adding nodes: {}", nodes)
-        if args.etcd:
-            if args.insecure:
-                logger.debug("adding insecure etcd")
-                etcd_config = Config(
-                    store="etcd",
-                    distributed=False,
-                    port=port,
-                    tls=False,
-                    enclave="virtual",
-                    nodes=nodes,
-                    node_ips=args.node_ips,
-                    http_version=2,
-                    worker_threads=0,
-                    sig_tx_interval=0,
-                    sig_ms_interval=0,
-                    ledger_chunk_bytes="",
-                    snapshot_tx_interval=0,
-                )
-                configs.append(etcd_config)
-
-            logger.debug("adding tls etcd")
+    if args.etcd:
+        if args.insecure:
+            logger.debug("adding insecure etcd")
             etcd_config = Config(
                 store="etcd",
                 distributed=False,
-                port=port,
-                tls=True,
+                tls=False,
                 enclave="virtual",
-                nodes=nodes,
-                node_ips=args.node_ips,
+                nodes=args.nodes,
                 http_version=2,
                 worker_threads=0,
                 sig_tx_interval=0,
@@ -386,101 +358,79 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
             )
             configs.append(etcd_config)
 
-        # pylint: disable=too-many-nested-blocks
-        for worker_threads in args.worker_threads:
-            logger.debug("adding worker threads: {}", worker_threads)
-            for sig_tx_interval in args.sig_tx_intervals:
-                logger.debug("adding sig_tx_interval: {}", sig_tx_interval)
-                for sig_ms_interval in args.sig_ms_intervals:
-                    logger.debug("adding sig_ms_interval: {}", sig_ms_interval)
-                    for ledger_chunk_bytes in args.ledger_chunk_bytes:
-                        logger.debug(
-                            "adding ledger_chunk_bytes: {}", ledger_chunk_bytes
-                        )
-                        for snapshot_tx_interval in args.snapshot_tx_intervals:
-                            logger.debug(
-                                "adding snapshot_tx_interval: {}", snapshot_tx_interval
-                            )
-                            lskv_config = Config(
-                                store="lskv",
-                                port=port,
-                                tls=True,
-                                enclave="virtual",
-                                nodes=nodes,
-                                node_ips=args.node_ips,
-                                http_version=1,
-                                worker_threads=worker_threads,
-                                sig_tx_interval=sig_tx_interval,
-                                sig_ms_interval=sig_ms_interval,
-                                ledger_chunk_bytes=ledger_chunk_bytes,
-                                snapshot_tx_interval=snapshot_tx_interval,
-                                distributed=False,
-                            )
-                            if "virtual" in args.enclave:
-                                lskv_config = copy.deepcopy(lskv_config)
-                                logger.debug("adding virtual lskv")
-                                if args.http1:
-                                    lskv_config = copy.deepcopy(lskv_config)
-                                    lskv_config.http_version = 1
-                                    logger.debug("adding http1 lskv")
-                                    if args.distributed:
-                                        lskv_config = copy.deepcopy(lskv_config)
-                                        lskv_config.distributed = True
-                                        logger.debug("adding distributed lskv")
-                                        configs.append(lskv_config)
-                                    if args.converged:
-                                        lskv_config = copy.deepcopy(lskv_config)
-                                        lskv_config.distributed = False
-                                        logger.debug("adding converged lskv")
-                                        configs.append(lskv_config)
-                                if args.http2:
-                                    lskv_config = copy.deepcopy(lskv_config)
-                                    lskv_config.http_version = 2
-                                    logger.debug("adding http2 lskv")
-                                    if args.distributed:
-                                        lskv_config = copy.deepcopy(lskv_config)
-                                        lskv_config.distributed = True
-                                        logger.debug("adding distributed lskv")
-                                        configs.append(lskv_config)
-                                    if args.converged:
-                                        lskv_config = copy.deepcopy(lskv_config)
-                                        lskv_config.distributed = False
-                                        logger.debug("adding converged lskv")
-                                        configs.append(lskv_config)
+        logger.debug("adding tls etcd")
+        etcd_config = Config(
+            store="etcd",
+            distributed=False,
+            tls=True,
+            enclave="virtual",
+            nodes=args.nodes,
+            http_version=2,
+            worker_threads=0,
+            sig_tx_interval=0,
+            sig_ms_interval=0,
+            ledger_chunk_bytes="",
+            snapshot_tx_interval=0,
+        )
+        configs.append(etcd_config)
 
-                            # sgx
-                            if "sgx" in args.enclave:
-                                logger.debug("adding sgx lskv")
+    # pylint: disable=too-many-nested-blocks
+    for worker_threads in args.worker_threads:
+        logger.debug("adding worker threads: {}", worker_threads)
+        for sig_tx_interval in args.sig_tx_intervals:
+            logger.debug("adding sig_tx_interval: {}", sig_tx_interval)
+            for sig_ms_interval in args.sig_ms_intervals:
+                logger.debug("adding sig_ms_interval: {}", sig_ms_interval)
+                for ledger_chunk_bytes in args.ledger_chunk_bytes:
+                    logger.debug(
+                        "adding ledger_chunk_bytes: {}", ledger_chunk_bytes
+                    )
+                    for snapshot_tx_interval in args.snapshot_tx_intervals:
+                        logger.debug(
+                            "adding snapshot_tx_interval: {}", snapshot_tx_interval
+                        )
+                        lskv_config = Config(
+                            store="lskv",
+                            tls=True,
+                            enclave="virtual",
+                            nodes=args.nodes,
+                            http_version=1,
+                            worker_threads=worker_threads,
+                            sig_tx_interval=sig_tx_interval,
+                            sig_ms_interval=sig_ms_interval,
+                            ledger_chunk_bytes=ledger_chunk_bytes,
+                            snapshot_tx_interval=snapshot_tx_interval,
+                            distributed=args.distributed,
+                        )
+                        if "virtual" in args.enclave:
+                            lskv_config = copy.deepcopy(lskv_config)
+                            logger.debug("adding virtual lskv")
+                            if args.http1:
                                 lskv_config = copy.deepcopy(lskv_config)
-                                lskv_config.enclave = "sgx"
-                                if args.http1:
-                                    lskv_config = copy.deepcopy(lskv_config)
-                                    lskv_config.http_version = 1
-                                    logger.debug("adding http1 lskv")
-                                    if args.distributed:
-                                        lskv_config = copy.deepcopy(lskv_config)
-                                        lskv_config.distributed = True
-                                        logger.debug("adding distributed lskv")
-                                        configs.append(lskv_config)
-                                    if args.converged:
-                                        lskv_config = copy.deepcopy(lskv_config)
-                                        lskv_config.distributed = False
-                                        logger.debug("adding converged lskv")
-                                        configs.append(lskv_config)
-                                if args.http2:
-                                    lskv_config = copy.deepcopy(lskv_config)
-                                    lskv_config.http_version = 2
-                                    logger.debug("adding http2 lskv")
-                                    if args.distributed:
-                                        lskv_config = copy.deepcopy(lskv_config)
-                                        lskv_config.distributed = True
-                                        logger.debug("adding distributed lskv")
-                                        configs.append(lskv_config)
-                                    if args.converged:
-                                        lskv_config = copy.deepcopy(lskv_config)
-                                        lskv_config.distributed = False
-                                        logger.debug("adding converged lskv")
-                                        configs.append(lskv_config)
+                                lskv_config.http_version = 1
+                                logger.debug("adding http1 lskv")
+                                configs.append(lskv_config)
+                            if args.http2:
+                                lskv_config = copy.deepcopy(lskv_config)
+                                lskv_config.http_version = 2
+                                logger.debug("adding http2 lskv")
+                                configs.append(lskv_config)
+
+                        # sgx
+                        if "sgx" in args.enclave:
+                            logger.debug("adding sgx lskv")
+                            lskv_config = copy.deepcopy(lskv_config)
+                            lskv_config.enclave = "sgx"
+                            if args.http1:
+                                lskv_config = copy.deepcopy(lskv_config)
+                                lskv_config.http_version = 1
+                                logger.debug("adding http1 lskv")
+                                configs.append(lskv_config)
+                            if args.http2:
+                                lskv_config = copy.deepcopy(lskv_config)
+                                lskv_config.http_version = 2
+                                logger.debug("adding http2 lskv")
+                                configs.append(lskv_config)
 
     return configs
 

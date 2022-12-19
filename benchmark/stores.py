@@ -33,7 +33,7 @@ class EtcdStore(Store):
                     "--scheme",
                     self.config.scheme(),
                     "--nodes",
-                    str(self.config.nodes),
+                    str(len(self.config.nodes)),
                 ]
                 logger.info("spawning etcd: {}", etcd_cmd)
                 return Popen(etcd_cmd, stdout=out, stderr=err)
@@ -104,10 +104,9 @@ class LSKVStore(Store):
                 if self.config.http_version == 2:
                     lskv_cmd.append("--http2")
 
-                port = 8000
-                for i in range(self.config.nodes):
+                for i in range(len(self.config.nodes)):
                     lskv_cmd.append("--node")
-                    lskv_cmd.append(f"local://127.0.0.1:{port + i}")
+                    lskv_cmd.append(f"local://{self.config.get_node_addr(i)}")
                 logger.info("spawning lskv: {}", lskv_cmd)
                 return Popen(lskv_cmd, stdout=out, stderr=err)
 
@@ -151,9 +150,9 @@ class DistributedLSKVStore(Store):
                 encoding="utf-8",
             ) as err:
                 nodes = []
-                port = 8000
-                for i, ip_addr in enumerate(self.config.node_ips):
-                    nodes.append(f"ssh://{ip_addr}:{port + i}")
+                for i in range(len(self.config.nodes)):
+                    addr = self.config.get_node_addr(i)
+                    nodes.append(f"ssh://{addr}")
                 package = "build/liblskv"
                 if self.config.enclave == "sgx":
                     package += ".enclave.so.signed"

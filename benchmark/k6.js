@@ -17,9 +17,6 @@ const addr = __ENV.ADDR;
 const duration_s = 5;
 const stageCount = 5;
 
-const grpc_client = new grpc.Client();
-grpc_client.load(["definitions"], "../../proto/etcd.proto");
-
 function getStages() {
   // start with a warm up
   let stages = [{ target: 100, duration: "1s" }];

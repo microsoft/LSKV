@@ -79,7 +79,7 @@ class EtcdBenchmark(common.Benchmark):
         bench = [
             "bin/benchmark",
             "--endpoints",
-            f"{self.config.scheme()}://127.0.0.1:{self.config.port}",
+            f"{self.config.scheme()}://{self.config.get_node_addr(0)}",
             "--clients",
             str(self.config.clients),
             "--conns",
