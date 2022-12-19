@@ -14,7 +14,7 @@ from typing import List
 import common
 from common import Store
 from loguru import logger
-from stores import DistributedLSKVStore, LSKVStore
+from stores import LSKVStore
 
 BENCH_DIR = os.path.join(common.BENCH_DIR, "k6")
 
@@ -170,10 +170,7 @@ def execute_config(config: K6Config):
     if config.store == "etcd":
         logger.warning("skipping etcd for k6 benchmark")
         return
-    if config.distributed:
-        store: Store = DistributedLSKVStore(config)
-    else:
-        store = LSKVStore(config)
+    store = LSKVStore(config)
 
     benchmark = K6Benchmark(config)
 

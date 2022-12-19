@@ -39,7 +39,6 @@ class Config:
 
     # pylint: disable=duplicate-code
     store: str
-    distributed: bool
     tls: bool
     enclave: str
     nodes: List[str]
@@ -272,11 +271,6 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--sig-ms-intervals", action="extend", nargs="+", type=int)
     parser.add_argument("--ledger-chunk-bytes", action="extend", nargs="+", type=str)
     parser.add_argument("--snapshot-tx-intervals", action="extend", nargs="+", type=int)
-    parser.add_argument(
-        "--distributed",
-        action="store_true",
-        help="Whether to run in distributed mode",
-    )
     return parser
 
 
@@ -347,7 +341,6 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
             logger.debug("adding insecure etcd")
             etcd_config = Config(
                 store="etcd",
-                distributed=False,
                 tls=False,
                 enclave="virtual",
                 nodes=args.nodes,
@@ -363,7 +356,6 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
         logger.debug("adding tls etcd")
         etcd_config = Config(
             store="etcd",
-            distributed=False,
             tls=True,
             enclave="virtual",
             nodes=args.nodes,
@@ -400,7 +392,6 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                             sig_ms_interval=sig_ms_interval,
                             ledger_chunk_bytes=ledger_chunk_bytes,
                             snapshot_tx_interval=snapshot_tx_interval,
-                            distributed=args.distributed,
                         )
                         if "virtual" in args.enclave:
                             lskv_config = copy.deepcopy(lskv_config)

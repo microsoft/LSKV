@@ -20,7 +20,7 @@ import common
 import pandas as pd  # type: ignore
 from common import DESIRED_DURATION_S, Store
 from loguru import logger
-from stores import DistributedLSKVStore, EtcdStore, LSKVStore
+from stores import EtcdStore, LSKVStore
 
 
 # pylint: disable=too-many-instance-attributes
@@ -281,10 +281,7 @@ def execute_config(config: EtcdConfig):
     if config.store == "etcd":
         store: Store = EtcdStore(config)
     else:
-        if config.distributed:
-            store = DistributedLSKVStore(config)
-        else:
-            store = LSKVStore(config)
+        store = LSKVStore(config)
 
     benchmark = EtcdBenchmark(config)
 
