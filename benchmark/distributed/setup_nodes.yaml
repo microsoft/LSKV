@@ -46,6 +46,7 @@
       ansible.posix.synchronize:
         src: "{{ playbook_dir }}/../../"
         dest: /tmp/lskv
+      tags: copy
 
     - name: Clone the CCF repo
       ansible.builtin.git:
