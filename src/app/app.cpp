@@ -21,6 +21,8 @@
 #include "lskvserver.pb.h"
 #include "node_data.h"
 
+#include <fmt/ranges.h>
+
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
 
@@ -55,6 +57,10 @@ namespace app
       openapi_info.title = "CCF Sample C++ Key-Value Store";
       openapi_info.description = "Sample Key-Value store built on CCF";
       openapi_info.document_version = LSKV_VERSION;
+
+      // enable tracking of deletes in historical queries to populate them in
+      // the diffs
+      context.get_historical_state().track_deletes_on_missing_keys(true);
 
       kvindex = std::make_shared<IndexStrategy>(app::kvstore::RECORDS);
       context.get_indexing_strategies().install_strategy(kvindex);

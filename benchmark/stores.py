@@ -80,7 +80,7 @@ class LSKVStore(Store):
                 else:
                     package += ".virtual.so"
                 lskv_cmd = [
-                    f"/opt/ccf_{self.config.enclave}/bin/sandbox.sh",
+                    "sandbox.sh",  # expect to find the sandbox in the path
                     "--enclave-type",
                     "virtual" if self.config.enclave == "virtual" else "release",
                     "--enclave-platform",
@@ -157,12 +157,11 @@ class DistributedLSKVStore(Store):
                     nodes.append(f"ssh://{ip}:{port + i}")
                 package = "build/liblskv"
                 if self.config.enclave == "sgx":
-                    package += ".enclave.signed.so"
+                    package += ".enclave.so.signed"
                 else:
                     package += ".virtual.so"
                 lskv_cmd = [
-                    # we only install sgx ccf on the distributed nodes
-                    f"/opt/ccf_{self.config.enclave}/bin/sandbox.sh",
+                    "sandbox.sh",  # expect to find the sandbox in the path
                     "--enclave-type",
                     "virtual" if self.config.enclave == "virtual" else "release",
                     "--enclave-platform",

@@ -1,4 +1,4 @@
-build/**
+build/
 *.deb
 /.venv_ccf_sandbox/
 workspace/
@@ -16,15 +16,26 @@ bin/
 /.venv/
 /certs/
 
-/.ipynb_checkpoints/
+.ipynb_checkpoints/
 /plots/
 
 *.pyc
+*.egg-info
 
 *.out
 *.err
 
+*_pb2.py
+*_pb2.pyi
+
 /docker-workspace/
+
+/*.parquet
+
+/.direnv/
+/.envrc
+
+/result
 
 /*.parquet
 

@@ -18,10 +18,10 @@ H_FILES=$(wildcard src/**/*.h)
 
 BIN_DIR=bin
 
-CCF_VER=ccf-4.0.0-dev0
-CCF_VER_LOWER=ccf_virtual_4.0.0_dev0
-CCF_SGX_VER_LOWER=ccf_sgx_4.0.0_dev0
-CCF_SGX_UNSAFE_VER_LOWER=ccf_sgx_unsafe_4.0.0_dev0
+CCF_VER=ccf-4.0.0-dev2
+CCF_VER_LOWER=ccf_virtual_4.0.0_dev2
+CCF_SGX_VER_LOWER=ccf_sgx_4.0.0_dev2
+CCF_SGX_UNSAFE_VER_LOWER=ccf_sgx_unsafe_4.0.0_dev2
 
 .PHONY: install-ccf-virtual
 install-ccf-virtual:
@@ -42,22 +42,22 @@ install-ccf-sgx-unsafe:
 	/opt/ccf_sgx_unsafe/getting_started/setup_vm/run.sh /opt/ccf_sgx_unsafe/getting_started/setup_vm/app-dev.yml --extra-vars "platform=sgx" # Install dependencies
 
 .PHONY: build-virtual
-build-virtual:
+build-virtual: .venv
 	mkdir -p $(BUILD)
-	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -GNinja ..
-	cd $(BUILD) && ninja
+	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -DGENERATE_PYTHON=ON -GNinja ..
+	. .venv/bin/activate && cd $(BUILD) && ninja
 
 .PHONY: build-virtual-verbose
 build-virtual-verbose:
 	mkdir -p $(BUILD)
-	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=ON -DCCF_UNSAFE=OFF -GNinja ..
+	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=ON -DCCF_UNSAFE=OFF -DGENERATE_PYTHON=ON -GNinja ..
 	cd $(BUILD) && ninja
 
 .PHONY: build-sgx
-build-sgx:
+build-sgx: .venv
 	mkdir -p $(BUILD)
-	cd $(BUILD) && CC=$(OE_CC) CXX=$(OE_CXX) cmake -DCOMPILE_TARGET=sgx -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -GNinja ..
-	cd $(BUILD) && ninja
+	cd $(BUILD) && CC=$(OE_CC) CXX=$(OE_CXX) cmake -DCOMPILE_TARGET=sgx -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -DGENERATE_PYTHON=ON -GNinja ..
+	. .venv/bin/activate && cd $(BUILD) && ninja
 
 .PHONY: build-docker-virtual
 build-docker-virtual:
@@ -93,7 +93,7 @@ run-virtual-verbose-http1: build-virtual-verbose
 
 .PHONY: run-sgx
 run-sgx: build-sgx
-	VENV_DIR=.venv $(CCF_PREFIX_SGX)/bin/sandbox.sh -p $(BUILD)/liblskv.enclave.so.signed -e release -t virtual --http2
+	VENV_DIR=.venv $(CCF_PREFIX_SGX)/bin/sandbox.sh -p $(BUILD)/liblskv.enclave.so.signed -e release -t sgx --http2
 
 .PHONY: test-virtual
 test-virtual: build-virtual patched-etcd

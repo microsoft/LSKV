@@ -2,18 +2,20 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
-from generator import Messages
-import base64
-import time
-import sys
-import json
-from loguru import logger
-
 """
 Generate a simple workload to run piccolo with.
 """
 
+import base64
+import json
+import sys
+import time
 
+from generator import Messages
+from loguru import logger
+
+
+# pylint: disable=too-many-arguments
 def put(
     msgs: Messages,
     key: str,
@@ -38,6 +40,7 @@ def put(
     )
 
 
+# pylint: disable=too-many-arguments
 def get(
     msgs: Messages,
     key: str,
@@ -65,6 +68,7 @@ def get(
     )
 
 
+# pylint: disable=too-many-arguments
 def delete(
     msgs: Messages,
     key: str,
@@ -92,11 +96,11 @@ def delete(
     )
 
 
-def b64encode(s: str) -> str:
+def b64encode(string: str) -> str:
     """
     Base64 encode a string.
     """
-    return base64.b64encode(s.encode()).decode()
+    return base64.b64encode(string.encode()).decode()
 
 
 def generate_scenario(http_version: int):
@@ -104,7 +108,8 @@ def generate_scenario(http_version: int):
     Generate a scenario for a given http version.
     """
     msgs = Messages()
-    # this is slow but could be made faster if the indexes in the Messages dataframe were added at the end as a batch
+    # this is slow but could be made faster if the indexes in
+    # the Messages dataframe were added at the end as a batch.
     # then we could make one part and repeat it
     start = time.time()
     for i in range(100):

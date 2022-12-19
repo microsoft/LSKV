@@ -12,6 +12,7 @@ import textwrap
 from typing import List, Tuple
 
 import common
+import numpy as np
 import pandas as pd  # type: ignore
 import seaborn as sns  # type: ignore
 
@@ -29,17 +30,18 @@ class Analyser:
     Analyser for helper functions.
     """
 
-    def __init__(self, benchmark: str):
+    def __init__(self, benchmark: str, bench_results: str = common.BENCH_DIR):
         """
         Initialise analyser.
         """
         self.benchmark = benchmark
+        self.bench_results = bench_results
 
     def bench_dir(self) -> str:
         """
         Return the bench directory where results are stored.
         """
-        return os.path.join("..", common.BENCH_DIR, self.benchmark)
+        return os.path.join("..", self.bench_results, self.benchmark)
 
     def plot_dir(self) -> str:
         """
@@ -353,8 +355,10 @@ class Analyser:
     def plot_achieved_throughput_bar(
         self,
         data: pd.DataFrame,
+        x_column="vars",
         row=None,
         col=None,
+        hue=None,
         # pylint: disable=dangerous-default-value
         ignore_vars=[],
         filename="",
@@ -362,19 +366,20 @@ class Analyser:
         """
         Plot a bar graph of achieved throughput.
         """
-        x_column = "vars"
         y_column = "achieved_throughput"
 
         var, invariant_vars = condense_vars(
-            data, [x_column, y_column, row, col] + ignore_vars
+            data, [x_column, y_column, row, col, hue] + ignore_vars
         )
-        data[x_column] = var
+        data["vars"] = var
 
         group_cols = [x_column]
         if row:
             group_cols.append(row)
         if col:
             group_cols.append(col)
+        if hue:
+            group_cols.append(hue)
         grouped = data.groupby(group_cols, dropna=False)
         throughputs = grouped.first()
 
@@ -452,6 +457,137 @@ class Analyser:
 
         return plot
 
+    def plot_percentile_latency_over_time(
+        self,
+        data: pd.DataFrame,
+        row=None,
+        col=None,
+        # pylint: disable=dangerous-default-value
+        ignore_vars=[],
+        filename="",
+        interval=1000,
+        percentile=0.99,
+    ):
+        """
+        Plot throughput throughout the experiment duration.
+        """
+        x_column = "mid"
+        y_column = "latency_ms"
+        hue = "vars"
+
+        var, invariant_vars = condense_vars(
+            data, [x_column, y_column, row, col, hue] + ignore_vars
+        )
+        data[hue] = var
+        # fill in missing values so that groupby works
+        data[hue].fillna("", inplace=True)
+
+        end = data["start_ms"].max()
+        group_cols = [pd.cut(data["start_ms"], np.arange(0, end, interval)), hue]
+        if row:
+            group_cols.append(row)
+        if col:
+            group_cols.append(col)
+        grouped = data.groupby(group_cols)
+
+        latencies = grouped.quantile(percentile)
+        mid = latencies.index.map(lambda x: (x[0].left + x[0].right) // 2)
+        latencies[x_column] = mid
+
+        latencies_data = grouped.first()
+        latencies_data[x_column] = latencies[x_column]
+        latencies_data[y_column] = latencies[y_column]
+
+        plot = sns.relplot(
+            kind="line",
+            data=latencies_data,
+            x=x_column,
+            y=y_column,
+            hue=hue,
+            row=row,
+            col=col,
+        )
+
+        plot.figure.subplots_adjust(top=0.9)
+        plot.figure.suptitle(make_title(invariant_vars))
+
+        # add tick labels to each x axis
+        for axes in plot.axes.flatten():
+            axes.tick_params(labelbottom=True)
+
+        if not filename:
+            filename = f"latency_percentile_over_time-{x_column}-{row}-{col}-{hue}-{percentile}"
+
+        plot.figure.savefig(os.path.join(self.plot_dir(), f"{filename}.svg"))
+        plot.figure.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
+
+        return plot
+
+    def plot_throughput_over_time(
+        self,
+        data: pd.DataFrame,
+        row=None,
+        col=None,
+        # pylint: disable=dangerous-default-value
+        ignore_vars=[],
+        filename="",
+        interval=1000,
+    ):
+        """
+        Plot throughput throughout the experiment duration.
+        """
+        x_column = "mid"
+        y_column = "latency_ms"
+        hue = "vars"
+
+        var, invariant_vars = condense_vars(
+            data, [x_column, y_column, row, col, hue] + ignore_vars
+        )
+        data[hue] = var
+        # fill in missing values so that groupby works
+        data[hue].fillna("", inplace=True)
+
+        end = data["start_ms"].max()
+        group_cols = [pd.cut(data["start_ms"], np.arange(0, end, interval)), hue]
+        if row:
+            group_cols.append(row)
+        if col:
+            group_cols.append(col)
+        grouped = data.groupby(group_cols)
+
+        throughputs = grouped.count() // (interval / 1000)
+        mid = throughputs.index.map(lambda x: (x[0].left + x[0].right) // 2)
+        throughputs[x_column] = mid
+
+        throughput_data = grouped.first()
+        throughput_data[x_column] = throughputs[x_column]
+        throughput_data[y_column] = throughputs[y_column]
+
+        plot = sns.relplot(
+            kind="line",
+            data=throughput_data,
+            x=x_column,
+            y=y_column,
+            hue=hue,
+            row=row,
+            col=col,
+        )
+
+        plot.figure.subplots_adjust(top=0.9)
+        plot.figure.suptitle(make_title(invariant_vars))
+
+        # add tick labels to each x axis
+        for axes in plot.axes.flatten():
+            axes.tick_params(labelbottom=True)
+
+        if not filename:
+            filename = f"throughput_over_time-{x_column}-{row}-{col}-{hue}"
+
+        plot.figure.savefig(os.path.join(self.plot_dir(), f"{filename}.svg"))
+        plot.figure.savefig(os.path.join(self.plot_dir(), f"{filename}.jpg"))
+
+        return plot
+
 
 def condense_vars(all_data, without) -> Tuple[pd.Series, List[str]]:
     """
@@ -471,6 +607,8 @@ def condense_vars(all_data, without) -> Tuple[pd.Series, List[str]]:
         if name == "tls":
             return all_data[name].map(lambda t: "tls" if t else "plain")
         if name == "content_type":
+            return all_data[name].astype(str)
+        if name == "enclave":
             return all_data[name].astype(str)
         if name == "http_version":
             return "http" + all_data[name].astype(str)
