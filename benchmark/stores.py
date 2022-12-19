@@ -136,7 +136,6 @@ class LSKVStore(Store):
         return f"{self.workspace()}/sandbox_common/user0_privk.pem"
 
 
-
 class DistributedLSKVStore(Store):
     """
     A store based on LSKV, distributed over many nodes.
@@ -153,8 +152,8 @@ class DistributedLSKVStore(Store):
             ) as err:
                 nodes = []
                 port = 8000
-                for i, ip in enumerate(self.config.node_ips):
-                    nodes.append(f"ssh://{ip}:{port + i}")
+                for i, ip_addr in enumerate(self.config.node_ips):
+                    nodes.append(f"ssh://{ip_addr}:{port + i}")
                 package = "build/liblskv"
                 if self.config.enclave == "sgx":
                     package += ".enclave.so.signed"

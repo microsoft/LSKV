@@ -135,7 +135,7 @@ def execute_config(config: PerfConfig):
         logger.info("skipping test with etcd store")
         return
     if config.distributed:
-        store = DistributedLSKVStore(config)
+        store: Store = DistributedLSKVStore(config)
     else:
         store = LSKVStore(config)
     benchmark = PerfBenchmark(config)

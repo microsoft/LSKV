@@ -12,7 +12,7 @@ const preAllocatedVUs = __ENV.PRE_ALLOCATED_VUS;
 const maxVUs = __ENV.MAX_VUS;
 const func = __ENV.FUNC;
 const content_type = __ENV.CONTENT_TYPE;
-const addr = __ENV.ADDR
+const addr = __ENV.ADDR;
 
 const duration_s = 5;
 const stageCount = 5;

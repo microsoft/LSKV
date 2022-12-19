@@ -279,7 +279,7 @@ def execute_config(config: EtcdConfig):
     Execute the given configuration.
     """
     if config.store == "etcd":
-        store = EtcdStore(config)
+        store: Store = EtcdStore(config)
     else:
         if config.distributed:
             store = DistributedLSKVStore(config)

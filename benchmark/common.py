@@ -143,6 +143,9 @@ class Store(abc.ABC):
         client = self.client()
         client += ["get", "missing key", "-w", "json"]
         if self.config.http_version == 1:
+            scheme = self.config.scheme()
+            ip_addr = self.config.node_ips[0]
+            port = self.config.port
             client = [
                 "curl",
                 "--cacert",
@@ -153,7 +156,7 @@ class Store(abc.ABC):
                 self.key(),
                 "-X",
                 "POST",
-                f"{self.config.scheme()}://{self.config.node_ips[0]}:{self.config.port}/v3/kv/range",
+                f"{scheme}://{ip_addr}:{port}/v3/kv/range",
                 "-d",
                 '{"key":"bWlzc2luZyBrZXkK"}',
                 "-H",
@@ -335,6 +338,7 @@ def wait_with_timeout(
 
 
 # pylint: disable=too-many-branches
+# pylint: disable=too-many-statements
 def make_common_configurations(args: argparse.Namespace) -> List[Config]:
     """
     Make the common configurations to run benchmarks against.
@@ -410,6 +414,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                                 sig_ms_interval=sig_ms_interval,
                                 ledger_chunk_bytes=ledger_chunk_bytes,
                                 snapshot_tx_interval=snapshot_tx_interval,
+                                distributed=False,
                             )
                             if "virtual" in args.enclave:
                                 lskv_config = copy.deepcopy(lskv_config)

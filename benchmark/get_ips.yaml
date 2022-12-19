@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
 ---
 - hosts: all
   remote_user: "{{ vm_user }}"

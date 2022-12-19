@@ -171,7 +171,7 @@ def execute_config(config: K6Config):
         logger.warning("skipping etcd for k6 benchmark")
         return
     if config.distributed:
-        store = DistributedLSKVStore(config)
+        store: Store = DistributedLSKVStore(config)
     else:
         store = LSKVStore(config)
 
