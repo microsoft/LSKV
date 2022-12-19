@@ -73,7 +73,10 @@ class Config:
             return "https"
         return "http"
 
-    def get_node_addr(self, node:int) -> str:
+    def get_node_addr(self, node: int) -> str:
+        """
+        Extract the address (ip and port) from the node string.
+        """
         return self.nodes[node].split("://")[-1]
 
     def to_str(self) -> str:
@@ -139,7 +142,6 @@ class Store(abc.ABC):
         Wait for the datastore to be ready to accept requests.
         """
         self._wait_for_ready()
-
 
     def _wait_for_ready(self, tries=120) -> bool:
         client = self.client()
@@ -285,7 +287,7 @@ def set_default_args(args: argparse.Namespace):
     # set default if not set
     if not args.nodes:
         logger.debug("using single node")
-        args.nodes = [f"local://127.0.0.1:8000"]
+        args.nodes = ["local://127.0.0.1:8000"]
 
     if not args.worker_threads:
         args.worker_threads = [0]
@@ -382,9 +384,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
             for sig_ms_interval in args.sig_ms_intervals:
                 logger.debug("adding sig_ms_interval: {}", sig_ms_interval)
                 for ledger_chunk_bytes in args.ledger_chunk_bytes:
-                    logger.debug(
-                        "adding ledger_chunk_bytes: {}", ledger_chunk_bytes
-                    )
+                    logger.debug("adding ledger_chunk_bytes: {}", ledger_chunk_bytes)
                     for snapshot_tx_interval in args.snapshot_tx_intervals:
                         logger.debug(
                             "adding snapshot_tx_interval: {}", snapshot_tx_interval
