@@ -14,7 +14,7 @@ from typing import List
 import common
 from common import Store
 from loguru import logger
-from stores import  EtcdStore, LSKVStore
+from stores import EtcdStore, LSKVStore
 
 BENCH_DIR = os.path.join(common.BENCH_DIR, "ycsb")
 
