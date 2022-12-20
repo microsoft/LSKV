@@ -119,7 +119,7 @@ class Store(abc.ABC):
             self.proc.wait()
             logger.info("stopped {}", self.config.to_str())
             logger.info("killing cchost")
-            subprocess.run(["pkill", "cchost"], check=True)
+            subprocess.run(["pkill", "cchost"], check=False)
 
         self.cleanup()
         return False
@@ -165,7 +165,7 @@ class Store(abc.ABC):
                 proc = subprocess.run(client, capture_output=True, check=True)
                 if proc.returncode == 0:
                     result = proc.stdout.decode("utf-8")
-                    logger.info(
+                    logger.debug(
                         "successfully ran wait check and got response {}", result
                     )
                     result_j = json.loads(result)

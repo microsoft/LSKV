@@ -24,7 +24,7 @@ function getStages() {
   let stages = [{ target: 100, duration: "1s" }];
   // ramp up
   for (let i = 0; i < stageCount; i++) {
-    const target = Math.floor(rate * (i + 1 / stageCount));
+    const target = Math.floor(rate * ((i + 1) / stageCount));
     // initial quick ramp up
     stages.push({ target: target, duration: `1s` });
     // followed by steady state for a bit
@@ -32,7 +32,7 @@ function getStages() {
   }
   // ramp down
   for (let i = stageCount - 1; i >= 0; i--) {
-    const target = Math.floor(rate * (i + 1 / stageCount));
+    const target = Math.floor(rate * ((i + 1) / stageCount));
     // initial quick ramp down
     stages.push({ target: target, duration: `1s` });
     // followed by steady state for a bit
