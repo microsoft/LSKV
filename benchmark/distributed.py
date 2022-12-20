@@ -61,17 +61,29 @@ def etcd_configurations(args: argparse.Namespace) -> List[etcd.EtcdConfig]:
     return etcd.make_configurations(args)
 
 
-def ycsb_configurations(args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
+def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     """
     Set args for all ycsb configurations.
     """
-    args.workloads = ["a"]
-    args.rate = [200]
-    args.threads = [1]
+    nodes = get_nodes()
+    configurations = [
 
-    common_configurations(args)
+        ycsb.YCSBConfig(
+            store="lskv",
+            tls=True,
+            enclave="sgx",
+            nodes=nodes,
+            worker_threads=0,
+            sig_tx_interval=5000,
+            sig_ms_interval=1000,
+            ledger_chunk_bytes="5MB",
+            snapshot_tx_interval=10000,
+            http_version=2,
+            rate=200,
+        ),
+    ]
 
-    return ycsb.make_configurations(args)
+    return configurations
 
 
 def perf_configurations(args: argparse.Namespace) -> List[perf.PerfConfig]:
