@@ -312,8 +312,8 @@ def k6_configurations(_args: argparse.Namespace) -> List[k6.K6Config]:
 if __name__ == "__main__":
     # logger.info("Running etcd")
     # common.main("etcd", etcd.get_arguments, etcd_configurations, etcd.execute_config)
-    # logger.info("Running ycsb")
-    # common.main("ycsb", ycsb.get_arguments, ycsb_configurations, ycsb.execute_config)
+    logger.info("Running ycsb")
+    common.main("ycsb", ycsb.get_arguments, ycsb_configurations, ycsb.execute_config)
     # logger.info("Running perf")
     # common.main("perf", perf.get_arguments, perf_configurations, perf.execute_config)
     logger.info("Running k6")
