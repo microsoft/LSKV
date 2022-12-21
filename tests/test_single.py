@@ -329,6 +329,7 @@ def test_public_prefix(governance_client, http1_client, sandbox):
     public_domain = txn.get_public_domain()
     assert len(public_domain.get_tables()) == 0
 
+
 def test_range_limit(http1_client):
     """
     Test the limit arg on range queries.
