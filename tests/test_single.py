@@ -17,6 +17,7 @@ from loguru import logger
 # pylint: disable=no-name-in-module
 from test_common import (
     b64decode,
+    b64encode,
     fixture_governance_client,
     fixture_http1_client,
     fixture_http1_client_unauthenticated,
@@ -327,3 +328,18 @@ def test_public_prefix(governance_client, http1_client, sandbox):
     txn = ledger.get_transaction(rev)
     public_domain = txn.get_public_domain()
     assert len(public_domain.get_tables()) == 0
+
+def test_range_limit(http1_client):
+    """
+    Test the limit arg on range queries.
+    """
+    http1_client.put(f"range_limit1", "val")
+    http1_client.put(f"range_limit2", "val")
+    res = http1_client.get("range_limit", range_end="range_limit4")
+    assert len(res.json()["kvs"]) == 2
+    assert res.json()["count"] == "2"
+
+    res = http1_client.get("range_limit", range_end="range_limit4", limit=1)
+    assert len(res.json()["kvs"]) == 1
+    assert res.json()["count"] == "1"
+    assert res.json()["kvs"][0]["key"] == b64encode("range_limit1")
