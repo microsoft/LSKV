@@ -52,7 +52,7 @@
       ansible.builtin.git:
         repo: "https://github.com/microsoft/CCF"
         dest: /tmp/CCF
-        version: ccf-4.0.0-dev0
+        version: ccf-{{ ccf_ver }}
 
     - name: Run the CCF sgx getting started playbook
       shell: ./getting_started/setup_vm/run.sh ./getting_started/setup_vm/app-run.yml --extra-vars 'platform=sgx' --extra-vars 'ccf_ver={{ ccf_ver }}'
@@ -63,6 +63,18 @@
       shell: ./getting_started/setup_vm/run.sh ./getting_started/setup_vm/app-run.yml --extra-vars 'platform=virtual' --extra-vars 'ccf_ver={{ ccf_ver }}'
       args:
         chdir: /tmp/CCF
+
+    - name: Patch virtual sandbox infra
+      ansible.posix.patch:
+        src: ccf-binary-dir.diff
+        dest: /opt/ccf_virtual/bin/infra/remote.py
+      become: true
+
+    - name: Patch sgx sandbox infra
+      ansible.posix.patch:
+        src: ccf-binary-dir.diff
+        dest: /opt/ccf_sgx/bin/infra/remote.py
+      become: true
 
     - name: Install apt packages
       ansible.builtin.apt:
