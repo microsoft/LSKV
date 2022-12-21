@@ -21,6 +21,7 @@ from typing import Callable, List, TypeVar
 
 # pylint: disable=import-error
 import cimetrics.upload  # type: ignore
+import paramiko
 import typing_extensions
 from loguru import logger
 
@@ -124,7 +125,20 @@ class Store(abc.ABC):
             self.proc.wait()
             logger.info("stopped {}", self.config.to_str())
             logger.info("killing cchost")
-            subprocess.run(["pkill", "cchost"], check=False)
+            hosts = [
+                n.split("://")[1].split(":")[0]
+                for n in self.config.nodes
+                if n.split("://")[0] == "ssh"
+            ]
+            if hosts:
+                # run remotely
+                for host in hosts:
+                    client = paramiko.SSHClient()
+                    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                    client.connect(host)
+                    stdin, stdout, stderr = client.exec_command("pkill cchost")
+            else:
+                subprocess.run(["pkill", "cchost"], check=False)
 
         self.cleanup()
         return False
