@@ -334,8 +334,8 @@ def test_range_limit(http1_client):
     """
     Test the limit arg on range queries.
     """
-    http1_client.put(f"range_limit1", "val")
-    http1_client.put(f"range_limit2", "val")
+    http1_client.put("range_limit1", "val")
+    http1_client.put("range_limit2", "val")
     res = http1_client.get("range_limit", range_end="range_limit4")
     assert len(res.json()["kvs"]) == 2
     assert res.json()["count"] == "2"

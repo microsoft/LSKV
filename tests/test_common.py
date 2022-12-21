@@ -328,6 +328,7 @@ class HttpClient:
                 raise Exception("failed to wait for commit")
             time.sleep(0.1)
 
+    # pylint: disable=too-many-arguments
     def get(
         self, key: str, range_end: str = "", rev: int = 0, limit: int = 0, check=True
     ):
