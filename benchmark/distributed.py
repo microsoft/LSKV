@@ -67,7 +67,6 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     """
     nodes = get_nodes()
     configurations = [
-
         ycsb.YCSBConfig(
             store="lskv",
             tls=True,
@@ -80,7 +79,7 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
             snapshot_tx_interval=10000,
             http_version=2,
             rate=200,
-            workload="a",
+            workload="workloada",
             threads=1,
         ),
     ]
