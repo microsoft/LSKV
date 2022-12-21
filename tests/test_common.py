@@ -328,17 +328,19 @@ class HttpClient:
                 raise Exception("failed to wait for commit")
             time.sleep(0.1)
 
-    def get(self, key: str, range_end: str = "", rev: int = 0, check=True):
+    def get(self, key: str, range_end: str = "", rev: int = 0, limit: int=0, check=True):
         """
         Perform a get operation on lskv.
         """
-        logger.info("Get: {} {} {}", key, range_end, rev)
+        logger.info("Get: {} {} {} {}", key, range_end, rev, limit)
         req = etcd_pb2.RangeRequest()
         req.key = key.encode("utf-8")
         if range_end:
             req.range_end = range_end.encode("utf-8")
         if rev:
             req.revision = rev
+        if limit:
+            req.limit = limit
         j = MessageToDict(req)
         res = self.client.post("/v3/kv/range", json=j)
         if check:
