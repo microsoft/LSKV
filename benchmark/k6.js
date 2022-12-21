@@ -73,8 +73,7 @@ const val0 = encoding.b64encode("value0");
 
 const host = `https://${addr}`;
 
-const total_requests = rate * duration_s;
-const prefill_keys = total_requests / 2;
+const prefill_keys = 100;
 
 export function setup() {
   randomSeed(123);
