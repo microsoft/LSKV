@@ -103,7 +103,7 @@ class YCSBenchmark(common.Benchmark):
         """
         Return the path to the workload file.
         """
-        return os.path.join("3rdparty/go-ycsb/workloads", self.config.workload)
+        return os.path.join("benchmark/go-ycsb/workloads", self.config.workload)
 
 
 def run_benchmark(config: YCSBConfig, store: Store, benchmark: YCSBenchmark) -> str:
