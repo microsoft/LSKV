@@ -80,6 +80,8 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
             snapshot_tx_interval=10000,
             http_version=2,
             rate=200,
+            workload="a",
+            threads=1,
         ),
     ]
 
