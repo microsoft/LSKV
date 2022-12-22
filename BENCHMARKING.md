@@ -63,4 +63,4 @@ After provisioning the nodes, they need to be setup with the correct dependencie
 ansible-playbook -i hosts benchmark/distributed/setup_nodes.yaml -e @benchmark/distributed/values.yaml
 ```
 
-Then, to run the benchmarks, ssh onto the first node (`ssh <user>@$(head -n 1 hosts)`), `cd /tmp/lskv` and run things from there (e.g. `. .venv/bin/activate && python3 benchmark/ci.py`).
+Then, to run the benchmarks, ssh onto the first node (`ssh <user>@$(head -n 1 hosts)`), `cd /tmp/lskv` and run things from there (e.g. `. .venv/bin/activate && python3 benchmark/distributed.py`).
