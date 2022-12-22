@@ -131,6 +131,8 @@ class Client:
             "--content",
             content_file,
         ]
+        # pylint: disable=consider-using-with
+        logger.debug("Proposal content: {}", open(content_file, "r", encoding="utf-8").read())
         if proposal_id:
             cose_sign1_cmd.append("--ccf-gov-msg-proposal_id")
             cose_sign1_cmd.append(proposal_id)
@@ -164,9 +166,11 @@ class Client:
         Propose some set of actions to be performed.
         """
         proposal_dict = proposals.asdict()
+        logger.debug("Proposing {}", proposal_dict)
         proposal_json = json.dumps(proposal_dict)
-        with tempfile.NamedTemporaryFile(mode="w") as proposal_file:
+        with tempfile.NamedTemporaryFile(mode="w+") as proposal_file:
             proposal_file.write(proposal_json)
+            proposal_file.flush()
             res = self.run("proposal", proposal_file.name)
         logger.debug("Created proposal with id {}", res.proposal_id)
         return res
@@ -175,12 +179,14 @@ class Client:
         """
         Accept some set of actions being performed.
         """
+        logger.debug("Accepting {}", proposal_id)
         accept = {
             "ballot": "export function vote (proposal, proposerId) { return true }"
         }
         accept_json = json.dumps(accept)
-        with tempfile.NamedTemporaryFile(mode="w") as proposal_file:
+        with tempfile.NamedTemporaryFile(mode="w+") as proposal_file:
             proposal_file.write(accept_json)
+            proposal_file.flush()
             res = self.run("ballot", proposal_file.name, proposal_id=proposal_id)
         logger.debug("Success: proposal state is {}", res.state)
         return res
@@ -189,12 +195,14 @@ class Client:
         """
         Reject some set of actions being performed.
         """
-        accept = {
+        logger.debug("Rejecting {}", proposal_id)
+        reject = {
             "ballot": "export function vote (proposal, proposerId) { return false }"
         }
-        accept_json = json.dumps(accept)
-        with tempfile.NamedTemporaryFile(mode="w") as proposal_file:
-            proposal_file.write(accept_json)
+        reject_json = json.dumps(reject)
+        with tempfile.NamedTemporaryFile(mode="w+") as proposal_file:
+            proposal_file.write(reject_json)
+            proposal_file.flush()
             res = self.run("ballot", proposal_file.name, proposal_id=proposal_id)
         logger.debug("Success: proposal state is {}", res.state)
         return res
