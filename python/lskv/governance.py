@@ -132,7 +132,9 @@ class Client:
             content_file,
         ]
         # pylint: disable=consider-using-with
-        logger.debug("Proposal content: {}", open(content_file, "r", encoding="utf-8").read())
+        logger.debug(
+            "Proposal content: {}", open(content_file, "r", encoding="utf-8").read()
+        )
         if proposal_id:
             cose_sign1_cmd.append("--ccf-gov-msg-proposal_id")
             cose_sign1_cmd.append(proposal_id)
