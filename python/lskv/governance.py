@@ -8,6 +8,7 @@ Governance helpers with instances of LSKV proposals.
 
 import json
 import subprocess
+import tempfile
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
@@ -164,9 +165,9 @@ class Client:
         """
         proposal_dict = proposals.asdict()
         proposal_json = json.dumps(proposal_dict)
-        with open("proposal_content.json", "w", encoding="utf-8") as proposal_file:
+        with tempfile.NamedTemporaryFile(mode="w") as proposal_file:
             proposal_file.write(proposal_json)
-        res = self.run("proposal", "proposal_content.json")
+            res = self.run("proposal", proposal_file.name)
         logger.debug("Created proposal with id {}", res.proposal_id)
         return res
 
@@ -178,9 +179,9 @@ class Client:
             "ballot": "export function vote (proposal, proposerId) { return true }"
         }
         accept_json = json.dumps(accept)
-        with open("proposal_content.json", "w", encoding="utf-8") as proposal_file:
+        with tempfile.NamedTemporaryFile(mode="w") as proposal_file:
             proposal_file.write(accept_json)
-        res = self.run("ballot", "proposal_content.json", proposal_id=proposal_id)
+            res = self.run("ballot", proposal_file.name, proposal_id=proposal_id)
         logger.debug("Success: proposal state is {}", res.state)
         return res
 
@@ -192,9 +193,9 @@ class Client:
             "ballot": "export function vote (proposal, proposerId) { return false }"
         }
         accept_json = json.dumps(accept)
-        with open("proposal_content.json", "w", encoding="utf-8") as proposal_file:
+        with tempfile.NamedTemporaryFile(mode="w") as proposal_file:
             proposal_file.write(accept_json)
-        res = self.run("ballot", "proposal_content.json", proposal_id=proposal_id)
+            res = self.run("ballot", proposal_file.name, proposal_id=proposal_id)
         logger.debug("Success: proposal state is {}", res.state)
         return res
 
