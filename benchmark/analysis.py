@@ -624,7 +624,7 @@ def condense_vars(all_data, without) -> Tuple[pd.Series, List[str]]:
         else:
             variant_columns.append(column)
 
-    variant_column = pd.Series()
+    variant_column = pd.Series(dtype=str)
     num_cols = len(variant_columns)
     for i, column in enumerate(variant_columns):
         new_column = make_new_column(column)
