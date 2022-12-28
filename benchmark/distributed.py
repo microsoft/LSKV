@@ -287,7 +287,6 @@ def k6_configurations(_args: argparse.Namespace) -> List[k6.K6Config]:
     """
     nodes = get_nodes()
     configurations = [
-
         # http1 json vs http2 json
         k6.K6Config(
             store="lskv",
@@ -299,29 +298,14 @@ def k6_configurations(_args: argparse.Namespace) -> List[k6.K6Config]:
             sig_ms_interval=1000,
             ledger_chunk_bytes="5MB",
             snapshot_tx_interval=10000,
-            http_version=2,
-            rate=100,
+            http_version=http_version,
+            rate=20000,
             vus=100,
             func="mixed_single",
             content_type="json",
-        ),
-        k6.K6Config(
-            store="lskv",
-            tls=True,
-            enclave="sgx",
-            nodes=nodes,
-            worker_threads=0,
-            sig_tx_interval=5000,
-            sig_ms_interval=1000,
-            ledger_chunk_bytes="5MB",
-            snapshot_tx_interval=10000,
-            http_version=1,
-            rate=100,
-            vus=100,
-            func="mixed_single",
-            content_type="json",
-        ),
-
+            value_size=256,
+        ) for http_version in [1, 2]
+    ] + [
         # grpc vs json
         k6.K6Config(
             store="lskv",
@@ -334,18 +318,18 @@ def k6_configurations(_args: argparse.Namespace) -> List[k6.K6Config]:
             ledger_chunk_bytes="5MB",
             snapshot_tx_interval=10000,
             http_version=2,
-            rate=100,
+            rate=20000,
             vus=100,
             func="mixed_single",
-            content_type="grpc",
-        ),
-
-
-        # virtual http1
+            content_type=content_type,
+            value_size=256,
+        ) for content_type in ["json", "grpc"]
+    ] + [
+        # virtual vs sgx
         k6.K6Config(
             store="lskv",
             tls=True,
-            enclave="virtual",
+            enclave=enclave,
             nodes=nodes,
             worker_threads=0,
             sig_tx_interval=5000,
@@ -353,91 +337,12 @@ def k6_configurations(_args: argparse.Namespace) -> List[k6.K6Config]:
             ledger_chunk_bytes="5MB",
             snapshot_tx_interval=10000,
             http_version=2,
-            rate=1000,
+            rate=20000,
             vus=100,
             func="mixed_single",
             content_type="grpc",
-        ),
-        k6.K6Config(
-            store="lskv",
-            tls=True,
-            enclave="virtual",
-            nodes=nodes,
-            worker_threads=0,
-            sig_tx_interval=5000,
-            sig_ms_interval=1000,
-            ledger_chunk_bytes="5MB",
-            snapshot_tx_interval=10000,
-            http_version=2,
-            rate=2000,
-            vus=100,
-            func="mixed_single",
-            content_type="grpc",
-        ),
-        k6.K6Config(
-            store="lskv",
-            tls=True,
-            enclave="virtual",
-            nodes=nodes,
-            worker_threads=0,
-            sig_tx_interval=5000,
-            sig_ms_interval=1000,
-            ledger_chunk_bytes="5MB",
-            snapshot_tx_interval=10000,
-            http_version=2,
-            rate=4000,
-            vus=100,
-            func="mixed_single",
-            content_type="grpc",
-        ),
-        k6.K6Config(
-            store="lskv",
-            tls=True,
-            enclave="virtual",
-            nodes=nodes,
-            worker_threads=0,
-            sig_tx_interval=5000,
-            sig_ms_interval=1000,
-            ledger_chunk_bytes="5MB",
-            snapshot_tx_interval=10000,
-            http_version=2,
-            rate=8000,
-            vus=100,
-            func="mixed_single",
-            content_type="grpc",
-        ),
-        k6.K6Config(
-            store="lskv",
-            tls=True,
-            enclave="virtual",
-            nodes=nodes,
-            worker_threads=0,
-            sig_tx_interval=5000,
-            sig_ms_interval=1000,
-            ledger_chunk_bytes="5MB",
-            snapshot_tx_interval=10000,
-            http_version=2,
-            rate=16000,
-            vus=100,
-            func="mixed_single",
-            content_type="grpc",
-        ),
-        k6.K6Config(
-            store="lskv",
-            tls=True,
-            enclave="virtual",
-            nodes=nodes,
-            worker_threads=0,
-            sig_tx_interval=5000,
-            sig_ms_interval=1000,
-            ledger_chunk_bytes="5MB",
-            snapshot_tx_interval=10000,
-            http_version=2,
-            rate=32000,
-            vus=100,
-            func="mixed_single",
-            content_type="grpc",
-        ),
+            value_size=256,
+        ) for enclave in ["virtual", "sgx"]
     ]
 
     return configurations
