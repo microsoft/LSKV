@@ -176,6 +176,8 @@ class Analyser:
             dataframe = self.make_latency_ms(dataframe)
 
             for key, value in config.items():
+                if key == "nodes":
+                    dataframe["node_count"] = len(value)
                 if isinstance(value, list):
                     dataframe[key] = "_".join(value)
                 else:
