@@ -30,6 +30,7 @@ class K6Config(common.Config):
     vus: int
     func: str
     content_type: str
+    value_size : int
 
     def bench_name(self) -> str:
         """
@@ -60,6 +61,8 @@ class K6Benchmark(common.Benchmark):
             f"csv={timings_file}",
             "--env",
             f"RATE={self.config.rate}",
+            "--env",
+            f"VALUE_SIZE={self.config.value_size}",
             "--env",
             f"WORKSPACE={workspace}",
             "--env",
@@ -147,6 +150,14 @@ def get_arguments():
         default=[],
         help="content type payload to use",
     )
+    parser.add_argument(
+        "--value-sizes",
+        action="extend",
+        nargs="+",
+        type=int,
+        default=[],
+        help="Size of values written to the datastore",
+    )
 
     args = parser.parse_args()
 
@@ -158,6 +169,8 @@ def get_arguments():
         args.func = ["put_single"]
     if not args.content_type:
         args.content_type = ["json"]
+    if not args.value_sizes:
+        args.value_sizes = [256]
 
     return args
 
@@ -201,14 +214,17 @@ def make_configurations(args: argparse.Namespace) -> List[K6Config]:
                     logger.debug("adding func: {}", func)
                     for content_type in args.content_type:
                         logger.debug("adding content_type: {}", content_type)
-                        conf = K6Config(
-                            **asdict(common_config),
-                            rate=rate,
-                            vus=vus,
-                            func=func,
-                            content_type=content_type,
-                        )
-                        configs.append(conf)
+                        for value_size in args.value_sizes:
+                            logger.debug("adding value_size: {}", value_size)
+                            conf = K6Config(
+                                **asdict(common_config),
+                                rate=rate,
+                                vus=vus,
+                                func=func,
+                                content_type=content_type,
+                                value_size=value_size,
+                            )
+                            configs.append(conf)
 
     return configs
 

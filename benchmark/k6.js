@@ -13,6 +13,7 @@ const maxVUs = __ENV.MAX_VUS;
 const func = __ENV.FUNC;
 const content_type = __ENV.CONTENT_TYPE;
 const addr = __ENV.ADDR;
+const valueSize = __ENV.VALUE_SIZE;
 
 const duration_s = 5;
 const stageCount = 5;
@@ -69,7 +70,7 @@ export let options = {
 function key(i) {
   return encoding.b64encode(`key${i}`);
 }
-const val0 = encoding.b64encode("value0");
+const val0 = encoding.b64encode("v".repeat(valueSize));
 
 const host = `https://${addr}`;
 
