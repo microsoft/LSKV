@@ -11,3 +11,5 @@
 - /scripts/env/
 - /.cache/
 - /.mypy_cache/
+- /*.deb
+- /result/
