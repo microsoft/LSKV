@@ -27,7 +27,7 @@
 # workload here (which we believe is more typical of how people build systems.)
 
 recordcount=1000
-operationcount=1000
+operationcount=100000
 workload=core
 
 readallfields=true
