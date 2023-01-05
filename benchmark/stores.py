@@ -32,11 +32,13 @@ class EtcdStore(Store):
                     "benchmark/etcd_cluster.py",
                     "--scheme",
                     self.config.scheme(),
+                    "--workspace",
+                    self.workspace(),
                 ]
                 for node in self.config.nodes:
                     etcd_cmd.append("--node")
                     etcd_cmd.append(node)
-                logger.info("spawning etcd: {}", etcd_cmd)
+                logger.info("spawning etcd: {}", " ".join(etcd_cmd))
                 return Popen(etcd_cmd, stdout=out, stderr=err)
 
     def workspace(self):
@@ -49,7 +51,7 @@ class EtcdStore(Store):
         """
         Return the path to the CA certificate.
         """
-        return f"{self.workspace()}/certs/cert.pem"
+        return f"{self.workspace()}/certs/ca.pem"
 
     def cert(self) -> str:
         """
@@ -61,7 +63,7 @@ class EtcdStore(Store):
         """
         Return the path to the key for the client certificate.
         """
-        return f"{self.workspace()}/certs/cert-key.pem"
+        return f"{self.workspace()}/certs/client-key.pem"
 
 
 class LSKVStore(Store):

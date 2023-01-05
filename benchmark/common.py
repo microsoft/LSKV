@@ -179,7 +179,7 @@ class Store(abc.ABC):
             ]
 
         for i in range(0, tries):
-            logger.debug("running ready check with cmd {}", client)
+            logger.debug("running ready check with cmd {}", " ".join(client))
             # pylint: disable=consider-using-with
             try:
                 proc = subprocess.run(client, capture_output=True, check=True)
