@@ -187,7 +187,7 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                 http_version=2,
                 rate=10000,
                 workload=f"workload{workload}",
-                threads=1,
+                threads=10,
             )
             for workload in ["a", "b", "c", "d", "e", "f"]
         ]
@@ -206,7 +206,7 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                 http_version=2,
                 rate=10000,
                 workload=f"workload{workload}",
-                threads=1,
+                threads=10,
             )
             for workload in ["a", "b", "c", "d", "e", "f"]
         ]
@@ -224,7 +224,7 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                 http_version=2,
                 rate=10000,
                 workload=f"workload{workload}",
-                threads=1,
+                threads=10,
             )
             for workload in ["a", "b", "c", "d", "e", "f"]
         ]
@@ -243,7 +243,7 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                 http_version=2,
                 rate=10000,
                 workload=f"workload{workload}",
-                threads=1,
+                threads=10,
             )
             for workload in ["a", "b", "c", "d", "e", "f"]
         ]
@@ -262,7 +262,7 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                 http_version=2,
                 rate=10000,
                 workload=f"workload{workload}",
-                threads=1,
+                threads=10,
             )
             for workload in ["a", "b", "c", "d", "e", "f"]
         ]
@@ -280,7 +280,7 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                 http_version=2,
                 rate=10000,
                 workload=f"workload{workload}",
-                threads=1,
+                threads=10,
             )
             for workload in ["a", "b", "c", "d", "e", "f"]
         ]

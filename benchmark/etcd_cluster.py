@@ -164,9 +164,11 @@ class RemoteRunner(Runner):
 
     def start(self):
         shutil.rmtree(self.node_dir(), ignore_errors=True)
-        self.client.exec_command(f"rm -rf {self.node_dir()}")
+        _, stdout, _ = self.client.exec_command(f"rm -rf {self.node_dir()}")
+        stdout.channel.recv_exit_status()
         os.makedirs(self.node_dir())
-        self.client.exec_command(f"mkdir -p {self.node_dir()}")
+        _, stdout, _ =self.client.exec_command(f"mkdir -p {self.node_dir()}")
+        stdout.channel.recv_exit_status()
 
         self.setup_files()
         cmd = self.cmd()
@@ -176,7 +178,8 @@ class RemoteRunner(Runner):
         self.client.exec_command(cmd)
 
     def stop(self):
-        self.client.exec_command("pkill etcd")
+        _, stdout, _ = self.client.exec_command("pkill etcd")
+        stdout.channel.recv_exit_status()
         out_file = os.path.join(self.node_dir(), "out")
         self.session.get(out_file, out_file)
         err_file = os.path.join(self.node_dir(), "err")
@@ -301,9 +304,9 @@ def main():
 
     try:
         for i, node in enumerate(nodes):
-            logger.info("spawning node {}: {}", i, (ip, port))
+            logger.info("spawning node {}: {}", i, node.address, node.port)
             node.start()
-            logger.info("spawned node {}: {}", i, (ip, port))
+            logger.info("spawned node {}: {}", i, node.address, node.port)
 
         # wait for a signal and print it out
         signals = {signal.SIGINT, signal.SIGTERM}
