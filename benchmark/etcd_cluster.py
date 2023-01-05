@@ -14,100 +14,152 @@ import certs
 import shutil
 import signal
 import subprocess
+import paramiko
 
 from loguru import logger
 
+class Runner:
+    # pylint: disable=too-many-arguments
+    def __init__(self,  address: str, port : int, node_index: int, scheme:str, workspace: str, initial_cluster:str):
+        self.address = address
+        self.port = port
+        self.node_index = node_index
+        self.scheme = scheme
+        self.workspace = workspace
+        self.initial_cluster = initial_cluster
 
-# pylint: disable=too-many-arguments
-def spawn_node(
-    node_index: int,
-    workspace: str,
-    scheme: str,
-    address: str,
-    port: int,
-    initial_cluster: str,
-) -> subprocess.Popen:
-    """
-    Spawn a new etcd node.
-    """
-    client_port = port
-    peer_port = client_port + 1
-    metrics_port = client_port + 2
+    def name(self) -> str:
+        return f"node{self.node_index}"
 
-    name = f"node{node_index}"
 
-    node_dir = os.path.join(workspace, name)
-    os.makedirs(node_dir)
+    def node_dir(self)->str:
+        node_dir = os.path.join(self.workspace, self.name())
+        if not os.path.exists(node_dir):
+            os.makedirs(node_dir)
+        return node_dir
 
-    # copy binary files to node dir
-    for file in ["bin/etcd"]:
-        src = os.path.abspath(file)
-        dst = os.path.join(node_dir, os.path.basename(file))
+    def setup_files(self):
+
+        # copy binary files to node dir
+        for file in ["bin/etcd"]:
+            src = os.path.abspath(file)
+            dst = os.path.join(self.node_dir(), os.path.basename(file))
+            self.copy_file(src, dst)
+
+        ca_cert = "ca.pem"
+        server_cert = "server.pem"
+        server_key = "server-key.pem"
+        peer_cert = f"{self.name()}.pem"
+        peer_key = f"{self.name()}-key.pem"
+
+        # copy data files to node dir
+        for file in [
+            os.path.join("certs", n)
+            for n in [ca_cert, server_cert, server_key, peer_cert, peer_key]
+        ]:
+            src = os.path.join(self.workspace, file)
+            dst = os.path.join(self.node_dir(), os.path.basename(file))
+            self.copy_file(src, dst)
+
+    def cmd(self)->str:
+        client_port = self.port
+        peer_port = client_port + 1
+        metrics_port = client_port + 2
+
+        cmd = [
+            "./etcd",
+            "--data-dir",
+            "data",
+            "--listen-client-urls",
+            f"{self.scheme}://{self.address}:{client_port}",
+            "--advertise-client-urls",
+            f"{self.scheme}://{self.address}:{client_port}",
+            "--listen-peer-urls",
+            f"{self.scheme}://{self.address}:{peer_port}",
+            "--initial-advertise-peer-urls",
+            f"{self.scheme}://{self.address}:{peer_port}",
+            "--listen-metrics-urls",
+            f"{self.scheme}://{self.address}:{metrics_port}",
+            "--initial-cluster",
+            self.initial_cluster,
+            "--initial-cluster-state",
+            "new",
+            "--name",
+            self.name(),
+        ]
+
+        ca_cert = "ca.pem"
+        server_cert = "server.pem"
+        server_key = "server-key.pem"
+        peer_cert = f"{self.name()}.pem"
+        peer_key = f"{self.name()}-key.pem"
+
+        if self.scheme == "https":
+            cmd += [
+                "--trusted-ca-file",
+                ca_cert,
+                "--cert-file",
+                server_cert,
+                "--key-file",
+                server_key,
+                "--client-cert-auth",
+                "--peer-trusted-ca-file",
+                ca_cert,
+                "--peer-cert-file",
+                peer_cert,
+                "--peer-key-file",
+                peer_key,
+                "--peer-client-cert-auth",
+            ]
+
+        cmd_str = " ".join(cmd)
+        cmd_str = f"{cmd_str} > out 2> err"
+
+        return cmd_str
+
+
+class LocalRunner(Runner):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def copy_file(self,src:str, dst:str):
         logger.info("Copying binary file from {} to {}", src, dst)
         shutil.copy(src, dst)
 
-    ca_cert = "ca.pem"
-    server_cert = "server.pem"
-    server_key = "server-key.pem"
-    peer_cert = f"{name}.pem"
-    peer_key = f"{name}-key.pem"
+    def start(self):
+        self.setup_files()
+        cmd = self.cmd()
 
-    # copy data files to node dir
-    for file in [
-        os.path.join("certs", n)
-        for n in [ca_cert, server_cert, server_key, peer_cert, peer_key]
-    ]:
-        src = os.path.join(workspace, file)
-        dst = os.path.join(node_dir, os.path.basename(file))
-        logger.info("Copying data file from {} to {}", src, dst)
-        shutil.copy(src, dst)
+        logger.info("running etcd node: {}", cmd)
 
-    cmd = [
-        "./etcd",
-        "--data-dir",
-        "data",
-        "--listen-client-urls",
-        f"{scheme}://{address}:{client_port}",
-        "--advertise-client-urls",
-        f"{scheme}://{address}:{client_port}",
-        "--listen-peer-urls",
-        f"{scheme}://{address}:{peer_port}",
-        "--initial-advertise-peer-urls",
-        f"{scheme}://{address}:{peer_port}",
-        "--listen-metrics-urls",
-        f"{scheme}://{address}:{metrics_port}",
-        "--initial-cluster",
-        initial_cluster,
-        "--initial-cluster-state",
-        "new",
-        "--name",
-        name,
-    ]
+        self.process = subprocess.Popen(cmd, shell=True, cwd=self.node_dir())
 
-    if scheme == "https":
-        cmd += [
-            "--trusted-ca-file",
-            ca_cert,
-            "--cert-file",
-            server_cert,
-            "--key-file",
-            server_key,
-            "--client-cert-auth",
-            "--peer-trusted-ca-file",
-            ca_cert,
-            "--peer-cert-file",
-            peer_cert,
-            "--peer-key-file",
-            peer_key,
-            "--peer-client-cert-auth",
-        ]
+    def stop(self):
+        self.process.kill()
+        self.process.wait()
 
-    logger.info("running etcd node: {}", " ".join(cmd))
+class RemoteRunner(Runner):
+    def __init__(self, *args):
+        super().__init__(*args)
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(self.address)
 
-    out = open(os.path.join(node_dir, "out"), "w")
-    err = open(os.path.join(node_dir, "err"), "w")
+        self.client = client
 
-    return subprocess.Popen(cmd, stdout=out, stderr=err, cwd=node_dir)
+        self.session = self.client.open_sftp()
+
+    def copy_file(self, src:str, dst:str):
+        logger.info("Copying file from {} to {}", src, dst)
+        self.session.put(src, dst)
+
+    def start(self):
+        self.setup_files()
+        cmd = self.cmd()
+
+        logger.info("running etcd node: {}", cmd)
+
+        self.process = self.client.exec_command(cmd)
 
 
 def generate_certs(workspace: str, nodes: List[Tuple[str, int]]):
@@ -142,9 +194,9 @@ def main():
     Main entry point for spawning the cluster.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("--node", action="extend", nargs="+", type=str)
-    parser.add_argument("--scheme", type=str, default="https")
-    parser.add_argument("--workspace", type=str, default="workspace")
+    parser.add_argument("--node", action="extend", nargs="+", type=str, help="The nodes to launch in the form local://ip:port or ssh://ip:port")
+    parser.add_argument("--scheme", type=str, default="https", help="scheme to use for connections, either http or https")
+    parser.add_argument("--workspace", type=str, default="workspace", help="the workspace dir to use")
     args = parser.parse_args()
 
     if not args.node:
@@ -164,20 +216,10 @@ def main():
     if len(prefixes) != 1:
         parser.error("nodes should all have the same prefix")
 
-    if prefixes[0] == "local":
-        logger.info("Using local")
-    elif prefixes[0] == "ssh":
-        logger.info("Using ssh")
-    else:
-        parser.error("Found unexpected prefix")
-
     node_addresses = [
         (n[1].split(":")[0], int(n[1].split(":")[1])) for n in node_addresses_full
     ]
     logger.info("Made addresses {}", node_addresses)
-
-    if args.scheme == "https":
-        generate_certs(args.workspace, node_addresses)
 
     initial_cluster = ",".join(
         [
@@ -187,21 +229,26 @@ def main():
     )
     logger.info("Built initial cluster {}", initial_cluster)
 
-    processes = []
+
+    nodes = []
+    if prefixes[0] == "local":
+        logger.info("Using local")
+        for i, (ip, port) in enumerate(node_addresses):
+            nodes.append(LocalRunner(address=ip, port=port, node_index=i, scheme=args.scheme, workspace=args.workspace, initial_cluster=initial_cluster))
+    elif prefixes[0] == "ssh":
+        logger.info("Using ssh")
+        for i, (ip, port) in enumerate(node_addresses):
+            nodes.append(RemoteRunner(address=ip, port=port, node_index=i, scheme=args.scheme, workspace=args.workspace, initial_cluster=initial_cluster))
+    else:
+        parser.error("Found unexpected prefix")
+
+    if args.scheme == "https":
+        generate_certs(args.workspace, node_addresses)
 
     try:
-        for i, (ip, port) in enumerate(node_addresses):
+        for i, node in enumerate(nodes):
             logger.info("spawning node {}: {}", i, (ip, port))
-            processes.append(
-                spawn_node(
-                    i,
-                    args.workspace,
-                    args.scheme,
-                    ip,
-                    port,
-                    initial_cluster,
-                )
-            )
+            node.start()
             logger.info("spawned node {}: {}", i, (ip, port))
 
         # wait for a signal and print it out
@@ -215,13 +262,11 @@ def main():
     except Exception as exception:
         logger.exception("exception while spawning nodes: {}", exception)
     finally:
-        for i, process in enumerate(processes):
-            logger.info("killing process {}", i)
-            process.kill()
-            logger.info("waiting for process {}", i)
-            process.wait()
+        for i, node in enumerate(nodes):
+            logger.info("stopping node {}", i)
+            node.stop()
 
-        logger.info("all processes finished")
+        logger.info("all nodes finished")
 
 
 if __name__ == "__main__":
