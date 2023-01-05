@@ -30,7 +30,7 @@ class K6Config(common.Config):
     vus: int
     func: str
     content_type: str
-    value_size : int
+    value_size: int
 
     def bench_name(self) -> str:
         """
