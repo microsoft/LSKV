@@ -32,9 +32,10 @@ class EtcdStore(Store):
                     "benchmark/etcd_cluster.py",
                     "--scheme",
                     self.config.scheme(),
-                    "--nodes",
-                    str(len(self.config.nodes)),
                 ]
+                for node in self.config.nodes:
+                    etcd_cmd.append("--node")
+                    etcd_cmd.append(node)
                 logger.info("spawning etcd: {}", etcd_cmd)
                 return Popen(etcd_cmd, stdout=out, stderr=err)
 

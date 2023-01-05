@@ -14,11 +14,10 @@ import tempfile
 
 from loguru import logger
 
-BASE_PORT = 8000
-
 
 # pylint: disable=too-many-arguments
 def spawn_node(
+    node_index: int,
     scheme: str,
     address: str,
     port: int,
@@ -34,7 +33,7 @@ def spawn_node(
     """
     Spawn a new etcd node.
     """
-    client_port = BASE_PORT + 3 * port
+    client_port = port
     peer_port = client_port + 1
     metrics_port = client_port + 2
 
@@ -57,7 +56,7 @@ def spawn_node(
         "--initial-cluster-state",
         "new",
         "--name",
-        f"node{port}",
+        f"node{node_index}",
     ]
     if scheme == "https":
         cmd += [
@@ -87,10 +86,8 @@ def main():
     Main entry point for spawning the cluster.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("--nodes", type=int, default=1)
+    parser.add_argument("--node", action="extend", nargs="+", type=str)
     parser.add_argument("--scheme", type=str, default="https")
-    parser.add_argument("--address", type=str, default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--cacert", type=str, default="certs/ca.pem")
     parser.add_argument("--cert", type=str, default="certs/server.pem")
     parser.add_argument("--key", type=str, default="certs/server-key.pem")
@@ -98,30 +95,39 @@ def main():
     parser.add_argument("--peer-cert-base", type=str, default="certs/node")
     args = parser.parse_args()
 
+    if not args.node:
+        parser.error("must have at least one node to run")
+
     logger.info("using config {}", args)
+
+    node_addresses = [n.split("://")[1] for n in args.node]
+    node_addresses = [(n.split(":")[0], int(n.split(":")[1]) )for n in node_addresses]
+    logger.info("Made addresses {}", node_addresses)
 
     initial_cluster = ",".join(
         [
-            f"node{i}={args.scheme}://{args.address}:{BASE_PORT + 3 * i + 1}"
-            for i in range(args.nodes)
+            f"node{i}={args.scheme}://{ip}:{port + 1}"
+            for i, (ip, port) in enumerate(node_addresses)
         ]
     )
+    logger.info("Built initial cluster {}", initial_cluster)
 
     processes = []
     data_dirs = []
 
     try:
-        for i in range(args.nodes):
-            logger.info("spawning node {}", i)
+        for i, (ip, port) in enumerate(node_addresses):
+            logger.info("spawning node {}: {}", i, (ip, port))
             data_dir = tempfile.mkdtemp()
             data_dirs.append(data_dir)
             peer_cert = f"{args.peer_cert_base}{i}.pem"
             peer_key = f"{args.peer_cert_base}{i}-key.pem"
             processes.append(
                 spawn_node(
-                    args.scheme,
-                    args.address,
                     i,
+                    args.scheme,
+                    ip,
+                    port,
                     data_dir,
                     initial_cluster,
                     args.cacert,
@@ -132,7 +138,7 @@ def main():
                     peer_key,
                 )
             )
-            logger.info("spawned node {}", i)
+            logger.info("spawned node {}: {}", i, (ip, port))
 
         # wait for a signal and print it out
         signals = {signal.SIGINT, signal.SIGTERM}
