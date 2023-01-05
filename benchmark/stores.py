@@ -63,9 +63,6 @@ class EtcdStore(Store):
         """
         return f"{self.workspace()}/certs/cert-key.pem"
 
-    def cleanup(self):
-        shutil.rmtree("default.etcd", ignore_errors=True)
-
 
 class LSKVStore(Store):
     """

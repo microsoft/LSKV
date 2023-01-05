@@ -140,7 +140,6 @@ class Store(abc.ABC):
             else:
                 subprocess.run(["pkill", "cchost"], check=False)
 
-        self.cleanup()
         return False
 
     @abc.abstractmethod
@@ -201,12 +200,6 @@ class Store(abc.ABC):
             time.sleep(1)
         logger.error("took too long waiting for node {} ({}s)", addr, tries)
         return False
-
-    def cleanup(self):
-        """
-        Cleanup resources used for this datastore.
-        """
-        # no cleanup for the base class to do and not a required method
 
     @abc.abstractmethod
     def key(self) -> str:
