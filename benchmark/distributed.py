@@ -178,62 +178,6 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                 store="lskv",
                 tls=True,
                 enclave="sgx",
-                nodes=nodes[:1],
-                worker_threads=0,
-                sig_tx_interval=5000,
-                sig_ms_interval=1000,
-                ledger_chunk_bytes="5MB",
-                snapshot_tx_interval=10000,
-                http_version=2,
-                rate=10000,
-                workload=f"workload{workload}",
-                threads=10,
-            )
-            for workload in ["a", "b", "c", "d", "e", "f"]
-        ]
-        + [
-            # lskv vs etcd
-            ycsb.YCSBConfig(
-                store="lskv",
-                tls=True,
-                enclave="virtual",
-                nodes=nodes[:1],
-                worker_threads=0,
-                sig_tx_interval=5000,
-                sig_ms_interval=1000,
-                ledger_chunk_bytes="5MB",
-                snapshot_tx_interval=10000,
-                http_version=2,
-                rate=10000,
-                workload=f"workload{workload}",
-                threads=10,
-            )
-            for workload in ["a", "b", "c", "d", "e", "f"]
-        ]
-        + [
-            ycsb.YCSBConfig(
-                store="etcd",
-                tls=True,
-                enclave="virtual",
-                nodes=nodes[:1],
-                worker_threads=0,
-                sig_tx_interval=5000,
-                sig_ms_interval=1000,
-                ledger_chunk_bytes="5MB",
-                snapshot_tx_interval=10000,
-                http_version=2,
-                rate=10000,
-                workload=f"workload{workload}",
-                threads=10,
-            )
-            for workload in ["a", "b", "c", "d", "e", "f"]
-        ]
-        + [
-            # lskv vs etcd
-            ycsb.YCSBConfig(
-                store="lskv",
-                tls=True,
-                enclave="sgx",
                 nodes=nodes[:3],
                 worker_threads=0,
                 sig_tx_interval=5000,

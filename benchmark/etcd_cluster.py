@@ -167,7 +167,7 @@ class RemoteRunner(Runner):
         _, stdout, _ = self.client.exec_command(f"rm -rf {self.node_dir()}")
         stdout.channel.recv_exit_status()
         os.makedirs(self.node_dir())
-        _, stdout, _ =self.client.exec_command(f"mkdir -p {self.node_dir()}")
+        _, stdout, _ = self.client.exec_command(f"mkdir -p {self.node_dir()}")
         stdout.channel.recv_exit_status()
 
         self.setup_files()
