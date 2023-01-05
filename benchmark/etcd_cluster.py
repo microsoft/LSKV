@@ -132,8 +132,19 @@ def main():
         shutil.rmtree(args.workspace)
     os.makedirs(args.workspace)
 
-    node_addresses = [n.split("://")[1] for n in args.node]
-    node_addresses = [(n.split(":")[0], int(n.split(":")[1])) for n in node_addresses]
+    node_addresses_full = [n.split("://") for n in args.node]
+    prefixes = list({n[0] for n in node_addresses_full})
+    if len(prefixes) != 1:
+        parser.error("nodes should all have the same prefix")
+
+    if prefixes[0] == "local":
+        logger.info("Using local")
+    elif prefixes[0] == "ssh":
+        logger.info("Using ssh")
+    else:
+        parser.error("Found unexpected prefix")
+
+    node_addresses = [(n[1].split(":")[0], int(n[1].split(":")[1])) for n in node_addresses_full]
     logger.info("Made addresses {}", node_addresses)
 
     if args.scheme == "https":
