@@ -33,13 +33,9 @@ class Runner:
 
 
     def node_dir(self)->str:
-        node_dir = os.path.join(self.workspace, self.name())
-        if not os.path.exists(node_dir):
-            os.makedirs(node_dir)
-        return node_dir
+        return os.path.join(self.workspace, self.name())
 
     def setup_files(self):
-
         # copy binary files to node dir
         for file in ["bin/etcd"]:
             src = os.path.abspath(file)
@@ -113,7 +109,7 @@ class Runner:
             ]
 
         cmd_str = " ".join(cmd)
-        cmd_str = f"{cmd_str} > out 2> err"
+        cmd_str = f"cd {self.node_dir()} && {cmd_str} > out 2> err"
 
         return cmd_str
 
@@ -123,24 +119,26 @@ class LocalRunner(Runner):
         super().__init__(*args, **kwargs)
 
     def copy_file(self,src:str, dst:str):
-        logger.info("Copying binary file from {} to {}", src, dst)
+        logger.info("[{}] Copying file from {} to {}", self.address, src, dst)
         shutil.copy(src, dst)
 
     def start(self):
+        shutil.rmtree(self.node_dir(), ignore_errors=True)
+        os.makedirs(self.node_dir())
         self.setup_files()
         cmd = self.cmd()
 
         logger.info("running etcd node: {}", cmd)
 
-        self.process = subprocess.Popen(cmd, shell=True, cwd=self.node_dir())
+        self.process = subprocess.Popen(cmd, shell=True)
 
     def stop(self):
         self.process.kill()
         self.process.wait()
 
 class RemoteRunner(Runner):
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         client.connect(self.address)
@@ -150,16 +148,26 @@ class RemoteRunner(Runner):
         self.session = self.client.open_sftp()
 
     def copy_file(self, src:str, dst:str):
-        logger.info("Copying file from {} to {}", src, dst)
+        logger.info("[{}] Copying file from {} to {}", self.address, src, dst)
         self.session.put(src, dst)
+        stat = os.stat(src)
+        self.session.chmod(dst, stat.st_mode)
 
     def start(self):
+        shutil.rmtree(self.node_dir(), ignore_errors=True)
+        self.client.exec_command(f"rm -rf {self.node_dir()}")
+        os.makedirs(self.node_dir())
+        self.client.exec_command(f"mkdir -p {self.node_dir()}")
+
         self.setup_files()
         cmd = self.cmd()
 
         logger.info("running etcd node: {}", cmd)
 
-        self.process = self.client.exec_command(cmd)
+        self.client.exec_command(cmd)
+
+    def stop(self):
+        self.client.exec_command("pkill etcd")
 
 
 def generate_certs(workspace: str, nodes: List[Tuple[str, int]]):
@@ -175,7 +183,10 @@ def generate_certs(workspace: str, nodes: List[Tuple[str, int]]):
     logger.info("Using cfssljson {}", cfssljson)
     certs.make_ca(certs_dir, cfssl, cfssljson)
 
-    certs.make_certs(certs_dir, cfssl, cfssljson, "server", "server", certs.SERVER_CSR)
+    ip_addresses = { a for (a, _) in nodes }.union({"127.0.0.1"})
+    server_csr = certs.SERVER_CSR
+    server_csr["hosts"] = list(ip_addresses)
+    certs.make_certs(certs_dir, cfssl, cfssljson, "server", "server", server_csr)
 
     for i, (ip, _port) in enumerate(nodes):
         peer_csr = certs.PEER_CSR
