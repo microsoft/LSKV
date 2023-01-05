@@ -177,6 +177,10 @@ class RemoteRunner(Runner):
 
     def stop(self):
         self.client.exec_command("pkill etcd")
+        out_file = os.path.join(self.node_dir(), "out")
+        self.session.get(out_file, out_file)
+        err_file = os.path.join(self.node_dir(), "err")
+        self.session.get(err_file, err_file)
 
 
 def generate_certs(workspace: str, nodes: List[Tuple[str, int]]):
