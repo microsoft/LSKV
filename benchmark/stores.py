@@ -39,23 +39,29 @@ class EtcdStore(Store):
                 logger.info("spawning etcd: {}", etcd_cmd)
                 return Popen(etcd_cmd, stdout=out, stderr=err)
 
+    def workspace(self):
+        """
+        Return the workspace directory for this store.
+        """
+        return os.path.join(os.getcwd(), self.config.output_dir(), "workspace")
+
     def cacert(self) -> str:
         """
         Return the path to the CA certificate.
         """
-        return "certs/ca.pem"
+        return f"{self.workspace()}/certs/cert.pem"
 
     def cert(self) -> str:
         """
         Return the path to the client certificate.
         """
-        return "certs/client.pem"
+        return f"{self.workspace()}/certs/client.pem"
 
     def key(self) -> str:
         """
         Return the path to the key for the client certificate.
         """
-        return "certs/client-key.pem"
+        return f"{self.workspace()}/certs/cert-key.pem"
 
     def cleanup(self):
         shutil.rmtree("default.etcd", ignore_errors=True)
