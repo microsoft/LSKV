@@ -18,9 +18,18 @@ import paramiko
 
 from loguru import logger
 
+
 class Runner:
     # pylint: disable=too-many-arguments
-    def __init__(self,  address: str, port : int, node_index: int, scheme:str, workspace: str, initial_cluster:str):
+    def __init__(
+        self,
+        address: str,
+        port: int,
+        node_index: int,
+        scheme: str,
+        workspace: str,
+        initial_cluster: str,
+    ):
         self.address = address
         self.port = port
         self.node_index = node_index
@@ -31,8 +40,7 @@ class Runner:
     def name(self) -> str:
         return f"node{self.node_index}"
 
-
-    def node_dir(self)->str:
+    def node_dir(self) -> str:
         return os.path.join(self.workspace, self.name())
 
     def setup_files(self):
@@ -57,7 +65,7 @@ class Runner:
             dst = os.path.join(self.node_dir(), os.path.basename(file))
             self.copy_file(src, dst)
 
-    def cmd(self)->str:
+    def cmd(self) -> str:
         client_port = self.port
         peer_port = client_port + 1
         metrics_port = client_port + 2
@@ -118,7 +126,7 @@ class LocalRunner(Runner):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def copy_file(self,src:str, dst:str):
+    def copy_file(self, src: str, dst: str):
         logger.info("[{}] Copying file from {} to {}", self.address, src, dst)
         shutil.copy(src, dst)
 
@@ -136,6 +144,7 @@ class LocalRunner(Runner):
         self.process.kill()
         self.process.wait()
 
+
 class RemoteRunner(Runner):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -147,7 +156,7 @@ class RemoteRunner(Runner):
 
         self.session = self.client.open_sftp()
 
-    def copy_file(self, src:str, dst:str):
+    def copy_file(self, src: str, dst: str):
         logger.info("[{}] Copying file from {} to {}", self.address, src, dst)
         self.session.put(src, dst)
         stat = os.stat(src)
@@ -183,7 +192,7 @@ def generate_certs(workspace: str, nodes: List[Tuple[str, int]]):
     logger.info("Using cfssljson {}", cfssljson)
     certs.make_ca(certs_dir, cfssl, cfssljson)
 
-    ip_addresses = { a for (a, _) in nodes }.union({"127.0.0.1"})
+    ip_addresses = {a for (a, _) in nodes}.union({"127.0.0.1"})
     server_csr = certs.SERVER_CSR
     server_csr["hosts"] = list(ip_addresses)
     certs.make_certs(certs_dir, cfssl, cfssljson, "server", "server", server_csr)
@@ -205,9 +214,22 @@ def main():
     Main entry point for spawning the cluster.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("--node", action="extend", nargs="+", type=str, help="The nodes to launch in the form local://ip:port or ssh://ip:port")
-    parser.add_argument("--scheme", type=str, default="https", help="scheme to use for connections, either http or https")
-    parser.add_argument("--workspace", type=str, default="workspace", help="the workspace dir to use")
+    parser.add_argument(
+        "--node",
+        action="extend",
+        nargs="+",
+        type=str,
+        help="The nodes to launch in the form local://ip:port or ssh://ip:port",
+    )
+    parser.add_argument(
+        "--scheme",
+        type=str,
+        default="https",
+        help="scheme to use for connections, either http or https",
+    )
+    parser.add_argument(
+        "--workspace", type=str, default="workspace", help="the workspace dir to use"
+    )
     args = parser.parse_args()
 
     if not args.node:
@@ -240,16 +262,33 @@ def main():
     )
     logger.info("Built initial cluster {}", initial_cluster)
 
-
     nodes = []
     if prefixes[0] == "local":
         logger.info("Using local")
         for i, (ip, port) in enumerate(node_addresses):
-            nodes.append(LocalRunner(address=ip, port=port, node_index=i, scheme=args.scheme, workspace=args.workspace, initial_cluster=initial_cluster))
+            nodes.append(
+                LocalRunner(
+                    address=ip,
+                    port=port,
+                    node_index=i,
+                    scheme=args.scheme,
+                    workspace=args.workspace,
+                    initial_cluster=initial_cluster,
+                )
+            )
     elif prefixes[0] == "ssh":
         logger.info("Using ssh")
         for i, (ip, port) in enumerate(node_addresses):
-            nodes.append(RemoteRunner(address=ip, port=port, node_index=i, scheme=args.scheme, workspace=args.workspace, initial_cluster=initial_cluster))
+            nodes.append(
+                RemoteRunner(
+                    address=ip,
+                    port=port,
+                    node_index=i,
+                    scheme=args.scheme,
+                    workspace=args.workspace,
+                    initial_cluster=initial_cluster,
+                )
+            )
     else:
         parser.error("Found unexpected prefix")
 
