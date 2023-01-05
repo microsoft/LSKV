@@ -137,6 +137,7 @@ class Store(abc.ABC):
                     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                     client.connect(host)
                     _stdin, _stdout, _stderr = client.exec_command("pkill cchost")
+                    _stdin, _stdout, _stderr = client.exec_command("pkill etcd")
             else:
                 subprocess.run(["pkill", "cchost"], check=False)
 
