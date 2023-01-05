@@ -171,25 +171,120 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     Set args for all ycsb configurations.
     """
     nodes = get_nodes()
-    configurations = [
-        # lskv vs etcd
-        ycsb.YCSBConfig(
-            store="lskv",
-            tls=True,
-            enclave="sgx",
-            nodes=nodes[:1],
-            worker_threads=0,
-            sig_tx_interval=5000,
-            sig_ms_interval=1000,
-            ledger_chunk_bytes="5MB",
-            snapshot_tx_interval=10000,
-            http_version=2,
-            rate=10000,
-            workload=f"workload{workload}",
-            threads=1,
-        )
-        for workload in ["a", "b", "c", "d", "e", "f"]
-    ]
+    configurations = (
+        [
+            # lskv vs etcd
+            ycsb.YCSBConfig(
+                store="lskv",
+                tls=True,
+                enclave="sgx",
+                nodes=nodes[:1],
+                worker_threads=0,
+                sig_tx_interval=5000,
+                sig_ms_interval=1000,
+                ledger_chunk_bytes="5MB",
+                snapshot_tx_interval=10000,
+                http_version=2,
+                rate=10000,
+                workload=f"workload{workload}",
+                threads=1,
+            )
+            for workload in ["a", "b", "c", "d", "e", "f"]
+        ]
+        + [
+            # lskv vs etcd
+            ycsb.YCSBConfig(
+                store="lskv",
+                tls=True,
+                enclave="virtual",
+                nodes=nodes[:1],
+                worker_threads=0,
+                sig_tx_interval=5000,
+                sig_ms_interval=1000,
+                ledger_chunk_bytes="5MB",
+                snapshot_tx_interval=10000,
+                http_version=2,
+                rate=10000,
+                workload=f"workload{workload}",
+                threads=1,
+            )
+            for workload in ["a", "b", "c", "d", "e", "f"]
+        ]
+        + [
+            ycsb.YCSBConfig(
+                store="etcd",
+                tls=True,
+                enclave="virtual",
+                nodes=nodes[:1],
+                worker_threads=0,
+                sig_tx_interval=5000,
+                sig_ms_interval=1000,
+                ledger_chunk_bytes="5MB",
+                snapshot_tx_interval=10000,
+                http_version=2,
+                rate=10000,
+                workload=f"workload{workload}",
+                threads=1,
+            )
+            for workload in ["a", "b", "c", "d", "e", "f"]
+        ]
+        + [
+            # lskv vs etcd
+            ycsb.YCSBConfig(
+                store="lskv",
+                tls=True,
+                enclave="sgx",
+                nodes=nodes[:3],
+                worker_threads=0,
+                sig_tx_interval=5000,
+                sig_ms_interval=1000,
+                ledger_chunk_bytes="5MB",
+                snapshot_tx_interval=10000,
+                http_version=2,
+                rate=10000,
+                workload=f"workload{workload}",
+                threads=1,
+            )
+            for workload in ["a", "b", "c", "d", "e", "f"]
+        ]
+        + [
+            # lskv vs etcd
+            ycsb.YCSBConfig(
+                store="lskv",
+                tls=True,
+                enclave="virtual",
+                nodes=nodes[:3],
+                worker_threads=0,
+                sig_tx_interval=5000,
+                sig_ms_interval=1000,
+                ledger_chunk_bytes="5MB",
+                snapshot_tx_interval=10000,
+                http_version=2,
+                rate=10000,
+                workload=f"workload{workload}",
+                threads=1,
+            )
+            for workload in ["a", "b", "c", "d", "e", "f"]
+        ]
+        + [
+            ycsb.YCSBConfig(
+                store="etcd",
+                tls=True,
+                enclave="virtual",
+                nodes=nodes[:3],
+                worker_threads=0,
+                sig_tx_interval=5000,
+                sig_ms_interval=1000,
+                ledger_chunk_bytes="5MB",
+                snapshot_tx_interval=10000,
+                http_version=2,
+                rate=10000,
+                workload=f"workload{workload}",
+                threads=1,
+            )
+            for workload in ["a", "b", "c", "d", "e", "f"]
+        ]
+    )
 
     return configurations
 
@@ -306,8 +401,8 @@ def k6_configurations(_args: argparse.Namespace) -> List[k6.K6Config]:
 if __name__ == "__main__":
     # logger.info("Running etcd")
     # common.main("etcd", etcd.get_arguments, etcd_configurations, etcd.execute_config)
-    # logger.info("Running ycsb")
-    # common.main("ycsb", ycsb.get_arguments, ycsb_configurations, ycsb.execute_config)
+    logger.info("Running ycsb")
+    common.main("ycsb", ycsb.get_arguments, ycsb_configurations, ycsb.execute_config)
     # logger.info("Running perf")
     # common.main("perf", perf.get_arguments, perf_configurations, perf.execute_config)
     logger.info("Running k6")
