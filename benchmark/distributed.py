@@ -337,6 +337,27 @@ def k6_configurations(_args: argparse.Namespace) -> List[k6.K6Config]:
             )
             for nodes in [nodes[:i] for i in [1, 3, 5, 7] if len(nodes) >= i]
         ]
+        + [
+            # receipt generation for mixed requests
+            k6.K6Config(
+                store="lskv",
+                tls=True,
+                enclave=enclave,
+                nodes=nodes[:1],
+                worker_threads=0,
+                sig_tx_interval=5000,
+                sig_ms_interval=1000,
+                ledger_chunk_bytes="5MB",
+                snapshot_tx_interval=10000,
+                http_version=2,
+                rate=10000,
+                vus=100,
+                func="mixed_single_receipt",
+                content_type="json",
+                value_size=256,
+            )
+            for enclave in ["virtual", "sgx"]
+        ]
     )
 
     return configurations
