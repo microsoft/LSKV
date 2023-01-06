@@ -79,7 +79,7 @@ class K6Benchmark(common.Benchmark):
             "benchmark/k6.js",
             "--console-output",
             log_file,
-            "--logformat",
+            "--log-format",
             "json",
         ]
         logger.debug("run cmd: {}", bench)
