@@ -39,7 +39,6 @@ function getStages() {
   }
   // end with a cool-down
   stages.push({ target: 100, duration: "1s" });
-  console.log(stages);
   return stages;
 }
 
@@ -74,24 +73,12 @@ const val0 = encoding.b64encode("v".repeat(valueSize));
 
 const host = `https://${addr}`;
 
-const prefill_keys = 100;
-
 export function setup() {
   randomSeed(123);
 
   if (content_type == "grpc") {
     grpc_client.connect(addr, {});
   }
-
-  let receipt_txids = [];
-  var txid = "";
-  // trigger getting some cached ones too (maybe)
-  for (let i = 0; i < prefill_keys; i++) {
-    // issue some writes so we have things to get receipts for
-    txid = put_single(i, "setup");
-    receipt_txids.push(txid);
-  }
-  return receipt_txids;
 }
 
 function check_success(response) {
@@ -128,6 +115,14 @@ export function put_single(i = 0, tag = "put_single") {
     const term = header["raftTerm"];
     const rev = header["revision"];
     const txid = `${term}.${rev}`;
+
+    const res_resp = {
+      method: "put",
+      req: payload,
+      res: res,
+    };
+    console.log(JSON.stringify(res_resp));
+
     return txid;
   } else {
     let payload = JSON.stringify({
@@ -152,6 +147,13 @@ export function put_single(i = 0, tag = "put_single") {
     const term = header["raftTerm"];
     const rev = header["revision"];
     const txid = `${term}.${rev}`;
+
+    const res_resp = {
+      method: "put",
+      req: payload,
+      res: res,
+    };
+    console.log(JSON.stringify(res_resp));
     return txid;
   }
 }
@@ -194,6 +196,13 @@ export function get_single(i = 0, tag = "get_single") {
     check(response, {
       "status is 200": (r) => r && r.status === grpc.StatusOK,
     });
+
+    const res_resp = {
+      method: "get",
+      req: payload,
+      res: response.message,
+    };
+    console.log(JSON.stringify(res_resp));
   } else {
     let payload = JSON.stringify({
       key: key(i),
@@ -210,6 +219,12 @@ export function get_single(i = 0, tag = "get_single") {
     let response = http.post(`${host}/v3/kv/range`, payload, params);
 
     check_success(response);
+    const res_resp = {
+      method: "get",
+      req: payload,
+      res: response.json(),
+    };
+    console.log(JSON.stringify(res_resp));
   }
 }
 
@@ -247,6 +262,13 @@ export function delete_single(i = 0, tag = "delete_single") {
     check(response, {
       "status is 200": (r) => r && r.status === grpc.StatusOK,
     });
+
+    const res_resp = {
+      method: "delete",
+      req: payload,
+      res: response.message,
+    };
+    console.log(JSON.stringify(res_resp));
   } else {
     let payload = JSON.stringify({
       key: key(i),
@@ -263,6 +285,12 @@ export function delete_single(i = 0, tag = "delete_single") {
     let response = http.post(`${host}/v3/kv/delete_range`, payload, params);
 
     check_success(response);
+    const res_resp = {
+      method: "delete",
+      req: payload,
+      res: response.json(),
+    };
+    console.log(JSON.stringify(res_resp));
   }
 }
 

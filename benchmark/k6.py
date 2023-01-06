@@ -52,6 +52,7 @@ class K6Benchmark(common.Benchmark):
         Return the command to run the benchmark for the given store.
         """
         timings_file = os.path.join(self.config.output_dir(), "timings.csv")
+        log_file = os.path.join(self.config.output_dir(), "console.log")
         workspace = store.cert()
         workspace = os.path.dirname(workspace)
         bench = [
@@ -76,6 +77,10 @@ class K6Benchmark(common.Benchmark):
             "--env",
             f"ADDR={self.config.get_node_addr(0)}",
             "benchmark/k6.js",
+            "--console-output",
+            log_file,
+            "--logformat",
+            "json",
         ]
         logger.debug("run cmd: {}", bench)
         return bench
