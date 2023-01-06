@@ -80,7 +80,7 @@ class K6Benchmark(common.Benchmark):
             "--console-output",
             log_file,
             "--log-format",
-            "json",
+            "raw",
         ]
         logger.debug("run cmd: {}", bench)
         return bench

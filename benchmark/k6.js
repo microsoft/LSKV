@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
-import { check, randomSeed } from "k6";
+import { check, randomSeed, sleep } from "k6";
 import http from "k6/http";
 import encoding from "k6/encoding";
 import exec from "k6/execution";
@@ -116,12 +116,13 @@ export function put_single(i = 0, tag = "put_single") {
     const rev = header["revision"];
     const txid = `${term}.${rev}`;
 
-    const res_resp = {
+    const req_resp = {
       method: "put",
       req: payload,
       res: res,
+      time: Date.now(),
     };
-    console.log(JSON.stringify(res_resp));
+    console.log(JSON.stringify(req_resp));
 
     return txid;
   } else {
@@ -148,12 +149,13 @@ export function put_single(i = 0, tag = "put_single") {
     const rev = header["revision"];
     const txid = `${term}.${rev}`;
 
-    const res_resp = {
+    const req_resp = {
       method: "put",
       req: payload,
       res: res,
+      time: Date.now(),
     };
-    console.log(JSON.stringify(res_resp));
+    console.log(JSON.stringify(req_resp));
     return txid;
   }
 }
@@ -161,7 +163,15 @@ export function put_single(i = 0, tag = "put_single") {
 // check the status of a transaction id with the service
 function get_tx_status(txid) {
   const response = http.get(`${host}/app/tx?transaction_id=${txid}`);
-  return response.json()["status"];
+  const res = response.json()
+  const req_resp = {
+    method: "get_tx_status",
+    req: txid,
+    res: res,
+    time:Date.now(),
+  }
+  console.log(JSON.stringify(req_resp))
+  return res["status"];
 }
 
 function wait_for_committed(txid) {
@@ -172,6 +182,8 @@ function wait_for_committed(txid) {
     if (s == "Committed" || s == "Invalid") {
       break;
     }
+    // sleep for 100ms to give the node a chance to commit things
+    sleep(0.1);
   }
   check_committed(s);
 }
@@ -180,6 +192,7 @@ function wait_for_committed(txid) {
 export function put_single_wait(i = 0) {
   const txid = put_single(i, "put_single_wait");
   wait_for_committed(txid);
+  return txid;
 }
 
 // perform a single get request at a preset key
@@ -197,12 +210,13 @@ export function get_single(i = 0, tag = "get_single") {
       "status is 200": (r) => r && r.status === grpc.StatusOK,
     });
 
-    const res_resp = {
+    const req_resp = {
       method: "get",
       req: payload,
       res: response.message,
+      time: Date.now(),
     };
-    console.log(JSON.stringify(res_resp));
+    console.log(JSON.stringify(req_resp));
   } else {
     let payload = JSON.stringify({
       key: key(i),
@@ -219,12 +233,13 @@ export function get_single(i = 0, tag = "get_single") {
     let response = http.post(`${host}/v3/kv/range`, payload, params);
 
     check_success(response);
-    const res_resp = {
+    const req_resp = {
       method: "get",
       req: payload,
       res: response.json(),
+      time: Date.now(),
     };
-    console.log(JSON.stringify(res_resp));
+    console.log(JSON.stringify(req_resp));
   }
 }
 
@@ -263,12 +278,21 @@ export function delete_single(i = 0, tag = "delete_single") {
       "status is 200": (r) => r && r.status === grpc.StatusOK,
     });
 
-    const res_resp = {
+    const res = response.message;
+    const header = res["header"];
+    const term = header["raftTerm"];
+    const rev = header["revision"];
+    const txid = `${term}.${rev}`;
+
+    const req_resp = {
       method: "delete",
       req: payload,
       res: response.message,
+      time: Date.now(),
     };
-    console.log(JSON.stringify(res_resp));
+    console.log(JSON.stringify(req_resp));
+
+    return txid;
   } else {
     let payload = JSON.stringify({
       key: key(i),
@@ -284,13 +308,22 @@ export function delete_single(i = 0, tag = "delete_single") {
 
     let response = http.post(`${host}/v3/kv/delete_range`, payload, params);
 
+    const res = response.json();
+    const header = res["header"];
+    const term = header["raftTerm"];
+    const rev = header["revision"];
+    const txid = `${term}.${rev}`;
+
     check_success(response);
-    const res_resp = {
+    const req_resp = {
       method: "delete",
       req: payload,
-      res: response.json(),
+      res: res,
+      time: Date.now(),
     };
-    console.log(JSON.stringify(res_resp));
+    console.log(JSON.stringify(req_resp));
+
+    return txid;
   }
 }
 
@@ -304,6 +337,7 @@ export function put_get_delete(i = 0) {
 export function delete_single_wait(i = 0) {
   const txid = delete_single(i, "delete_single_wait");
   wait_for_committed(txid);
+  return txid;
 }
 
 // Randomly select a request type to run
@@ -342,11 +376,25 @@ export function mixed_single_wait() {
   }
 }
 
-export function get_receipt(receipt_txids, tag = "get_receipt") {
-  const txid =
-    receipt_txids[exec.scenario.iterationInTest % receipt_txids.length];
+// Randomly select a request type to run
+export function mixed_single_receipt() {
+  const rnd = Math.random();
+  if (rnd >= 0 && rnd < 0.6) {
+    // 60% reads
+    get_single();
+  } else if (rnd >= 0.6 && rnd < 0.9) {
+    // 30% writes
+    const txid = put_single_wait();
+    get_receipt(txid);
+  } else {
+    // 10% deletes
+    const txid = delete_single_wait();
+    get_receipt(txid);
+  }
+}
 
-  const [revision, raftTerm] = txid.split(".");
+export function get_receipt(txid, tag = "get_receipt") {
+  const [raftTerm, revision] = txid.split(".");
   let payload = JSON.stringify({
     revision: revision,
     raftTerm: raftTerm,
@@ -360,6 +408,19 @@ export function get_receipt(receipt_txids, tag = "get_receipt") {
     },
   };
 
-  const response = http.post(`${host}/v3/receipt/get_receipt`, payload, params);
+  var response = http.post(`${host}/v3/receipt/get_receipt`, payload, params);
   check_success(response);
+  if (response.status == 202){
+    // try again
+    response = http.post(`${host}/v3/receipt/get_receipt`, payload, params);
+    check_success(response);
+  }
+
+  const req_resp = {
+    method: "receipt",
+    req: payload,
+    res: response.json(),
+      time: Date.now(),
+  };
+  console.log(JSON.stringify(req_resp));
 }
