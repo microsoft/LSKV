@@ -179,13 +179,22 @@ class Analyser:
                 if key == "nodes":
                     dataframe["node_count"] = len(value)
                 if isinstance(value, list):
-                    dataframe[key] = "_".join(value)
-                else:
-                    dataframe[key] = value
+                    value = "_".join(value)
+
+                dataframe[key] = value
 
             dataframes.append(dataframe)
 
-        return pd.concat(dataframes, ignore_index=True)
+        all_data = pd.concat(dataframes, ignore_index=True)
+
+        for col in all_data.columns:
+            nunique = all_data[col].nunique()
+            dtype = all_data[col].dtype
+            if nunique < 100 and dtype not in ["int64", "float64", "bool", "category"]:
+                all_data[col] = all_data[col].astype("category")
+                print(f"Converted column {col} from {dtype} to category due to having {nunique} unique items")
+
+        return all_data
 
     # pylint: disable=too-many-arguments
     def plot_scatter(
