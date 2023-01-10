@@ -27,3 +27,8 @@ ansible-playbook -i hosts benchmark/distributed/setup_nodes.yaml -e @benchmark/d
 ```
 
 Then, to run the benchmarks, ssh onto the first node (`ssh <user>@$(head -n 1 hosts)`), `cd /tmp/lskv` and run things from there (e.g. `. .venv/bin/activate && python3 benchmark/distributed.py`).
+
+## Receipt verification
+
+The receipt verification benchmark (`benchmark/receipt_verify.py`) uses a hard-coded receipt so can be run standalone without a running datastore.
+It can be run with `python benchmark/receipt_verify.py`.
