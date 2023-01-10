@@ -72,18 +72,19 @@ def main():
     res = '{"header":{"cluster_id":1201806628430307423,"member_id":15247274768972111916,"revision":11,"raft_term":2}}'
     receipt = '{"header":{"clusterId":"1201806628430307423","memberId":"15247274768972111916","revision":"12","raftTerm":"2","committedRevision":"12","committedRaftTerm":"2"},"receipt":{"cert":"-----BEGIN CERTIFICATE-----\\nMIIBwzCCAUmgAwIBAgIRAKYlYuAhGIfcih3QDJsVfH4wCgYIKoZIzj0EAwMwFjEU\\nMBIGA1UEAwwLQ0NGIE5ldHdvcmswHhcNMjMwMTA2MTIwODM2WhcNMjMwNDA2MTIw\\nODM1WjATMREwDwYDVQQDDAhDQ0YgTm9kZTB2MBAGByqGSM49AgEGBSuBBAAiA2IA\\nBB0era6qeg/KkKhxvfJUI3bwSYToBuuAxiB1O4H/YbVoq+/j9ljf6SAPA/lEMwaB\\nUaq3Tf2GGhjIwBFQsiD7ZDpC8+UhDxzGRNrCa8kUqAvXdr2AZoGc3Bpiy812qQDL\\ncaNeMFwwCQYDVR0TBAIwADAdBgNVHQ4EFgQUZVBGS+4onlJn1H0mEQL0eOIC6U4w\\nHwYDVR0jBBgwFoAUF6/StYa1PdeEITb16OPG/LcoFl8wDwYDVR0RBAgwBocEfwAA\\nATAKBggqhkjOPQQDAwNoADBlAjEAolzbk5mSRdJ2kat0FzJgy9jzTe38BDFFZYl2\\nlhLN8CFfWkfWsEGU12ZO4HUfZz5xAjApJfoOAUg13hIpseGjFCOFVD8QlGVZVjz4\\nu91XTau+62uMBoGfLG6QDxmEjYWHzCQ=\\n-----END CERTIFICATE-----\\n","signature":"MGQCME8JI0fJqsJp0Asor/C3dQjt/b5xSQs6LF1pM7MZikPV3VSewct8Ll5POz4OqHg1UwIwQbIo9hdZjA4h1hcWUV+8OhobsnaDvAhRQ68rYb1fovt28bx/rm2LsPPzeyzbFTLq","nodeId":"2ce05b6d9e3399d3a38a740c9bb82114f75fab3c493069186767a903d4ca9cf6","txReceipt":{"leafComponents":{"claimsDigest":"7efbc55203a0e1ea810e2e8c1a9561ff650ac0d5de623b3f35f145823466edc9","commitEvidence":"ce:2.11:166dae27360e38b6657b90dca456c5ab2b805bc008a3892b274b7d2b2bb72c8a","writeSetDigest":"4d67287b7a5b6b808e9cbb84017e27a57d83d60847def8ccffe273f82c6d6a2d"},"proof":[{"left":"630a7b723504d69c95ae7ce64499f37060da2fa351f1b18d29e13f2695c5cbbb"},{"left":"3f7582f3b824d2af7a81bf106514a6c817332ea346a918c2fc45cb12c2c0cacc"},{"left":"822d9b9ead97bc353d3e044316636155650b25e1f15d819d5e07185786108d77"}]}}}'
 
+    print(f"Timing receipt verification with {iterations} iterations and {repeats} repeats")
+
     durations = timeit.Timer(
         lambda: check_json_receipt(req_type, req, res, receipt)
     ).repeat(number=iterations, repeat=repeats)
 
     for duration in durations:
-        print("duration", duration)
-        print("average ", duration / iterations)
+        print(f"Took {duration} seconds to complete {iterations} iterations, on average {duration/iterations} s/iter")
 
     print()
-    print("average duration", sum(durations) / len(durations), "seconds")
+    print(f"Average duration to complete {iterations} iterations:", sum(durations) / len(durations), "seconds")
     print(
-        "average average ",
+        "Average duration per iteration ",
         ((sum(durations) / len(durations)) / iterations) * 1000,
         "milliseconds",
     )
