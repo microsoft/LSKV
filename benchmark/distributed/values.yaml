@@ -1,0 +1,8 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+---
+# values for the distributed benchmarking setup
+vm_user: "apj39"
+
+py_ccf_ver: "4.0.0dev3"
+ccf_ver: "4.0.0-dev3"

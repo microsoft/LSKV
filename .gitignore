@@ -30,9 +30,14 @@ bin/
 
 /docker-workspace/
 
+/*.parquet
+
 /.direnv/
 /.envrc
 
 /result
 
 /*.parquet
+
+*.pub
+hosts

@@ -32,32 +32,38 @@ class EtcdStore(Store):
                     "benchmark/etcd_cluster.py",
                     "--scheme",
                     self.config.scheme(),
-                    "--nodes",
-                    str(self.config.nodes),
+                    "--workspace",
+                    self.workspace(),
                 ]
-                logger.info("spawning etcd: {}", etcd_cmd)
+                for node in self.config.nodes:
+                    etcd_cmd.append("--node")
+                    etcd_cmd.append(node)
+                logger.info("spawning etcd: {}", " ".join(etcd_cmd))
                 return Popen(etcd_cmd, stdout=out, stderr=err)
+
+    def workspace(self):
+        """
+        Return the workspace directory for this store.
+        """
+        return os.path.join(os.getcwd(), self.config.output_dir(), "workspace")
 
     def cacert(self) -> str:
         """
         Return the path to the CA certificate.
         """
-        return "certs/ca.pem"
+        return f"{self.workspace()}/certs/ca.pem"
 
     def cert(self) -> str:
         """
         Return the path to the client certificate.
         """
-        return "certs/client.pem"
+        return f"{self.workspace()}/certs/client.pem"
 
     def key(self) -> str:
         """
         Return the path to the key for the client certificate.
         """
-        return "certs/client-key.pem"
-
-    def cleanup(self):
-        shutil.rmtree("default.etcd", ignore_errors=True)
+        return f"{self.workspace()}/certs/client-key.pem"
 
 
 class LSKVStore(Store):
@@ -79,8 +85,11 @@ class LSKVStore(Store):
                     package += ".enclave.so.signed"
                 else:
                     package += ".virtual.so"
+                bin_path = "sandbox.sh"
+                if shutil.which(bin_path) is None:
+                    bin_path = f"/opt/ccf_{self.config.enclave}/bin/sandbox.sh"
                 lskv_cmd = [
-                    "sandbox.sh",  # expect to find the sandbox in the path
+                    bin_path,
                     "--enclave-type",
                     "virtual" if self.config.enclave == "virtual" else "release",
                     "--enclave-platform",
@@ -104,10 +113,10 @@ class LSKVStore(Store):
                 if self.config.http_version == 2:
                     lskv_cmd.append("--http2")
 
-                port = 8000
-                for i in range(self.config.nodes):
+                for node in self.config.nodes:
                     lskv_cmd.append("--node")
-                    lskv_cmd.append(f"local://127.0.0.1:{port + i}")
+                    lskv_cmd.append(node)
+
                 logger.info("spawning lskv: {}", lskv_cmd)
                 return Popen(lskv_cmd, stdout=out, stderr=err)
 

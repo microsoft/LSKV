@@ -79,7 +79,7 @@ class EtcdBenchmark(common.Benchmark):
         bench = [
             "bin/benchmark",
             "--endpoints",
-            f"{self.config.scheme()}://127.0.0.1:{self.config.port}",
+            f"{self.config.scheme()}://{self.config.get_node_addr(0)}",
             "--clients",
             str(self.config.clients),
             "--conns",
@@ -278,7 +278,11 @@ def execute_config(config: EtcdConfig):
     """
     Execute the given configuration.
     """
-    store = EtcdStore(config) if config.store == "etcd" else LSKVStore(config)
+    if config.store == "etcd":
+        store: Store = EtcdStore(config)
+    else:
+        store = LSKVStore(config)
+
     benchmark = EtcdBenchmark(config)
 
     timings_file = run_benchmark(
