@@ -192,7 +192,9 @@ class Analyser:
             dtype = all_data[col].dtype
             if nunique < 100 and dtype not in ["int64", "float64", "bool", "category"]:
                 all_data[col] = all_data[col].astype("category")
-                print(f"Converted column {col} from {dtype} to category due to having {nunique} unique items")
+                print(
+                    f"Converted column {col} from {dtype} to category due to having {nunique} unique items"
+                )
 
         return all_data
 
