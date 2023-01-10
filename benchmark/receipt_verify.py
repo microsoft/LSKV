@@ -106,11 +106,13 @@ RuXUu+yl3EgtEgvw
         sum(durations) / len(durations),
         "seconds",
     )
+    ms_per_iter = ((sum(durations) / len(durations)) / iterations) * 1000
     print(
         "Average duration per iteration ",
-        ((sum(durations) / len(durations)) / iterations) * 1000,
+        ms_per_iter,
         "milliseconds",
     )
+    print("Throughput:", 1000 / ms_per_iter)
 
 
 if __name__ == "__main__":

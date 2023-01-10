@@ -183,7 +183,7 @@ function wait_for_committed(txid) {
       break;
     }
     // sleep for 100ms to give the node a chance to commit things
-    sleep(0.1);
+    sleep(0.01);
   }
   check_committed(s);
 }
@@ -410,7 +410,9 @@ export function get_receipt(txid, tag = "get_receipt") {
 
   var response = http.post(`${host}/v3/receipt/get_receipt`, payload, params);
   check_success(response);
-  if (response.status == 202){
+  while (response.status == 202){
+    // sleep for 10ms to give the node a chance to process the receipt
+    sleep(0.01);
     // try again
     response = http.post(`${host}/v3/receipt/get_receipt`, payload, params);
     check_success(response);
