@@ -36,17 +36,6 @@ def get_nodes() -> List[str]:
     return [f"ssh://{ip}:8000" for ip in get_hosts()]
 
 
-def common_configurations(args: argparse.Namespace):
-    """
-    Fill in the args for all common configurations.
-    """
-    args.worker_threads = [0]
-    args.etcd = True
-    args.enclave = ["virtual"]
-    args.http2 = True
-    args.nodes = ["local://127.0.0.1:8000"]
-
-
 def etcd_configurations(_args: argparse.Namespace) -> List[etcd.EtcdConfig]:
     """
     Set args for all etcd configurations.
@@ -233,20 +222,6 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     return configurations
 
 
-def perf_configurations(args: argparse.Namespace) -> List[perf.PerfConfig]:
-    """
-    Set args for all perf configurations.
-    """
-    common_configurations(args)
-    args.http1 = True
-    args.http2 = False
-    args.etcd = False
-    args.workloads = ["benchmark/piccolo-requests-http1.parquet"]
-    args.max_inflight_requests = [2]
-
-    return perf.make_configurations(args)
-
-
 def k6_configurations(_args: argparse.Namespace) -> List[k6.K6Config]:
     """
     Set args for all k6 configurations.
@@ -368,7 +343,5 @@ if __name__ == "__main__":
     # common.main("etcd", etcd.get_arguments, etcd_configurations, etcd.execute_config)
     logger.info("Running ycsb")
     common.main("ycsb", ycsb.get_arguments, ycsb_configurations, ycsb.execute_config)
-    # logger.info("Running perf")
-    # common.main("perf", perf.get_arguments, perf_configurations, perf.execute_config)
     logger.info("Running k6")
     common.main("k6", k6.get_arguments, k6_configurations, k6.execute_config)
