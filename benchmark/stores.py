@@ -7,8 +7,10 @@ Stores to run benchmarks against.
 """
 
 import os
+import json
 import shutil
 from subprocess import Popen
+import subprocess
 
 from common import Store
 from loguru import logger
@@ -64,6 +66,45 @@ class EtcdStore(Store):
         Return the path to the key for the client certificate.
         """
         return f"{self.workspace()}/certs/client-key.pem"
+
+    def get_leader_address(self) -> str:
+        """
+        Get address of the leader node.
+        """
+        node = self.config.get_node_addr(0)
+
+        command = [
+            "bin/etcdctl",
+            "--endpoints",
+            f"{self.config.scheme()}://{node}",
+            "--cacert",
+            self.cacert(),
+            "--cert",
+            self.cert(),
+            "--key",
+            self.key(),
+            "endpoint",
+            "status",
+            "-w",
+            "json",
+            "--cluster",
+        ]
+        logger.debug("Running endpoint status command: {}", command)
+        p = subprocess.run(command, capture_output=True)
+        logger.debug("Endpoint status stdout: {}", p.stdout)
+        logger.debug("Endpoint status stderr: {}", p.stderr)
+        j = json.loads(p.stdout)
+        logger.debug("Got endpoint status: {}", j)
+
+        for e in j:
+            member_id = e["Status"]["header"]["member_id"]
+            leader = e["Status"]["leader"]
+            if member_id == leader:
+                addr = e["Endpoint"].split("://")[-1]
+                logger.info("Found leader node {}", addr)
+                return addr
+
+        return node
 
 
 class LSKVStore(Store):
@@ -143,3 +184,35 @@ class LSKVStore(Store):
         Return the path to the key for the client certificate.
         """
         return f"{self.workspace()}/sandbox_common/user0_privk.pem"
+
+    def get_leader_address(self) -> str:
+        """
+        Get address of the leader node.
+        """
+        node = self.config.get_node_addr(0)
+
+        command = [
+            "curl",
+            "--cacert",
+            self.cacert(),
+            "--cert",
+            self.cert(),
+            "--key",
+            self.key(),
+            f"{self.config.scheme()}://{node}/node/network/nodes",
+        ]
+        logger.debug("Running endpoint status command: {}", command)
+        p = subprocess.run(command, capture_output=True)
+        logger.debug("Endpoint status stdout: {}", p.stdout)
+        logger.debug("Endpoint status stderr: {}", p.stderr)
+        j = json.loads(p.stdout)
+        logger.debug("Got endpoint status: {}", j)
+
+        for e in j["nodes"]:
+            primary = e["primary"]
+            if primary:
+                addr = e["rpc_interfaces"]["primary_rpc_interface"]["published_address"]
+                logger.info("Found leader node {}", addr)
+                return addr
+
+        return node

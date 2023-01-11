@@ -75,7 +75,7 @@ class K6Benchmark(common.Benchmark):
             "--env",
             f"MAX_VUS={self.config.vus}",
             "--env",
-            f"ADDR={self.config.get_node_addr(0)}",
+            f"ADDR={store.get_leader_address()}",
             "benchmark/k6.js",
             "--console-output",
             log_file,

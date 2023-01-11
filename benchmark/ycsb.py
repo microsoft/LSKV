@@ -60,7 +60,7 @@ class YCSBenchmark(common.Benchmark):
             "--prop",
             "silence=false",
             "--prop",
-            f"etcd.endpoints={self.config.scheme()}://{self.config.get_node_addr(0)}",
+            f"etcd.endpoints={self.config.scheme()}://{store.get_leader_address()}",
             "--property_file",
             self.path_to_workload(),
             "--interval",

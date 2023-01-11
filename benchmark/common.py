@@ -152,6 +152,13 @@ class Store(abc.ABC):
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def get_leader_address(self) -> str:
+        """
+        Find the leader node and return its address.
+        """
+        raise NotImplementedError
+
     def wait_for_ready(self):
         """
         Wait for the datastore to be ready to accept requests.
