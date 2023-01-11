@@ -140,8 +140,10 @@ class Store(abc.ABC):
                     stdout.channel.recv_exit_status()
                     _stdin, stdout, _stderr = client.exec_command("pkill etcd")
                     stdout.channel.recv_exit_status()
+                    time.sleep(1)
             else:
                 subprocess.run(["pkill", "cchost"], check=False)
+                subprocess.run(["pkill", "etcd"], check=False)
 
         return False
 
