@@ -12,8 +12,10 @@ import json
 import timeit
 
 import ccf.receipt  # type: ignore
+
 # pylint: disable=import-error
 import etcd_pb2  # type: ignore
+
 # pylint: disable=import-error
 import lskvserver_pb2  # type: ignore
 from cryptography.x509 import load_pem_x509_certificate  # type: ignore
