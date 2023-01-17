@@ -260,7 +260,9 @@ def generate_certs(workspace: str, nodes: List[Tuple[str, int]]):
         name = f"node{i}"
         peer_csr["CN"] = name
         if ip_addr not in peer_csr["hosts"]:
-            peer_csr["hosts"].append(ip_addr)
+            hosts = peer_csr["hosts"]
+            assert isinstance(hosts, list)
+            hosts.append(ip_addr)
 
         certs.make_certs(certs_dir, cfssl, cfssljson, "peer", name, peer_csr)
 
