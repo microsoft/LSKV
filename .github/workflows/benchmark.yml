@@ -59,62 +59,59 @@ jobs:
       - name: Make .venv
         run: make .venv
 
-      - name: Make certs
-        run: make certs
-
       - name: Run benchmark
         run: export PATH=$HOME/.local/go/bin:$PATH && . .venv/bin/activate && python3 benchmark/ci.py
 
-      - name: Plot results
-        run: make execute-notebook
+      # - name: Plot results
+      #   run: make execute-notebook
 
-      - name: Mark safe directories
-        run: git config --global --add safe.directory $(pwd)
+      # - name: Mark safe directories
+      #   run: git config --global --add safe.directory $(pwd)
 
-      - name: Set up git author
-        run: |
-          git config --global user.email "62645686+ccf-bot@users.noreply.github.com"
-          git config --global user.name "ccf-bot"
+      # - name: Set up git author
+      #   run: |
+      #     git config --global user.email "62645686+ccf-bot@users.noreply.github.com"
+      #     git config --global user.name "ccf-bot"
 
-      - name: Commit and push plots
-        run: |
-          set -x
-          git checkout -- benchmark
-          git checkout ci-plots
-          git pull origin ci-plots
-          mkdir ${{ github.sha }}
-          mv plots/* ${{ github.sha }}/.
-          rm -f ${{ github.sha }}/**/*.svg
-          git add ${{ github.sha }}/**/*.jpg
-          git commit -m "add plots for ${{ github.sha }}"
-          git push origin ci-plots
+      # - name: Commit and push plots
+      #   run: |
+      #     set -x
+      #     git checkout -- benchmark
+      #     git checkout ci-plots
+      #     git pull origin ci-plots
+      #     mkdir ${{ github.sha }}
+      #     mv plots/* ${{ github.sha }}/.
+      #     rm -f ${{ github.sha }}/**/*.svg
+      #     git add ${{ github.sha }}/**/*.jpg
+      #     git commit -m "add plots for ${{ github.sha }}"
+      #     git push origin ci-plots
 
-      - name: Set up comment file
-        run: |
-          repo_url=${{ github.server_url }}/${{ github.repository }}
-          echo "## Plots from benchmarking at ${{ github.sha }}" >> comment.md
-          echo >> comment.md
-          echo "> Available from [here](${repo_url}/tree/ci-plots/${{ github.sha }})" >> comment.md
-          echo >> comment.md
-          for dir in ${{ github.sha }}/*; do
-            for f in $dir/*; do
-              short="${f#*/}"
-              echo "<details>" >> comment.md
-              echo "<summary><b>$short</b></summary>" >> comment.md
-              echo "<a href=\"${repo_url}/blob/ci-plots/$f?raw=true\"><img src=\"${repo_url}/blob/ci-plots/$f?raw=true\"></a>" >> comment.md
-              echo "</details>" >> comment.md
-            done
-          done
+      # - name: Set up comment file
+      #   run: |
+      #     repo_url=${{ github.server_url }}/${{ github.repository }}
+      #     echo "## Plots from benchmarking at ${{ github.sha }}" >> comment.md
+      #     echo >> comment.md
+      #     echo "> Available from [here](${repo_url}/tree/ci-plots/${{ github.sha }})" >> comment.md
+      #     echo >> comment.md
+      #     for dir in ${{ github.sha }}/*; do
+      #       for f in $dir/*; do
+      #         short="${f#*/}"
+      #         echo "<details>" >> comment.md
+      #         echo "<summary><b>$short</b></summary>" >> comment.md
+      #         echo "<a href=\"${repo_url}/blob/ci-plots/$f?raw=true\"><img src=\"${repo_url}/blob/ci-plots/$f?raw=true\"></a>" >> comment.md
+      #         echo "</details>" >> comment.md
+      #       done
+      #     done
 
-      - name: Upload plots to PR
-        run: |
-          gh pr comment ${{ github.event.number }} --edit-last --body-file comment.md || \
-          gh pr comment ${{ github.event.number }} --body-file comment.md
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Upload plots to PR
+      #   run: |
+      #     gh pr comment ${{ github.event.number }} --edit-last --body-file comment.md || \
+      #     gh pr comment ${{ github.event.number }} --body-file comment.md
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload plots as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: plots
-          path: ${{ github.sha }}/
+      # - name: Upload plots as artifact
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: plots
+      #     path: ${{ github.sha }}/
