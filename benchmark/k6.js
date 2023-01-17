@@ -163,14 +163,14 @@ export function put_single(i = 0, tag = "put_single") {
 // check the status of a transaction id with the service
 function get_tx_status(txid) {
   const response = http.get(`${host}/app/tx?transaction_id=${txid}`);
-  const res = response.json()
+  const res = response.json();
   const req_resp = {
     method: "get_tx_status",
     req: txid,
     res: res,
-    time:Date.now(),
-  }
-  console.log(JSON.stringify(req_resp))
+    time: Date.now(),
+  };
+  console.log(JSON.stringify(req_resp));
   return res["status"];
 }
 
@@ -410,7 +410,7 @@ export function get_receipt(txid, tag = "get_receipt") {
 
   var response = http.post(`${host}/v3/receipt/get_receipt`, payload, params);
   check_success(response);
-  while (response.status == 202){
+  while (response.status == 202) {
     // sleep for 10ms to give the node a chance to process the receipt
     sleep(0.01);
     // try again
@@ -422,7 +422,7 @@ export function get_receipt(txid, tag = "get_receipt") {
     method: "receipt",
     req: payload,
     res: response.json(),
-      time: Date.now(),
+    time: Date.now(),
   };
   console.log(JSON.stringify(req_resp));
 }
