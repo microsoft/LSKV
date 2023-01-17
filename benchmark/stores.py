@@ -6,11 +6,11 @@
 Stores to run benchmarks against.
 """
 
-import os
 import json
+import os
 import shutil
-from subprocess import Popen
 import subprocess
+from subprocess import Popen
 
 from common import Store
 from loguru import logger
@@ -90,17 +90,18 @@ class EtcdStore(Store):
             "--cluster",
         ]
         logger.debug("Running endpoint status command: {}", command)
-        p = subprocess.run(command, capture_output=True)
-        logger.debug("Endpoint status stdout: {}", p.stdout)
-        logger.debug("Endpoint status stderr: {}", p.stderr)
-        j = json.loads(p.stdout)
-        logger.debug("Got endpoint status: {}", j)
+        # pylint: disable=subprocess-run-check
+        proc = subprocess.run(command, capture_output=True)
+        logger.debug("Endpoint status stdout: {}", proc.stdout)
+        logger.debug("Endpoint status stderr: {}", proc.stderr)
+        json_out = json.loads(proc.stdout)
+        logger.debug("Got endpoint status: {}", json_out)
 
-        for e in j:
-            member_id = e["Status"]["header"]["member_id"]
-            leader = e["Status"]["leader"]
+        for element in json_out:
+            member_id = element["Status"]["header"]["member_id"]
+            leader = element["Status"]["leader"]
             if member_id == leader:
-                addr = e["Endpoint"].split("://")[-1]
+                addr = element["Endpoint"].split("://")[-1]
                 logger.info("Found leader node {}", addr)
                 return addr
 
@@ -202,16 +203,19 @@ class LSKVStore(Store):
             f"{self.config.scheme()}://{node}/node/network/nodes",
         ]
         logger.debug("Running endpoint status command: {}", command)
-        p = subprocess.run(command, capture_output=True)
-        logger.debug("Endpoint status stdout: {}", p.stdout)
-        logger.debug("Endpoint status stderr: {}", p.stderr)
-        j = json.loads(p.stdout)
-        logger.debug("Got endpoint status: {}", j)
+        # pylint: disable=subprocess-run-check
+        proc = subprocess.run(command, capture_output=True)
+        logger.debug("Endpoint status stdout: {}", proc.stdout)
+        logger.debug("Endpoint status stderr: {}", proc.stderr)
+        json_out = json.loads(proc.stdout)
+        logger.debug("Got endpoint status: {}", json_out)
 
-        for e in j["nodes"]:
-            primary = e["primary"]
+        for element in json_out["nodes"]:
+            primary = element["primary"]
             if primary:
-                addr = e["rpc_interfaces"]["primary_rpc_interface"]["published_address"]
+                addr = element["rpc_interfaces"]["primary_rpc_interface"][
+                    "published_address"
+                ]
                 logger.info("Found leader node {}", addr)
                 return addr
 

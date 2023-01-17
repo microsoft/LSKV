@@ -14,7 +14,6 @@ from loguru import logger
 import common
 import etcd
 import k6
-import perf_system as perf
 import ycsb
 
 
@@ -36,7 +35,7 @@ def get_nodes() -> List[str]:
     return [f"ssh://{ip}:8000" for ip in get_hosts()]
 
 
-def etcd_configurations(_args: argparse.Namespace) -> List[etcd.EtcdConfig]:
+def etcd_configurations(_: argparse.Namespace) -> List[etcd.EtcdConfig]:
     """
     Set args for all etcd configurations.
     """
@@ -155,7 +154,7 @@ def etcd_configurations(_args: argparse.Namespace) -> List[etcd.EtcdConfig]:
     return configurations
 
 
-def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
+def ycsb_configurations(_: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     """
     Set args for all ycsb configurations.
     """
@@ -278,7 +277,7 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     return configurations
 
 
-def k6_configurations(_args: argparse.Namespace) -> List[k6.K6Config]:
+def k6_configurations(_: argparse.Namespace) -> List[k6.K6Config]:
     """
     Set args for all k6 configurations.
     """
@@ -353,7 +352,7 @@ def k6_configurations(_args: argparse.Namespace) -> List[k6.K6Config]:
                 store="lskv",
                 tls=True,
                 enclave="sgx",
-                nodes=nodes,
+                nodes=n,
                 worker_threads=0,
                 sig_tx_interval=5000,
                 sig_ms_interval=1000,
@@ -366,7 +365,7 @@ def k6_configurations(_args: argparse.Namespace) -> List[k6.K6Config]:
                 content_type="grpc",
                 value_size=256,
             )
-            for nodes in [nodes[:i] for i in [1, 3, 5, 7] if len(nodes) >= i]
+            for n in [nodes[:i] for i in [1, 3, 5, 7] if len(nodes) >= i]
         ]
         + [
             # receipt generation for mixed requests

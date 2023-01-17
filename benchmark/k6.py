@@ -210,6 +210,7 @@ def make_configurations(args: argparse.Namespace) -> List[K6Config]:
     """
     configs = []
 
+    # pylint: disable=too-many-nested-blocks
     for common_config in common.make_common_configurations(args):
         for rate in args.rate:
             logger.debug("adding rate: {}", rate)

@@ -9,17 +9,21 @@ Setup and run a local etcd cluster.
 import argparse
 import os
 import os.path
-from typing import List, Tuple
-import certs
 import shutil
 import signal
 import subprocess
-import paramiko
+from typing import List, Tuple
 
+import certs
+import paramiko
 from loguru import logger
 
 
 class Runner:
+    """
+    Class to manage running a node as part of a cluster.
+    """
+
     # pylint: disable=too-many-arguments
     def __init__(
         self,
@@ -38,12 +42,27 @@ class Runner:
         self.initial_cluster = initial_cluster
 
     def name(self) -> str:
+        """
+        Return the name for a node.
+        """
         return f"node{self.node_index}"
 
     def node_dir(self) -> str:
+        """
+        Working directory for the node.
+        """
         return os.path.join(self.workspace, self.name())
 
+    def copy_file(self, _src: str, _dst: str):
+        """
+        Copy a file.
+        """
+        raise NotImplementedError("copy_file not implemented.")
+
     def setup_files(self):
+        """
+        Copy files needed to run to the working directory.
+        """
         # copy binary files to node dir
         for file in ["bin/etcd"]:
             src = os.path.abspath(file)
@@ -66,6 +85,9 @@ class Runner:
             self.copy_file(src, dst)
 
     def cmd(self) -> str:
+        """
+        Command to run to start this node.
+        """
         client_port = self.port
         peer_port = client_port + 1
         metrics_port = client_port + 2
@@ -123,14 +145,25 @@ class Runner:
 
 
 class LocalRunner(Runner):
+    """
+    Run a local node as a unix process.
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.process = None
 
     def copy_file(self, src: str, dst: str):
+        """
+        Copy a file.
+        """
         logger.info("[{}] Copying file from {} to {}", self.address, src, dst)
         shutil.copy(src, dst)
 
     def start(self):
+        """
+        Start a node, copying required files first.
+        """
         shutil.rmtree(self.node_dir(), ignore_errors=True)
         os.makedirs(self.node_dir())
         self.setup_files()
@@ -138,14 +171,23 @@ class LocalRunner(Runner):
 
         logger.info("running etcd node: {}", cmd)
 
+        # pylint: disable=consider-using-with
         self.process = subprocess.Popen(cmd, shell=True)
 
     def stop(self):
-        self.process.kill()
-        self.process.wait()
+        """
+        Stop a node.
+        """
+        if self.process:
+            self.process.kill()
+            self.process.wait()
 
 
 class RemoteRunner(Runner):
+    """
+    Run a node on a remote machine.
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         client = paramiko.SSHClient()
@@ -157,12 +199,18 @@ class RemoteRunner(Runner):
         self.session = self.client.open_sftp()
 
     def copy_file(self, src: str, dst: str):
+        """
+        Copy a file.
+        """
         logger.info("[{}] Copying file from {} to {}", self.address, src, dst)
         self.session.put(src, dst)
         stat = os.stat(src)
         self.session.chmod(dst, stat.st_mode)
 
     def start(self):
+        """
+        Start a node.
+        """
         shutil.rmtree(self.node_dir(), ignore_errors=True)
         _, stdout, _ = self.client.exec_command(f"rm -rf {self.node_dir()}")
         stdout.channel.recv_exit_status()
@@ -178,6 +226,9 @@ class RemoteRunner(Runner):
         self.client.exec_command(cmd)
 
     def stop(self):
+        """
+        Stop a node.
+        """
         _, stdout, _ = self.client.exec_command("pkill etcd")
         stdout.channel.recv_exit_status()
         out_file = os.path.join(self.node_dir(), "out")
@@ -204,18 +255,19 @@ def generate_certs(workspace: str, nodes: List[Tuple[str, int]]):
     server_csr["hosts"] = list(ip_addresses)
     certs.make_certs(certs_dir, cfssl, cfssljson, "server", "server", server_csr)
 
-    for i, (ip, _port) in enumerate(nodes):
+    for i, (ip_addr, _port) in enumerate(nodes):
         peer_csr = certs.PEER_CSR
         name = f"node{i}"
         peer_csr["CN"] = name
-        if ip not in peer_csr["hosts"]:
-            peer_csr["hosts"].append(ip)
+        if ip_addr not in peer_csr["hosts"]:
+            peer_csr["hosts"].append(ip_addr)
 
         certs.make_certs(certs_dir, cfssl, cfssljson, "peer", name, peer_csr)
 
     certs.make_certs(certs_dir, cfssl, cfssljson, "client", "client", certs.CLIENT_CSR)
 
 
+# pylint: disable=too-many-branches
 def main():
     """
     Main entry point for spawning the cluster.
@@ -272,10 +324,10 @@ def main():
     nodes = []
     if prefixes[0] == "local":
         logger.info("Using local")
-        for i, (ip, port) in enumerate(node_addresses):
+        for i, (ip_addr, port) in enumerate(node_addresses):
             nodes.append(
                 LocalRunner(
-                    address=ip,
+                    address=ip_addr,
                     port=port,
                     node_index=i,
                     scheme=args.scheme,
@@ -285,10 +337,10 @@ def main():
             )
     elif prefixes[0] == "ssh":
         logger.info("Using ssh")
-        for i, (ip, port) in enumerate(node_addresses):
+        for i, (ip_addr, port) in enumerate(node_addresses):
             nodes.append(
                 RemoteRunner(
-                    address=ip,
+                    address=ip_addr,
                     port=port,
                     node_index=i,
                     scheme=args.scheme,

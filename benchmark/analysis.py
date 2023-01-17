@@ -131,6 +131,8 @@ class Analyser:
             return data
         return data
 
+    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-branches
     def get_data(self) -> pd.DataFrame:
         """
         Load the data for the benchmark, adding config values as columns.
@@ -193,7 +195,8 @@ class Analyser:
             if nunique < 100 and dtype not in ["int64", "float64", "bool", "category"]:
                 all_data[col] = all_data[col].astype("category")
                 print(
-                    f"Converted column {col} from {dtype} to category due to having {nunique} unique items"
+                    f"Converted column {col} from {dtype} to "
+                    + f"category due to having {nunique} unique items"
                 )
 
         return all_data
