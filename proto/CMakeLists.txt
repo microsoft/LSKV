@@ -36,6 +36,7 @@ foreach(proto_file ${PROTO_FILES})
   endif()
 
   if(${GENERATE_PYTHON})
+    # for tests
     add_custom_command(
       OUTPUT ${CMAKE_SOURCE_DIR}/tests/${PROTO_NAME_WE}_pb2.py
       COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build.sh ${proto_file}
@@ -44,6 +45,16 @@ foreach(proto_file ${PROTO_FILES})
       DEPENDS ${proto_file})
     add_custom_target(${PROTO_NAME_WE}_proto_python ALL
                       DEPENDS ${CMAKE_SOURCE_DIR}/tests/${PROTO_NAME_WE}_pb2.py)
+
+    # for benchmarks
+    add_custom_command(
+      OUTPUT ${CMAKE_SOURCE_DIR}/benchmark/${PROTO_NAME_WE}_pb2.py
+      COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build.sh ${proto_file}
+              ${CMAKE_SOURCE_DIR}/benchmark/
+      COMMENT "Generate Python source file from protobuf file ${PROTO_NAME}"
+      DEPENDS ${proto_file})
+    add_custom_target(${PROTO_NAME_WE}_proto_python ALL
+                      DEPENDS ${CMAKE_SOURCE_DIR}/benchmark/${PROTO_NAME_WE}_pb2.py)
   endif()
 
   if(${COMPILE_TARGET} STREQUAL "sgx")
