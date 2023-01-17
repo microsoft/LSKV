@@ -82,6 +82,7 @@ def git_ls_files() -> List[str]:
         "flake.lock",  # just build files
         ".envrc",  # just build files
         "*.parquet",  # binary
+        "benchmark/go-ycsb/workloads"
     ]
     excluded = [f":!:{e}" for e in excluded]
     cmd = ["git", "ls-files", "--", "."] + excluded

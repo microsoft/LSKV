@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
 diff --git a/tests/infra/remote.py b/tests/infra/remote.py
 index c603920df..8503ba193 100644
 --- a/tests/infra/remote.py
