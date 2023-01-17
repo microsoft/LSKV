@@ -31,4 +31,4 @@ Then, to run the benchmarks, ssh onto the first node (`ssh <user>@$(head -n 1 ho
 ## Receipt verification
 
 The receipt verification benchmark (`benchmark/receipt_verify.py`) uses a hard-coded receipt so can be run standalone without a running datastore.
-It can be run with `PYTHONPATH=tests python benchmark/receipt_verify.py`.
+It can be run with `python benchmark/receipt_verify.py`.
