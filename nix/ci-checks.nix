@@ -21,6 +21,7 @@
     typing-extensions
     types-protobuf
     python-ccf
+    paramiko
   ];
 in {
   checks = {
