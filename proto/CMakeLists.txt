@@ -43,7 +43,7 @@ foreach(proto_file ${PROTO_FILES})
               ${CMAKE_SOURCE_DIR}/tests/
       COMMENT "Generate Python source file from protobuf file ${PROTO_NAME}"
       DEPENDS ${proto_file})
-    add_custom_target(${PROTO_NAME_WE}_proto_python ALL
+    add_custom_target(${PROTO_NAME_WE}_proto_python_tests ALL
                       DEPENDS ${CMAKE_SOURCE_DIR}/tests/${PROTO_NAME_WE}_pb2.py)
 
     # for benchmarks
@@ -53,7 +53,7 @@ foreach(proto_file ${PROTO_FILES})
               ${CMAKE_SOURCE_DIR}/benchmark/
       COMMENT "Generate Python source file from protobuf file ${PROTO_NAME}"
       DEPENDS ${proto_file})
-    add_custom_target(${PROTO_NAME_WE}_proto_python ALL
+    add_custom_target(${PROTO_NAME_WE}_proto_python_benchmark ALL
                       DEPENDS ${CMAKE_SOURCE_DIR}/benchmark/${PROTO_NAME_WE}_pb2.py)
   endif()
 
