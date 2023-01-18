@@ -12,3 +12,4 @@
 - /.mypy_cache/
 - /*.deb
 - /result/
+- /bench.*/
