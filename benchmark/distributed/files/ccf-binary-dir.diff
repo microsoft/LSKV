@@ -1,0 +1,14 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+diff --git a/tests/infra/remote.py b/tests/infra/remote.py
+index c603920df..8503ba193 100644
+--- a/tests/infra/remote.py
++++ b/tests/infra/remote.py
+@@ -146,6 +146,7 @@ class SSHRemote(CmdMixin):
+         common_dir,
+         env=None,
+         pid_file=None,
++        binary_dir=".",
+     ):
+         """
+         Runs a command on a remote host, through an SSH connection. A temporary

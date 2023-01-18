@@ -2,7 +2,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 index f44c51e5..a4333529 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -208,23 +208,6 @@ install(
+@@ -208,24 +208,6 @@ install(
    PATTERN "*.h"
  )
  
@@ -16,6 +16,7 @@ index f44c51e5..a4333529 100644
 -)
 -
 -install(PROGRAMS tests/sandbox/sandbox.sh DESTINATION bin)
+-install(PROGRAMS tests/docker_wrap.sh DESTINATION bin)
 -install(FILES samples/constitutions/default/actions.js DESTINATION bin)
 -install(FILES samples/constitutions/default/validate.js DESTINATION bin)
 -install(FILES samples/constitutions/sandbox/resolve.js DESTINATION bin)

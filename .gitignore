@@ -25,7 +25,12 @@ bin/
 *.out
 *.err
 
+*_pb2.py
+*_pb2.pyi
+
 /docker-workspace/
+
+/*.parquet
 
 /.direnv/
 /.envrc
@@ -33,3 +38,6 @@ bin/
 /result
 
 /*.parquet
+
+*.pub
+hosts

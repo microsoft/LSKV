@@ -6,6 +6,27 @@ pkgs.lib.makeScope pkgs.newScope (
   self: let
     lskvlib =
       pkgs.callPackage ./lib.nix {};
+
+    # A python3 derivation that is extended with some CC related
+    # packages.
+    python3 = pkgs.python3.override {
+      packageOverrides = pself: _psuper: {
+        # Some generic python packages that are missing from
+        # nixpkgs.
+        columnar = pself.callPackage ./python/columnar.nix {};
+        string-color = pself.callPackage ./python/string-color.nix {};
+        adtk = pself.callPackage ./python/adtk.nix {};
+        pycose = pself.callPackage ./python/pycose.nix {};
+        cimetrics = pself.callPackage ./python/cimetrics.nix {};
+        better-exceptions = pself.callPackage ./python/better-exceptions.nix {};
+
+        types-paramiko = pself.callPackage ./python/types-paramiko.nix {};
+
+        python-ccf = pself.callPackage ./python/python-ccf.nix {inherit ccf;};
+        python-ccf-infra = pself.callPackage ./python/python-ccf-infra.nix {};
+      };
+    };
+
     ccf = self.callPackage ./ccf.nix {
       stdenv = pkgs.llvmPackages_10.libcxxStdenv;
     };
@@ -18,12 +39,12 @@ pkgs.lib.makeScope pkgs.newScope (
     packages = lskvlib.forAllPlatforms {
       inherit ccf ccf-sandbox lskv lskv-sandbox;
     };
-    ci-checks-pkgs = pkgs.callPackage ./ci-checks.nix {};
+    ci-checks-pkgs = pkgs.callPackage ./ci-checks.nix {inherit (python3.pkgs) python-ccf types-paramiko;};
     ci-checks = lskvlib.ciChecks ci-checks-pkgs.checks;
     ci-fixes = lskvlib.ciFixes ci-checks-pkgs.fixes;
   in
     rec {
-      inherit lskvlib ci-checks ci-fixes;
+      inherit lskvlib ci-checks ci-fixes python3;
       inherit (python3.pkgs) python-ccf;
 
       ci-check-all = lskvlib.ciChecksAll ci-checks-pkgs.checks;
@@ -47,24 +68,6 @@ pkgs.lib.makeScope pkgs.newScope (
       };
 
       k6 = self.callPackage ./k6.nix {};
-
-      # A python3 derivation that is extended with some CC related
-      # packages.
-      python3 = pkgs.python3.override {
-        packageOverrides = pself: _psuper: {
-          # Some generic python packages that are missing from
-          # nixpkgs.
-          columnar = pself.callPackage ./python/columnar.nix {};
-          string-color = pself.callPackage ./python/string-color.nix {};
-          adtk = pself.callPackage ./python/adtk.nix {};
-          pycose = pself.callPackage ./python/pycose.nix {};
-          cimetrics = pself.callPackage ./python/cimetrics.nix {};
-          better-exceptions = pself.callPackage ./python/better-exceptions.nix {};
-
-          python-ccf = pself.callPackage ./python/python-ccf.nix {inherit ccf;};
-          python-ccf-infra = pself.callPackage ./python/python-ccf-infra.nix {};
-        };
-      };
 
       mkShell = args:
         (pkgs.mkShell.override {

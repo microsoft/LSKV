@@ -467,12 +467,6 @@ namespace app
         payload.range_end().size(),
         payload.range_end());
 
-      if (payload.limit() != 0)
-      {
-        return ccf::grpc::make_error<etcdserverpb::RangeResponse>(
-          GRPC_STATUS_FAILED_PRECONDITION,
-          fmt::format("limit {} not yet supported", payload.limit()));
-      }
       if (payload.sort_order() != etcdserverpb::RangeRequest_SortOrder_NONE)
       {
         return ccf::grpc::make_error<etcdserverpb::RangeResponse>(
@@ -525,8 +519,18 @@ namespace app
       }
 
       auto count = 0;
+      const auto limit = payload.limit();
       auto now_s = get_time_s();
       auto add_kv = [&](auto& key, auto& value) {
+        if (limit > 0 && count >= limit)
+        {
+          CCF_APP_DEBUG(
+            "filtering out kv from range return as already have the limit {}",
+            limit);
+          // don't add this item as we already have enough
+          return;
+        }
+
         // check that the lease for this value has not expired
         // NOTE: contains checks the expiration of the lease too.
         if (value.lease != 0 && !lstore.contains(value.lease, now_s))

@@ -18,6 +18,7 @@ from loguru import logger
 # pylint: disable=no-name-in-module
 from test_common import (
     b64decode,
+    b64encode,
     fixture_governance_client,
     fixture_http1_client,
     fixture_http1_client_unauthenticated,
@@ -42,11 +43,11 @@ def test_unauthenticated(http1_client_unauthenticated):
     """
     Test that the unauthenticated users can't interact.
     """
-    res = http1_client_unauthenticated.put("foo", "bar")
+    res = http1_client_unauthenticated.put("foo", "bar", check=False)
     assert res.status_code == HTTPStatus.UNAUTHORIZED
-    res = http1_client_unauthenticated.get("foo")
+    res = http1_client_unauthenticated.get("foo", check=False)
     assert res.status_code == HTTPStatus.UNAUTHORIZED
-    res = http1_client_unauthenticated.delete("foo")
+    res = http1_client_unauthenticated.delete("foo", check=False)
     assert res.status_code == HTTPStatus.UNAUTHORIZED
 
 
@@ -56,11 +57,9 @@ def test_kv_latest(http1_client):
     Test that the KV system works with the optimistic queries
     """
     res = http1_client.put("foo", "bar")
-    check_response(res)
     put_rev = res.json()["header"]["revision"]
 
     res = http1_client.get("foo")
-    check_response(res)
     kvs = res.json()["kvs"]
     assert b64decode(kvs[0]["key"]) == "foo"
     assert b64decode(kvs[0]["value"]) == "bar"
@@ -70,11 +69,9 @@ def test_kv_latest(http1_client):
 
     # writing to it again updates the revision and version
     res = http1_client.put("foo", "bar")
-    check_response(res)
     update_rev = res.json()["header"]["revision"]
 
     res = http1_client.get("foo")
-    check_response(res)
     kvs = res.json()["kvs"]
     assert b64decode(kvs[0]["key"]) == "foo"
     assert b64decode(kvs[0]["value"]) == "bar"
@@ -84,20 +81,16 @@ def test_kv_latest(http1_client):
 
     # then we can delete it
     res = http1_client.delete("foo")
-    check_response(res)
 
     # and not see it any more
     res = http1_client.get("foo")
-    check_response(res)
     assert "kvs" not in res.json()
 
     # then create it again and it should have a new version and create_revision
     res = http1_client.put("foo", "bar")
-    check_response(res)
     put_rev = res.json()["header"]["revision"]
 
     res = http1_client.get("foo")
-    check_response(res)
     kvs = res.json()["kvs"]
     assert b64decode(kvs[0]["key"]) == "foo"
     assert b64decode(kvs[0]["value"]) == "bar"
@@ -114,7 +107,6 @@ def test_kv_historical(http1_client):
     revisions = []
     for i in range(5):
         res = http1_client.put("fooh", f"bar{i}")
-        check_response(res)
         rev = int(res.json()["header"]["revision"])
         term = int(res.json()["header"]["raftTerm"])
         revisions.append((rev, term))
@@ -126,7 +118,6 @@ def test_kv_historical(http1_client):
     create_rev = revisions[0][0]
     for i, (rev, term) in enumerate(revisions):
         res = http1_client.get("fooh", rev=rev)
-        check_response(res)
         kvs = res.json()["kvs"]
         assert b64decode(kvs[0]["key"]) == "fooh"
         assert b64decode(kvs[0]["value"]) == f"bar{i}"
@@ -135,13 +126,11 @@ def test_kv_historical(http1_client):
         assert kvs[0]["version"] == str(i + 1)
 
     res = http1_client.delete("fooh")
-    check_response(res)
     deleted_rev = int(res.json()["header"]["revision"])
 
     for i, (rev, term) in enumerate(revisions):
         # still there
         res = http1_client.get("fooh", rev=rev)
-        check_response(res)
         kvs = res.json()["kvs"]
         assert b64decode(kvs[0]["key"]) == "fooh"
         assert b64decode(kvs[0]["value"]) == f"bar{i}"
@@ -151,7 +140,6 @@ def test_kv_historical(http1_client):
 
     # but we can't see it in the historical keyspace anymore
     res = http1_client.get("fooh", rev=deleted_rev)
-    check_response(res)
     assert "kvs" not in res.json()  # fields with default values are not included
     assert "count" not in res.json()  # fields with default values are not included
 
@@ -164,7 +152,6 @@ def test_kv_compaction(http1_client):
     revisions = []
     for i in range(5):
         res = http1_client.put("foocompact", f"bar{i}")
-        check_response(res)
         hdr = res.json()["header"]
         rev = int(hdr["revision"])
         term = int(hdr["raftTerm"])
@@ -175,13 +162,11 @@ def test_kv_compaction(http1_client):
 
     # remove earlier items
     res = http1_client.compact(revisions[2][0])
-    check_response(res)
 
     # check that we can't access all of them
     for i in range(5):
         res = http1_client.get("foocompact", rev=revisions[i][0])
         success = revisions[i][0] >= revisions[2][0]
-        check_response(res)
         if success:
             assert int(res.json()["count"]) == 1
         else:
@@ -193,7 +178,6 @@ def test_status_version(http1_client):
     Test that the status endpoint returns the version.
     """
     res = http1_client.status()
-    check_response(res)
     version = res.json()["version"]
     version_re = r"^\d+\.\d+\.\d+(-.*)?$"
     assert re.match(version_re, version)
@@ -206,26 +190,21 @@ def test_lease_kv(http1_client):
     """
     key = __name__
     # create a lease
-    res = http1_client.lease_grant()
-    check_response(res)
-    lease_id = res.json()["ID"]
+    _, proto = http1_client.lease_grant()
+    lease_id = proto.ID
 
     # then create a key with it
-    res = http1_client.put(key, "present", lease_id=lease_id)
-    check_response(res)
+    http1_client.put(key, "present", lease_id=lease_id)
 
     # then get the key to check it has the lease id set
     res = http1_client.get(key)
-    check_response(res)
-    assert res.json()["kvs"][0]["lease"] == lease_id
+    assert int(res.json()["kvs"][0]["lease"]) == lease_id
 
     # revoke the lease
-    res = http1_client.lease_revoke(lease_id)
-    check_response(res)
+    http1_client.lease_revoke(lease_id)
 
     # get the key again to see if it exists
     res = http1_client.get(key)
-    check_response(res)
     assert "kvs" not in res.json()
 
 
@@ -235,27 +214,23 @@ def test_lease(http1_client):
     Test lease creation, revocation and keep-alive.
     """
     # creating a lease works
-    res = http1_client.lease_grant()
-    check_response(res)
-    lease_id = res.json()["ID"]
+    _, proto = http1_client.lease_grant()
+    lease_id = proto.ID
 
     # then we can keep that lease alive (extending the ttl)
-    res = http1_client.lease_keep_alive(lease_id)
-    check_response(res)
+    http1_client.lease_keep_alive(lease_id)
 
     # and explicitly revoke the lease
-    res = http1_client.lease_revoke(lease_id)
-    check_response(res)
+    http1_client.lease_revoke(lease_id)
 
     # but we can't keep a revoked lease alive
-    res = http1_client.lease_keep_alive(lease_id)
+    res, proto = http1_client.lease_keep_alive(lease_id, check=False)
     logger.info("res: {} {}", res.status_code, res.text)
     assert res.status_code == 400
 
     # and we can't revoke lease that wasn't active (or known)
     missing_id = "002"
-    res = http1_client.lease_revoke(missing_id)
-    check_response(res)
+    http1_client.lease_revoke(missing_id)
 
 
 def test_tx_status(http1_client):
@@ -263,25 +238,21 @@ def test_tx_status(http1_client):
     Test custom tx_status endpoint.
     """
     res = http1_client.put("footx", "bar")
-    check_response(res)
     j = res.json()
     term = j["header"]["raftTerm"]
     rev = j["header"]["revision"]
     http1_client.wait_for_commit(term, rev)
 
     res = http1_client.tx_status(term, rev)
-    check_response(res)
     status = res.json()["status"]
     # the node needs time to commit, but that may have happened already
     assert status in ["Pending", "Committed"]
 
     res = http1_client.tx_status(term, 100000)
-    check_response(res)
     # a tx far in the future may have been submitted by another node
     assert "status" not in res.json()  # missing status means Unknown
 
     res = http1_client.tx_status(int(term) + 1, int(rev) - 1)
-    check_response(res)
     status = res.json()["status"]
     assert status == "Invalid"
 
@@ -316,7 +287,6 @@ def test_public_prefix(governance_client, http1_client, sandbox):
     """
     prefix = "mysecretprefix"
     res = http1_client.put(f"{prefix}/test", "my secret")
-    check_response(res)
     term = int(res.json()["header"]["raftTerm"])
     rev = int(res.json()["header"]["revision"])
     http1_client.wait_for_commit(term, rev)
@@ -337,7 +307,6 @@ def test_public_prefix(governance_client, http1_client, sandbox):
     governance_client.accept(proposal_id)
 
     res = http1_client.put(f"{prefix}/test", "my secret")
-    check_response(res)
     term = int(res.json()["header"]["raftTerm"])
     rev = int(res.json()["header"]["revision"])
     http1_client.wait_for_commit(term, rev)
@@ -373,7 +342,6 @@ def test_public_prefix(governance_client, http1_client, sandbox):
 
     # setting a new key now doesn't end up public
     res = http1_client.put(f"{prefix}/test", "my secret")
-    check_response(res)
     term = int(res.json()["header"]["raftTerm"])
     rev = int(res.json()["header"]["revision"])
     http1_client.wait_for_commit(term, rev)
@@ -387,22 +355,17 @@ def test_public_prefix(governance_client, http1_client, sandbox):
     assert len(public_domain.get_tables()) == 0
 
 
-def check_response(res, status=HTTPStatus.OK):
+def test_range_limit(http1_client):
     """
-    Check a response to be success.
+    Test the limit arg on range queries.
     """
-    logger.info("res: {} {}", res.status_code, res.text)
-    assert res.status_code == status
-    check_header(res.json())
+    http1_client.put("range_limit1", "val")
+    http1_client.put("range_limit2", "val")
+    res = http1_client.get("range_limit", range_end="range_limit4")
+    assert len(res.json()["kvs"]) == 2
+    assert res.json()["count"] == "2"
 
-
-def check_header(body):
-    """
-    Check the header is well-formed.
-    """
-    assert "header" in body
-    header = body["header"]
-    assert "clusterId" in header
-    assert "memberId" in header
-    assert "revision" in header
-    assert "raftTerm" in header
+    res = http1_client.get("range_limit", range_end="range_limit4", limit=1)
+    assert len(res.json()["kvs"]) == 1
+    assert res.json()["count"] == "1"
+    assert res.json()["kvs"][0]["key"] == b64encode("range_limit1")

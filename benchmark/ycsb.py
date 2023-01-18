@@ -60,7 +60,7 @@ class YCSBenchmark(common.Benchmark):
             "--prop",
             "silence=false",
             "--prop",
-            f"etcd.endpoints={self.config.scheme()}://127.0.0.1:{self.config.port}",
+            f"etcd.endpoints={self.config.scheme()}://{store.get_leader_address()}",
             "--property_file",
             self.path_to_workload(),
             "--interval",
@@ -103,7 +103,7 @@ class YCSBenchmark(common.Benchmark):
         """
         Return the path to the workload file.
         """
-        return os.path.join("3rdparty/go-ycsb/workloads", self.config.workload)
+        return os.path.join("benchmark/go-ycsb/workloads", self.config.workload)
 
 
 def run_benchmark(config: YCSBConfig, store: Store, benchmark: YCSBenchmark) -> str:
@@ -188,7 +188,10 @@ def execute_config(config: YCSBConfig):
     """
     Execute the given configuration.
     """
-    store = EtcdStore(config) if config.store == "etcd" else LSKVStore(config)
+    if config.store == "etcd":
+        store: Store = EtcdStore(config)
+    else:
+        store = LSKVStore(config)
     benchmark = YCSBenchmark(config)
 
     timings_file = run_benchmark(

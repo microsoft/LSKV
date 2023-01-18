@@ -18,10 +18,10 @@ H_FILES=$(wildcard src/**/*.h)
 
 BIN_DIR=bin
 
-CCF_VER=ccf-4.0.0-dev2
-CCF_VER_LOWER=ccf_virtual_4.0.0_dev2
-CCF_SGX_VER_LOWER=ccf_sgx_4.0.0_dev2
-CCF_SGX_UNSAFE_VER_LOWER=ccf_sgx_unsafe_4.0.0_dev2
+CCF_VER=ccf-4.0.0-dev3
+CCF_VER_LOWER=ccf_virtual_4.0.0_dev3
+CCF_SGX_VER_LOWER=ccf_sgx_4.0.0_dev3
+CCF_SGX_UNSAFE_VER_LOWER=ccf_sgx_unsafe_4.0.0_dev3
 
 .PHONY: install-ccf-virtual
 install-ccf-virtual:
@@ -42,22 +42,22 @@ install-ccf-sgx-unsafe:
 	/opt/ccf_sgx_unsafe/getting_started/setup_vm/run.sh /opt/ccf_sgx_unsafe/getting_started/setup_vm/app-dev.yml --extra-vars "platform=sgx" # Install dependencies
 
 .PHONY: build-virtual
-build-virtual:
+build-virtual: .venv
 	mkdir -p $(BUILD)
-	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -GNinja ..
-	cd $(BUILD) && ninja
+	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -DGENERATE_PYTHON=ON -GNinja ..
+	. .venv/bin/activate && cd $(BUILD) && ninja
 
 .PHONY: build-virtual-verbose
 build-virtual-verbose:
 	mkdir -p $(BUILD)
-	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=ON -DCCF_UNSAFE=OFF -GNinja ..
+	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=ON -DCCF_UNSAFE=OFF -DGENERATE_PYTHON=ON -GNinja ..
 	cd $(BUILD) && ninja
 
 .PHONY: build-sgx
-build-sgx:
+build-sgx: .venv
 	mkdir -p $(BUILD)
-	cd $(BUILD) && CC=$(OE_CC) CXX=$(OE_CXX) cmake -DCOMPILE_TARGET=sgx -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -GNinja ..
-	cd $(BUILD) && ninja
+	cd $(BUILD) && CC=$(OE_CC) CXX=$(OE_CXX) cmake -DCOMPILE_TARGET=sgx -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=OFF -DCCF_UNSAFE=OFF -DGENERATE_PYTHON=ON -GNinja ..
+	. .venv/bin/activate && cd $(BUILD) && ninja
 
 .PHONY: build-docker-virtual
 build-docker-virtual:
@@ -143,18 +143,6 @@ $(BIN_DIR)/k6: patched-k6
 	mkdir -p $(BIN_DIR)
 	mv $(BUILD)/3rdparty/k6/k6 $(BIN_DIR)/k6
 
-.PHONY: benchmark-virtual
-benchmark-virtual: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual .venv certs
-	. .venv/bin/activate && python3 benchmark/etcd.py --virtual
-
-.PHONY: benchmark-sgx
-benchmark-sgx: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual build-sgx .venv certs
-	. .venv/bin/activate && python3 benchmark/etcd.py --sgx
-
-.PHONY: benchmark-all
-benchmark-all: $(BIN_DIR)/etcd $(BIN_DIR)/benchmark build-virtual build-sgx .venv certs
-	. .venv/bin/activate && python3 benchmark/etcd.py --sgx --virtual --insecure --worker-threads 0 2 4 8 --clients 1 10 100 --connections 1 10 100 --prefill-num-keys 0 10 100 1000 --prefill-value-size 10 40 160 640 --rate 10 100 1000
-
 .PHONY: .venv
 .venv: requirements.txt
 	python3 -m venv .venv
@@ -183,10 +171,6 @@ $(BIN_DIR)/cfssl:
 	chmod +x $(BIN_DIR)/cfssljson
 
 $(BIN_DIR)/cfssljson: $(BIN_DIR)/cfssl
-
-.PHONY: certs
-certs: $(BIN_DIR)/cfssl $(BIN_DIR)/cfssljson .venv
-	. .venv/bin/activate && ./certs.py
 
 .PHONY: cpplint
 cpplint: $(CPP_FILES) $(H_FILES)

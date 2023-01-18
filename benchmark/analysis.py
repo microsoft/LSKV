@@ -131,6 +131,8 @@ class Analyser:
             return data
         return data
 
+    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-branches
     def get_data(self) -> pd.DataFrame:
         """
         Load the data for the benchmark, adding config values as columns.
@@ -176,14 +178,28 @@ class Analyser:
             dataframe = self.make_latency_ms(dataframe)
 
             for key, value in config.items():
+                if key == "nodes":
+                    dataframe["node_count"] = len(value)
                 if isinstance(value, list):
-                    dataframe[key] = "_".join(value)
-                else:
-                    dataframe[key] = value
+                    value = "_".join(value)
+
+                dataframe[key] = value
 
             dataframes.append(dataframe)
 
-        return pd.concat(dataframes, ignore_index=True)
+        all_data = pd.concat(dataframes, ignore_index=True)
+
+        for col in all_data.columns:
+            nunique = all_data[col].nunique()
+            dtype = all_data[col].dtype
+            if nunique < 100 and dtype not in ["int64", "float64", "bool", "category"]:
+                all_data[col] = all_data[col].astype("category")
+                print(
+                    f"Converted column {col} from {dtype} to "
+                    + f"category due to having {nunique} unique items"
+                )
+
+        return all_data
 
     # pylint: disable=too-many-arguments
     def plot_scatter(
@@ -624,7 +640,7 @@ def condense_vars(all_data, without) -> Tuple[pd.Series, List[str]]:
         else:
             variant_columns.append(column)
 
-    variant_column = pd.Series()
+    variant_column = pd.Series(dtype=str)
     num_cols = len(variant_columns)
     for i, column in enumerate(variant_columns):
         new_column = make_new_column(column)

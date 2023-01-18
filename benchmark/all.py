@@ -20,7 +20,7 @@ def all_common_configurations(args: argparse.Namespace):
     """
     Fill in the args for all common configurations.
     """
-    args.nodes = [1, 3, 5]
+    args.nodes = ["local://127.0.0.1:8000"]
     args.worker_threads = [1, 2, 4]
     args.enclave = ["virtual", "sgx"]
     args.http2 = True

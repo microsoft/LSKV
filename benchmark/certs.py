@@ -95,7 +95,7 @@ def make_certs(
     cfssljson: str,
     profile: str,
     name: str,
-    data: Dict[str, Any],
+    csr_data: Dict[str, Any],
 ):
     """
     Make certs with cfssl
@@ -105,7 +105,7 @@ def make_certs(
         os.path.join(certs, f"{name}.json"), "w", encoding="utf-8"
     ) as config_file:
         logger.info("Writing csr to {}", config_file.name)
-        config_file.write(json.dumps(data))
+        config_file.write(json.dumps(csr_data))
     logger.info("Running cfssl gencert")
     subprocess.run(
         f"{cfssl} gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json "
