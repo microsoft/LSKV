@@ -20,6 +20,8 @@ pkgs.lib.makeScope pkgs.newScope (
         cimetrics = pself.callPackage ./python/cimetrics.nix {};
         better-exceptions = pself.callPackage ./python/better-exceptions.nix {};
 
+        types-paramiko = pself.callPackage ./python/types-paramiko.nix {};
+
         python-ccf = pself.callPackage ./python/python-ccf.nix {inherit ccf;};
         python-ccf-infra = pself.callPackage ./python/python-ccf-infra.nix {};
       };
@@ -37,7 +39,7 @@ pkgs.lib.makeScope pkgs.newScope (
     packages = lskvlib.forAllPlatforms {
       inherit ccf ccf-sandbox lskv lskv-sandbox;
     };
-    ci-checks-pkgs = pkgs.callPackage ./ci-checks.nix {inherit (python3.pkgs) python-ccf;};
+    ci-checks-pkgs = pkgs.callPackage ./ci-checks.nix {inherit (python3.pkgs) python-ccf types-paramiko;};
     ci-checks = lskvlib.ciChecks ci-checks-pkgs.checks;
     ci-fixes = lskvlib.ciFixes ci-checks-pkgs.fixes;
   in

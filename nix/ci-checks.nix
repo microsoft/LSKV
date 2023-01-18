@@ -11,6 +11,7 @@
   shfmt,
   cmake-format,
   python-ccf,
+  types-paramiko,
 }: let
   pythonDeps = with python3Packages; [
     loguru
@@ -21,6 +22,8 @@
     typing-extensions
     types-protobuf
     python-ccf
+    paramiko
+    types-paramiko
   ];
 in {
   checks = {

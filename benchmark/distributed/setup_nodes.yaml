@@ -1,0 +1,117 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+---
+- hosts: all
+  gather_facts: false
+  tasks:
+    - name: Accept new ssh fingerprints
+      shell: ssh-keyscan {{ inventory_hostname }} >> ~/.ssh/known_hosts
+      delegate_to: localhost
+
+- hosts: all
+  remote_user: "{{ vm_user }}"
+  gather_facts: false
+  tasks:
+    - name: Wait for ssh to be up on the nodes
+      ansible.builtin.wait_for_connection:
+
+    - name: ping
+      ping:
+
+- hosts: all[0]
+  remote_user: "{{ vm_user }}"
+  gather_facts: false
+  tasks:
+    - name: Generate an OpenSSH keypair with the default values (4096 bits, rsa)
+      community.crypto.openssh_keypair:
+        path: /home/{{ vm_user }}/.ssh/id_rsa
+
+    - name: Get pub key for the first node
+      ansible.builtin.fetch:
+        src: /home/{{ vm_user }}/.ssh/id_rsa.pub
+        dest: bench_id_rsa.pub
+        flat: true
+
+- hosts: all
+  remote_user: "{{ vm_user }}"
+  gather_facts: false
+  tasks:
+    - name: Set authorized pub key
+      authorized_key:
+        state: present
+        user: "{{ vm_user }}"
+        key: "{{ lookup('file', 'bench_id_rsa.pub') }}"
+
+    - name: Copy lskv repo over
+      ansible.posix.synchronize:
+        src: "{{ playbook_dir }}/../../"
+        dest: /tmp/lskv
+      tags: copy
+
+    - name: Clone the CCF repo
+      ansible.builtin.git:
+        repo: "https://github.com/microsoft/CCF"
+        dest: /tmp/CCF
+        version: ccf-{{ ccf_ver }}
+
+    - name: Run the CCF sgx getting started playbook
+      shell: ./getting_started/setup_vm/run.sh ./getting_started/setup_vm/app-run.yml --extra-vars 'platform=sgx' --extra-vars 'ccf_ver={{ ccf_ver }}'
+      args:
+        chdir: /tmp/CCF
+
+    - name: Run the CCF virtual getting started playbook
+      shell: ./getting_started/setup_vm/run.sh ./getting_started/setup_vm/app-run.yml --extra-vars 'platform=virtual' --extra-vars 'ccf_ver={{ ccf_ver }}'
+      args:
+        chdir: /tmp/CCF
+
+    - name: Patch virtual sandbox infra
+      ansible.posix.patch:
+        src: ccf-binary-dir.diff
+        dest: /opt/ccf_virtual/bin/infra/remote.py
+      become: true
+
+    - name: Patch sgx sandbox infra
+      ansible.posix.patch:
+        src: ccf-binary-dir.diff
+        dest: /opt/ccf_sgx/bin/infra/remote.py
+      become: true
+
+    - name: Install apt packages
+      ansible.builtin.apt:
+        name:
+          - make
+          - python3.8
+          - python3.8-venv
+          - gcc
+        update_cache: true
+      become: true
+
+- hosts: all[0]
+  remote_user: "{{ vm_user }}"
+  gather_facts: false
+  tasks:
+    - name: Install pip for sandbox
+      ansible.builtin.pip:
+        name: pip
+        virtualenv: /tmp/lskv/.venv_ccf_sandbox
+        virtualenv_command: python3 -m venv
+
+    - name: Install ccf for sandbox
+      ansible.builtin.pip:
+        name: ccf=={{ py_ccf_ver }}
+        virtualenv: /tmp/lskv/.venv_ccf_sandbox
+        virtualenv_command: python3 -m venv
+
+    - name: Install requirements for sandbox
+      ansible.builtin.pip:
+        requirements: /opt/ccf_sgx/bin/requirements.txt
+        virtualenv: /tmp/lskv/.venv_ccf_sandbox
+        virtualenv_command: python3 -m venv
+
+    - name: Install requirements for benchmarking
+      ansible.builtin.pip:
+        requirements: /tmp/lskv/requirements.txt
+        virtualenv: /tmp/lskv/.venv
+        virtualenv_command: python3 -m venv
+      args:
+        chdir: /tmp/lskv

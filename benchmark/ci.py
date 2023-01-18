@@ -10,6 +10,7 @@ import argparse
 from typing import List
 
 # pylint: disable=duplicate-code
+from loguru import logger
 import common
 import etcd
 import k6
@@ -25,7 +26,7 @@ def common_configurations(args: argparse.Namespace):
     args.etcd = True
     args.enclave = ["virtual"]
     args.http2 = True
-    args.nodes = [1]
+    args.nodes = ["local://127.0.0.1:8000"]
 
 
 def etcd_configurations(args: argparse.Namespace) -> List[etcd.EtcdConfig]:
@@ -93,7 +94,11 @@ def k6_configurations(args: argparse.Namespace) -> List[k6.K6Config]:
 
 
 if __name__ == "__main__":
+    logger.info("Running etcd")
     common.main("etcd", etcd.get_arguments, etcd_configurations, etcd.execute_config)
+    logger.info("Running ycsb")
     common.main("ycsb", ycsb.get_arguments, ycsb_configurations, ycsb.execute_config)
+    logger.info("Running perf")
     common.main("perf", perf.get_arguments, perf_configurations, perf.execute_config)
+    logger.info("Running k6")
     common.main("k6", k6.get_arguments, k6_configurations, k6.execute_config)
