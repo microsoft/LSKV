@@ -70,6 +70,14 @@ build-docker-sgx:
 .PHONY: build-docker
 build-docker: build-docker-virtual build-docker-sgx
 
+.PHONY: run-docker-virtual
+run-docker-virtual: .venv
+	. .venv/bin/activate && python3 benchmark/lskv_cluster.py --enclave virtual
+
+.PHONY: run-docker-sgx
+run-docker-sgx: .venv
+	. .venv/bin/activate && python3 benchmark/lskv_cluster.py --enclave sgx
+
 .PHONY: debug-dockerignore
 debug-dockerignore:
 	docker build --no-cache -t build-context -f Dockerfile.ignore .
@@ -95,8 +103,8 @@ run-virtual-verbose-http1: build-virtual-verbose
 run-sgx: build-sgx
 	VENV_DIR=.venv $(CCF_PREFIX_SGX)/bin/sandbox.sh -p $(BUILD)/liblskv.enclave.so.signed -e release -t sgx --http2
 
-.PHONY: test-virtual
-test-virtual: build-virtual patched-etcd
+.PHONY: test-etcd-integration
+test-etcd-integration: build-virtual patched-etcd
 	./integration-tests.sh -v
 
 .PHONY: tests
