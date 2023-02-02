@@ -572,7 +572,9 @@ class Member:
         # pylint: disable=consider-using-with
         service_cert = "".join(
             open(
-                f"{self.workspace}/sandbox_common/service_cert.pem", "r", encoding="utf-8"
+                f"{self.workspace}/sandbox_common/service_cert.pem",
+                "r",
+                encoding="utf-8",
             ).readlines()
         )
         transition_service_to_open = {

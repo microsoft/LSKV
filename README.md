@@ -9,6 +9,7 @@ The Ledger-backed Secure Key-Value store, also known as LSKV, is a research proj
 ## Targets
 
 Currently LSKV can run in the following targets:
+
 - Virtual (non-attested, insecure, handy for development)
 - SGX (attested, secure)
 - SEV-SNP (attested, secure but not actively tested)
