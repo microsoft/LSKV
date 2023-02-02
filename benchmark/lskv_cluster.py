@@ -339,7 +339,7 @@ class Operator:
                 logger.warning("Node not ready, try {}: {}", i, exception)
             i += 1
             time.sleep(1)
-        raise Exception("Failed to wait for node to be ready")
+        raise RuntimeError("Failed to wait for node to be ready")
 
     def make_node_dir(self, name: str) -> str:
         """

@@ -125,7 +125,7 @@ def prefill_datastore(config: EtcdConfig, store: Store, start: int, end: int):
                 stderr=subprocess.DEVNULL,
             )
             if proc.wait() != 0:
-                raise Exception("failed to fill datastore")
+                raise RuntimeError("failed to fill datastore")
     logger.debug("prefilled {} keys", i)
 
 

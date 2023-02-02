@@ -160,7 +160,7 @@ class Client:
         ret_json = json.loads(ret)
         if "error" in ret_json:
             ccf_error = CCFError(**ret_json["error"])
-            raise Exception(ccf_error)
+            raise RuntimeError(ccf_error)
         return ProposalResponse(**ret_json)
 
     def propose(self, proposals: Proposal) -> ProposalResponse:
