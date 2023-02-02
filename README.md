@@ -6,11 +6,21 @@ The Ledger-backed Secure Key-Value store, also known as LSKV, is a research proj
 
 **This early stage research prototype should not be used in production.**
 
+## Targets
+
+Currently LSKV can run in the following targets:
+
+- Virtual (non-attested, insecure, handy for development)
+- SGX (attested, secure)
+- SEV-SNP (attested, secure but not actively tested)
+
 ## Install Dependencies
+
+These instructions expect an Ubuntu 20.04 machine, or follow the docker instructions.
 
 This repository and its dependencies can be checked out by clicking: [![Open in VSCode](https://img.shields.io/static/v1?label=Open+in&message=VSCode&logo=visualstudiocode&color=007ACC&logoColor=007ACC&labelColor=2C2C32)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/LSKV)
 
-Alternatively, CCF and its dependencies can be installed manually:
+Alternatively, CCF and its dependencies can be installed manually (for virtual mode):
 
 ```bash
 make install-ccf-virtual
@@ -19,11 +29,11 @@ make install-ccf-virtual
 Or
 
 ```bash
-$ wget https://github.com/microsoft/CCF/releases/download/ccf-4.0.0-dev3/ccf_virtual_4.0.0_dev3_amd64.deb
-$ sudo dpkg -i ccf_virtual_4.0.0_dev3_amd64.deb # Installs CCF under /opt/ccf_virtual
-$ cat /opt/ccf_virtual/share/VERSION_LONG
-ccf-4.0.0-dev3
-$ /opt/ccf_virtual/getting_started/setup_vm/run.sh /opt/ccf_virtual/getting_started/setup_vm/app-dev.yml  # Install dependencies
+wget https://github.com/microsoft/CCF/releases/download/ccf-4.0.0-dev3/ccf_virtual_4.0.0_dev3_amd64.deb
+sudo dpkg -i ccf_virtual_4.0.0_dev3_amd64.deb # Installs CCF under /opt/ccf_virtual
+cat /opt/ccf_virtual/share/VERSION_LONG
+# ccf-4.0.0-dev3
+/opt/ccf_virtual/getting_started/setup_vm/run.sh /opt/ccf_virtual/getting_started/setup_vm/app-dev.yml  # Install dependencies
 ```
 
 If your organisation supports it, you can also checkout this repository in a Github codespace: [![Open in Github codespace](https://img.shields.io/static/v1?label=Open+in&message=GitHub+codespace&logo=github&color=2F363D&logoColor=white&labelColor=2C2C32)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=534240617&machine=basicLinux32gb&devcontainer_path=.devcontainer.json&location=WestEurope)
@@ -45,7 +55,7 @@ Builds `build/liblskv.virtual.so`.
 Alternatively, it is possible to build a runtime image of this application via docker:
 
 ```bash
-$ make build-docker-virtual
+make build-docker-virtual
 ```
 
 ### SGX (attested)
@@ -64,7 +74,7 @@ Builds `build/liblskv.enclave.so.signed`.
 Alternatively, it is possible to build a runtime image of this application via docker:
 
 ```bash
-$ make build-docker-sgx
+make build-docker-sgx
 ```
 
 ## Build options
@@ -80,10 +90,16 @@ The cmake build can be configured with the following lskv-specific options:
 
 ### Etcd integration tests
 
-To run some etcd integration tests:
+To run the main LSKV tests:
 
 ```sh
-make test-virtual
+make tests
+```
+
+To run some etcd integration tests, note that this isn't up-to-date so might lead to failures:
+
+```sh
+make test-etcd-integration
 ```
 
 ## Run
@@ -91,13 +107,13 @@ make test-virtual
 ### Locally
 
 ```bash
-$ make run-virtual
+make run-virtual
 ```
 
 Or
 
 ```bash
-$ /opt/ccf_virtual/bin/sandbox.sh -p build/liblskv.virtual.so --http2
+/opt/ccf_virtual/bin/sandbox.sh -p build/liblskv.virtual.so --http2
 ```
 
 Producing:
@@ -115,17 +131,14 @@ Python environment successfully setup
 [12:00:00.000] Press Ctrl+C to shutdown the network
 ```
 
-Or, for an SGX-enabled application: `$ make run-sgx` or `$ /opt/ccf_sgx/bin/sandbox.sh -p build/liblskv.enclave.so.signed -e release --http2`.
+Or, for an SGX-enabled application: `make run-sgx`.
 
 ### With docker in Virtual mode
 
 **Note**: A Docker image following the latest changes on the `main` branch is available as `ccfmsrc.azurecr.io/public/lskv:latest-virtual`.
 
 ```bash
-$ docker run --name ccfmsrc.azurecr.io/public/lskv:latest-virtual -it --rm lskv-virtual
-...
-2022-01-01T12:00:00.000000Z -0.000 0   [info ] ../src/node/node_state.h:1790        | Network TLS connections now accepted
-# It is then possible to interact with the service
+make run-docker-virtual
 ```
 
 ### With docker in SGX mode
@@ -133,28 +146,25 @@ $ docker run --name ccfmsrc.azurecr.io/public/lskv:latest-virtual -it --rm lskv-
 **Note**: A Docker image following the latest changes on the `main` branch is available as `ccfmsrc.azurecr.io/public/lskv:latest-sgx`.
 
 ```bash
-$ docker run --name ccfmsrc.azurecr.io/public/lskv:latest-sgx -it --rm --device /dev/sgx_enclave:/dev/sgx_enclave --device /dev/sgx_provision:/dev/sgx_provision -v /dev/sgx:/dev/sgx lskv-sgx
-...
-2022-01-01T12:00:00.000000Z -0.000 0   [info ] ../src/node/node_state.h:1790        | Network TLS connections now accepted
-# It is then possible to interact with the service
+make run-docker-sgx
 ```
 
 ## Interacting with the store
 
 **Note**: When running with Docker extra setup steps are currently required before interacting with the store as below, see [Running a CCF Service](https://microsoft.github.io/CCF/main/operations/start_network.html#opening-a-network-to-users).
-The [`lskv_cluster.py`](./benchmark/lskv_cluster.py) may also be useful for setting up a local docker cluster.
+The [`lskv_cluster.py`](./benchmark/lskv_cluster.py) may also be useful for setting up a local docker cluster (used inside the docker steps above).
 
 ### etcdctl (gRPC API)
 
 You can use the official etcd CLI client for interacting with the datastore over gRPC, for supported methods see the [gRPC API status](https://github.com/microsoft/LSKV/issues/35).
 
 ```bash
-$ ./etcdctl.sh put key value
-OK
+./etcdctl.sh put key value
+# OK
 
-$ ./etcdctl.sh get key
-key
-value
+./etcdctl.sh get key
+# key
+# value
 ```
 
 ### JSON API
@@ -190,3 +200,5 @@ The receipt includes claims for this purpose, for LSKV these are outlined below.
 The receipts are available through the `lskvserverpb.Receipt/GetReceipt` endpoint (`/v3/receipt/get_receipt` for json).
 The receipt is a protobuf form of the [output available from CCF](https://microsoft.github.io/CCF/main/use_apps/verify_tx.html#write-receipts), see [`lskvserver.proto`](./proto/lskvserver.proto) for the definition of the message types.
 The custom claims that are registered for the receipt take the form of the `ReceiptClaims` message in that `lskvserver.proto` file.
+
+For verifying receipts see the tests at [`test_common.py`](./tests/test_common.py), specifically the `check_receipt` method.

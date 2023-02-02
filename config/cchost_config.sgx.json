@@ -1,7 +1,8 @@
 {
   "enclave": {
     "file": "/app/liblskv.enclave.so.signed",
-    "type": "Release"
+    "type": "Release",
+    "platform": "SGX"
   },
   "network": {
     "node_to_node_interface": {
@@ -9,7 +10,8 @@
     },
     "rpc_interfaces": {
       "main_interface": {
-        "bind_address": "0.0.0.0:8000"
+        "bind_address": "0.0.0.0:8000",
+        "app_protocol": "HTTP2"
       }
     }
   },

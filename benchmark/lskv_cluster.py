@@ -150,13 +150,19 @@ class Node:
         """
         enclave_file = "/app/liblskv.virtual.so"
         enclave_type = "Virtual"
+        enclave_platform = "Virtual"
         if self.enclave == "sgx":
             enclave_file = "/app/liblskv.enclave.so.signed"
             enclave_type = "Release"
+            enclave_platform = "SGX"
         app_protocol = "HTTP1" if self.http_version == 1 else "HTTP2"
 
         return {
-            "enclave": {"file": enclave_file, "type": enclave_type},
+            "enclave": {
+                "file": enclave_file,
+                "type": enclave_type,
+                "platform": enclave_platform,
+            },
             "network": {
                 "node_to_node_interface": {
                     "bind_address": f"{self.ip_address}:{self.peer_port}"
@@ -204,14 +210,20 @@ class Node:
         """
         enclave_file = "/app/liblskv.virtual.so"
         enclave_type = "Virtual"
+        enclave_platform = "Virtual"
         if self.enclave == "sgx":
             enclave_file = "/app/liblskv.enclave.so.signed"
             enclave_type = "Release"
+            enclave_platform = "SGX"
         app_protocol = "HTTP1" if self.http_version == 1 else "HTTP2"
 
         base_client_port = 8000
         return {
-            "enclave": {"file": enclave_file, "type": enclave_type},
+            "enclave": {
+                "file": enclave_file,
+                "type": enclave_type,
+                "platform": enclave_platform,
+            },
             "network": {
                 "node_to_node_interface": {
                     "bind_address": f"{self.ip_address}:{self.peer_port}"
@@ -327,7 +339,7 @@ class Operator:
                 logger.warning("Node not ready, try {}: {}", i, exception)
             i += 1
             time.sleep(1)
-        raise Exception("Failed to wait for node to be ready")
+        raise RuntimeError("Failed to wait for node to be ready")
 
     def make_node_dir(self, name: str) -> str:
         """
@@ -386,7 +398,7 @@ class Operator:
         node_dir = self.make_node_dir(node.name)
         config_file = self.make_node_config(node, node_dir)
         config_file_abs = os.path.abspath(config_file)
-        common_dir_abs = os.path.abspath(os.path.join(self.workspace, "common"))
+        common_dir_abs = os.path.abspath(os.path.join(self.workspace, "sandbox_common"))
         constitution_dir_abs = os.path.abspath("constitution")
         cmd = [
             "docker",
@@ -439,7 +451,7 @@ class Operator:
                 "curl",
                 "https://127.0.0.1:8000/node/network/nodes",
                 "--cacert",
-                f"{self.workspace}/common/service_cert.pem",
+                f"{self.workspace}/sandbox_common/service_cert.pem",
             ]
         )
 
@@ -462,7 +474,7 @@ class Operator:
         """
         Set up the common directory for shared information.
         """
-        common_dir = os.path.join(self.workspace, "common")
+        common_dir = os.path.join(self.workspace, "sandbox_common")
         run(["mkdir", "-p", common_dir])
         run(
             [
@@ -484,7 +496,7 @@ class Operator:
         """
         name = self.make_name(0)
         run(
-            ["docker", "cp", f"{name}:/app/certs/service_cert.pem", "common"],
+            ["docker", "cp", f"{name}:/app/certs/service_cert.pem", "sandbox_common"],
             cwd=self.workspace,
         )
 
@@ -499,15 +511,15 @@ class Member:
         self.name = name
         self.curl = Curl(
             "https://127.0.0.1:8000",
-            f"{self.workspace}/common/service_cert.pem",
-            f"{self.workspace}/common/{name}_cert.pem",
-            f"{self.workspace}/common/{name}_privk.pem",
+            f"{self.workspace}/sandbox_common/service_cert.pem",
+            f"{self.workspace}/sandbox_common/{name}_cert.pem",
+            f"{self.workspace}/sandbox_common/{name}_privk.pem",
         )
         self.scurl = SCurl(
             "https://127.0.0.1:8000",
-            f"{self.workspace}/common/service_cert.pem",
-            f"{self.workspace}/common/{name}_cert.pem",
-            f"{self.workspace}/common/{name}_privk.pem",
+            f"{self.workspace}/sandbox_common/service_cert.pem",
+            f"{self.workspace}/sandbox_common/{name}_cert.pem",
+            f"{self.workspace}/sandbox_common/{name}_privk.pem",
         )
 
     def activate_member(self):
@@ -560,7 +572,9 @@ class Member:
         # pylint: disable=consider-using-with
         service_cert = "".join(
             open(
-                f"{self.workspace}/common/service_cert.pem", "r", encoding="utf-8"
+                f"{self.workspace}/sandbox_common/service_cert.pem",
+                "r",
+                encoding="utf-8",
             ).readlines()
         )
         transition_service_to_open = {
@@ -626,7 +640,7 @@ def main(
 
         member0.activate_member()
 
-        member0.set_user(f"{workspace}/common/user0_cert.pem")
+        member0.set_user(f"{workspace}/sandbox_common/user0_cert.pem")
 
         member0.open_network()
 
@@ -647,7 +661,7 @@ def main(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--workspace", type=str, default="docker-workspace")
+    parser.add_argument("--workspace", type=str, default="workspace")
     parser.add_argument("--nodes", type=int, default=1)
     parser.add_argument("--enclave", type=str, default="virtual")
     parser.add_argument(

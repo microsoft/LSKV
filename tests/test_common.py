@@ -236,7 +236,7 @@ def fixture_sandbox():
 
             yield sandbox
         else:
-            raise Exception("failed to prepare the sandbox")
+            raise RuntimeError("failed to prepare the sandbox")
 
 
 @pytest.fixture(name="http1_client", scope="module")
@@ -325,7 +325,7 @@ class HttpClient:
                     elif status == "Invalid":
                         return False
             if i > tries:
-                raise Exception("failed to wait for commit")
+                raise RuntimeError("failed to wait for commit")
             time.sleep(0.1)
 
     # pylint: disable=too-many-arguments
