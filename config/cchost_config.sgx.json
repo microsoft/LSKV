@@ -10,7 +10,7 @@
     },
     "rpc_interfaces": {
       "main_interface": {
-        "bind_address": "0.0.0.0:8000"
+        "bind_address": "0.0.0.0:8000",
         "app_protocol": "HTTP2"
       }
     }
