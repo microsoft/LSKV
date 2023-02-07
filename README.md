@@ -6,6 +6,8 @@ The Ledger-backed Secure Key-Value store, also known as LSKV, is a research proj
 
 **This early stage research prototype should not be used in production.**
 
+LSKV went to FOSDEM! [Check out the presentation recording](https://fosdem.org/2023/schedule/event/cc_lskv/).
+
 ## Targets
 
 Currently LSKV can run in the following targets:
