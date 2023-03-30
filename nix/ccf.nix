@@ -28,7 +28,7 @@ in
     pname = "ccf-${platform}";
     version = "4.0.7";
     src = fetchFromGitHub {
-      owner = "microsoft";
+      owner = "jumaffre";
       repo = "CCF";
       name = "ccf-${version}";
       rev = "ccf-${version}";

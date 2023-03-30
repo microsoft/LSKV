@@ -1,0 +1,12 @@
+diff --git a/python/requirements.txt b/python/requirements.txt
+index b86a59393..4c1f4efe5 100644
+--- a/python/requirements.txt
++++ b/python/requirements.txt
+@@ -1,4 +1,4 @@
+ loguru >= 0.5, == 0.*
+-cryptography == 40.*
++cryptography == 39.*
+ string-color >= 1.2.1
+-pycose >= 1.0.1
+\ No newline at end of file
++pycose >= 1.0.1
