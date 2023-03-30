@@ -1,5 +1,7 @@
 # LSKV
 
+**This branch is based off the CCF `lskv` branch which contains features like bidi streaming support as well as sorted maps**
+
 [![Open in VSCode](https://img.shields.io/static/v1?label=Open+in&message=VSCode&logo=visualstudiocode&color=007ACC&logoColor=007ACC&labelColor=2C2C32)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/LSKV) [![LSKV CI](https://github.com/microsoft/LSKV/actions/workflows/ci.yml/badge.svg)](https://github.com/microsoft/LSKV/actions/workflows/ci.yml)
 
 The Ledger-backed Secure Key-Value store, also known as LSKV, is a research project to investigate whether it is possible to build a trustworthy distributed data store on top of the [Confidential Consortium Framework (CCF)](https://github.com/microsoft/CCF). LSKV aims to provide gRPC & HTTP/JSON APIs, similar to that of existing key-value stores such as [etcd](https://etcd.io/), with support for common operations such as watches and leases, whilst taking advantage of the confidentiality guarantees, auditability, and multi-party governance provided by CCF.
