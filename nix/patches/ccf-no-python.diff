@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index f44c51e5..a4333529 100644
+index faab282ce..44cddf803 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -208,24 +208,6 @@ install(
+@@ -276,24 +276,6 @@ install(
    PATTERN "*.h"
  )
  
