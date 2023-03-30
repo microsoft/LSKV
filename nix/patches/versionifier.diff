@@ -1,0 +1,13 @@
+diff --git a/python/ccf/_versionifier.py b/python/ccf/_versionifier.py
+index 2d7aba487..7a33f7c6e 100644
+--- a/python/ccf/_versionifier.py
++++ b/python/ccf/_versionifier.py
+@@ -40,7 +40,7 @@ def to_python_version(original):
+                 unprefixed.translate(plus_remover), next_replace, "+"
+             )
+ 
+-    raise ValueError(f"Cannot convert '{original}' to a Version")
++    return Version("0.0.0")
+ 
+ 
+ if __name__ == "__main__":

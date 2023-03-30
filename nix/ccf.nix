@@ -26,13 +26,13 @@
 in
   stdenv.mkDerivation rec {
     pname = "ccf-${platform}";
-    version = "4.0.0-dev6";
+    version = "http2_remove_hint_grpc";
     src = fetchFromGitHub {
-      owner = "microsoft";
+      owner = "jumaffre";
       repo = "CCF";
       name = "ccf-${version}";
-      rev = "ccf-${version}";
-      hash = "sha256-Y9mEKYAN7zcJ3wMovnGribu2caw+ip1EJYYEZezYdis=";
+      rev = "${version}";
+      hash = "sha256-BBzbPQrYSvqmK5Ck0OmbztO7mN0EzfsgVrSfk3LU5nw=";
     };
     patches = [
       patches/ccf-no-python.diff
