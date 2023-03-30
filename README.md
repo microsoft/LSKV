@@ -31,10 +31,10 @@ make install-ccf-virtual
 Or
 
 ```bash
-wget https://github.com/microsoft/CCF/releases/download/ccf-4.0.0-dev3/ccf_virtual_4.0.0_dev3_amd64.deb
-sudo dpkg -i ccf_virtual_4.0.0_dev3_amd64.deb # Installs CCF under /opt/ccf_virtual
+wget https://github.com/microsoft/CCF/releases/download/ccf-4.0.0-dev6/ccf_virtual_4.0.0_dev6_amd64.deb
+sudo dpkg -i ccf_virtual_4.0.0_dev6_amd64.deb # Installs CCF under /opt/ccf_virtual
 cat /opt/ccf_virtual/share/VERSION_LONG
-# ccf-4.0.0-dev3
+# ccf-4.0.0-dev6
 /opt/ccf_virtual/getting_started/setup_vm/run.sh /opt/ccf_virtual/getting_started/setup_vm/app-dev.yml  # Install dependencies
 ```
 
