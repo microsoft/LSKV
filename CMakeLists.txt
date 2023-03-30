@@ -54,7 +54,8 @@ add_compile_definitions(GOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0)
 
 message(STATUS "CCF_DIR: ${CCF_DIR}")
 
-# disable log deprecation warnings, we're using old versions of things that might not be fully compatible
+# disable log deprecation warnings, we're using old versions of things that
+# might not be fully compatible
 add_compile_definitions(CCF_LOGGER_NO_DEPRECATE)
 # Not sure why this is needed but it gets the protobuf stuff to build
 add_compile_definitions(GOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0)
