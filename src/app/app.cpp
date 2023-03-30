@@ -313,7 +313,7 @@ namespace app
         auto const& create_payload = payload.create_request();
         auto watch_id = next_watch_id++;
         Watch watch = {
-          watch_id, ccf::grpc::detach_stream(std::move(out_stream))};
+          watch_id, ccf::grpc::detach_stream(ctx.rpc_ctx, std::move(out_stream))};
         watches.emplace(std::make_pair(create_payload.key(), std::move(watch)));
 
         // notify the client of creation
