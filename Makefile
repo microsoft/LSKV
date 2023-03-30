@@ -51,7 +51,7 @@ build-virtual: .venv
 build-virtual-verbose:
 	mkdir -p $(BUILD)
 	cd $(BUILD) && CC=$(CC) CXX=$(CXX) cmake -DCOMPILE_TARGET=virtual -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DVERBOSE_LOGGING=ON -DCCF_UNSAFE=OFF -DGENERATE_PYTHON=ON -GNinja ..
-	cd $(BUILD) && ninja
+	. .venv/bin/activate && cd $(BUILD) && ninja
 
 .PHONY: build-sgx
 build-sgx: .venv
