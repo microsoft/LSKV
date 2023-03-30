@@ -46,6 +46,11 @@ add_compile_definitions(CCF_LOGGER_NO_DEPRECATE)
 # https://github.com/protocolbuffers/protobuf/issues/10108
 add_compile_definitions(GOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0)
 
+# disable log deprecation warnings, we're using old versions of things that might not be fully compatible
+add_compile_definitions(CCF_LOGGER_NO_DEPRECATE)
+# Not sure why this is needed but it gets the protobuf stuff to build
+add_compile_definitions(GOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0)
+
 add_ccf_app(
   lskv
   SRCS
