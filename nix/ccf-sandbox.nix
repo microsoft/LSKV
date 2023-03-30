@@ -4,9 +4,10 @@
   python3,
   stdenv,
   platform ? "virtual",
+  verbose ? false,
 }: let
   infra = python3.pkgs.toPythonApplication python3.pkgs.python-ccf-infra;
-  c = ccf.override {inherit platform;};
+  c = ccf.override {inherit platform verbose;};
 in
   stdenv.mkDerivation {
     pname = "ccf-sandbox-${platform}";
