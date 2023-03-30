@@ -13,6 +13,7 @@
   protobuf,
   openssl,
   platform ? "virtual",
+  verbose ? false,
 }: let
   toRemove =
     if platform == "sgx"
@@ -56,6 +57,7 @@ in
       "-DBUILD_TESTS=OFF"
       "-DBUILD_UNIT_TESTS=OFF"
       "-DLVI_MITIGATIONS=OFF"
+      "-DVERBOSE_LOGGING=${if verbose then "ON" else "OFF"}"
       "-DCOMPILE_TARGET=${platform}"
     ];
 

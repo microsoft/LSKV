@@ -8,6 +8,7 @@
   ccf,
   nix-filter,
   platform ? "virtual",
+  verbose ? false,
 }:
 stdenv.mkDerivation rec {
   pname = "lskv-${platform}";
@@ -33,6 +34,7 @@ stdenv.mkDerivation rec {
   ];
 
   cmakeFlags = [
+    "-DVERBOSE_LOGGING=${if verbose then "ON" else "OFF"}"
     "-DCOMPILE_TARGET=${platform}"
     (
       if platform == "sgx"
