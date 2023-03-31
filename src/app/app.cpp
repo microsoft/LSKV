@@ -312,8 +312,11 @@ namespace app
 
         auto const& create_payload = payload.create_request();
         auto watch_id = next_watch_id++;
+        auto detached_stream = ccf::grpc::detach_stream(ctx.rpc_ctx, std::move(out_stream), [watch_id]() mutable {
+              CCF_APP_DEBUG("Closing watch response stream for watch id {}", watch_id);
+              });
         Watch watch = {
-          watch_id, ccf::grpc::detach_stream(ctx.rpc_ctx, std::move(out_stream))};
+          watch_id, std::move(detached_stream)};
         watches.emplace(std::make_pair(create_payload.key(), std::move(watch)));
 
         // notify the client of creation
@@ -321,6 +324,8 @@ namespace app
           etcdserverpb::WatchResponse response;
           response.set_watch_id(watch.id);
           response.set_created(true);
+
+          CCF_APP_DEBUG("Notifying client of created watch for key {} with id {}", create_payload.key(), watch_id);
 
           auto committed = last_committed_txid();
           fill_header(*response.mutable_header(), committed);
@@ -742,6 +747,7 @@ namespace app
         auto& watch = w->second;
         etcdserverpb::WatchResponse response;
         response.set_watch_id(watch.id);
+        CCF_APP_DEBUG("Sending watch event to {} for PUT event for key {}", watch.id, payload.key());
         auto* event = response.add_events();
         event->set_type(etcdserverpb::Event::PUT);
         auto* kv = event->mutable_kv();
