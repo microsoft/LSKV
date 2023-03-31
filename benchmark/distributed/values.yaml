@@ -4,5 +4,5 @@
 # values for the distributed benchmarking setup
 vm_user: "apj39"
 
-py_ccf_ver: "4.0.0dev6"
-ccf_ver: "4.0.0-dev6"
+py_ccf_ver: "4.0.0rc0"
+ccf_ver: "4.0.0-rc0"
