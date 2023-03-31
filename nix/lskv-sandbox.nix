@@ -13,5 +13,5 @@
   sandbox = ccf-sandbox.override {inherit platform verbose;};
 in
   writeShellScriptBin "lskv-sandbox.sh" ''
-    ${sandbox}/bin/sandbox.sh --package ${l}/lib/liblskv --enclave-type ${enclave_type} --enclave-platform ${platform} $@
+    ${sandbox}/bin/sandbox.sh --package ${l}/lib/liblskv --enclave-type ${enclave_type} --enclave-platform ${platform} --http2 $@
   ''
