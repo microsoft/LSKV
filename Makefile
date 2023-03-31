@@ -4,8 +4,8 @@ BUILD=build
 CCF_PREFIX_VIRTUAL=/opt/ccf_virtual
 CCF_PREFIX_SGX=/opt/ccf_sgx
 
-CC!=which clang-10
-CXX!=which clang++-10
+CC!=which clang-15
+CXX!=which clang++-15
 
 OE_CC=/opt/oe_lvi/clang-10
 OE_CXX=/opt/oe_lvi/clang++-10
