@@ -30,7 +30,7 @@ LSKV comes packaged with a sandbox based on the CCF one that uses the nix-built 
 To build and run it:
 
 ```sh
-nix run .#lskv-sandbox-virtual
+nix run .#lskv-sandbox-virtual -- --http2
 ```
 
 Again, replace `virtual` for `sgx` to build that platform.
