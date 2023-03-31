@@ -303,7 +303,7 @@ namespace app
       etcdserverpb::WatchRequest&& payload,
       ccf::grpc::StreamPtr<etcdserverpb::WatchResponse>&& out_stream)
     {
-      CCF_APP_INFO("Watch request received {}", payload.DebugString());
+      CCF_APP_DEBUG("Watch request received {}", payload.DebugString());
 
       // TODO: Only support watch creation for now
       if (payload.has_create_request())
