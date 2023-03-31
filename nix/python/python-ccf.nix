@@ -25,7 +25,6 @@ in
     '';
 
     patches = [
-      ../patches/versionifier.diff
       ../patches/crypto39.diff
     ];
 
