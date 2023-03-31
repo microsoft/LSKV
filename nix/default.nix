@@ -44,6 +44,12 @@ pkgs.lib.makeScope pkgs.newScope (
       lskv-sandbox-verbose = lskv-sandbox.override {
         verbose = true;
       };
+      ccf-verbose = ccf.override {
+        verbose = true;
+      };
+      lskv-verbose = lskv.override {
+        verbose = true;
+      };
     };
     ci-checks-pkgs = pkgs.callPackage ./ci-checks.nix {inherit (python3.pkgs) python-ccf types-paramiko;};
     ci-checks = lskvlib.ciChecks ci-checks-pkgs.checks;
