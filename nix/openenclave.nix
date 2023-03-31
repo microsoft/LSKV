@@ -27,7 +27,7 @@
     stripRoot = false;
   };
 in
-  stdenv.mkDerivation rec {
+  stdenv.mkDerivation {
     pname = "openenclave";
     version = openenclave-version;
     src = openenclave-src;
