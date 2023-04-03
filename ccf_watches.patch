@@ -1,8 +1,8 @@
 diff --git a/src/endpoints/grpc/grpc.h b/src/endpoints/grpc/grpc.h
-index b08e37ff9..0e192c82e 100644
+index bf7829feb..c29fa47ad 100644
 --- a/src/endpoints/grpc/grpc.h
 +++ b/src/endpoints/grpc/grpc.h
-@@ -67,22 +67,31 @@ namespace ccf::grpc
+@@ -68,22 +68,30 @@ namespace ccf::grpc
      }
      else
      {
@@ -17,9 +17,6 @@ index b08e37ff9..0e192c82e 100644
 -          message_length));
 -      }
 +        const auto message_length = impl::read_message_frame(data, size);
- 
--      In in;
--      if (!in.ParseFromArray(data, message_length))
 +        if (size != message_length)
 +        {
 +          throw std::logic_error(fmt::format(
@@ -27,7 +24,9 @@ index b08e37ff9..0e192c82e 100644
 +            size,
 +            message_length));
 +        }
-+
+ 
+-      In in;
+-      if (!in.ParseFromArray(data, message_length))
 +        if (!in.ParseFromArray(data, message_length))
 +        {
 +          throw std::logic_error(fmt::format(
@@ -48,20 +47,10 @@ index b08e37ff9..0e192c82e 100644
        return in;
      }
 diff --git a/src/http/http2_callbacks.h b/src/http/http2_callbacks.h
-index 8d169946b..e232c99ec 100644
+index 45634231c..d7d46ca44 100644
 --- a/src/http/http2_callbacks.h
 +++ b/src/http/http2_callbacks.h
-@@ -29,12 +29,17 @@ namespace http2
-     auto& body = stream_data->outgoing.body.ro_data();
-     size_t to_read = std::min(body.size(), length);
- 
-+    LOG_TRACE_FMT(
-+      "http2::read_outgoing_callback, stream: {} - to read {} bytes",
-+      stream_id,
-+      to_read);
-+
-     if (
-       to_read == 0 &&
+@@ -36,7 +36,7 @@ namespace http2
        stream_data->outgoing.state == StreamResponseState::Streaming)
      {
        // Early out: when streaming, avoid calling this callback
@@ -70,7 +59,7 @@ index 8d169946b..e232c99ec 100644
        return NGHTTP2_ERR_DEFERRED;
      }
  
-@@ -82,8 +87,20 @@ namespace http2
+@@ -122,8 +122,20 @@ namespace http2
            return 0;
          }
  
@@ -93,19 +82,20 @@ index 8d169946b..e232c99ec 100644
            auto* p = get_parser(user_data);
            p->handle_completed(stream_id, stream_data);
 diff --git a/src/http/http2_parser.h b/src/http/http2_parser.h
-index f9c0469b7..ae856db94 100644
+index 4e5b91a33..a4b808b8a 100644
 --- a/src/http/http2_parser.h
 +++ b/src/http/http2_parser.h
-@@ -292,8 +292,10 @@ namespace http2
+@@ -387,8 +387,11 @@ namespace http2
  
        if (stream_data->outgoing.state != StreamResponseState::Uninitialised)
        {
 -        throw std::logic_error(fmt::format(
 -          "Stream {} should be uninitialised to start stream", stream_id));
-+        LOG_FAIL_FMT("Stream already started");
-+        return;
 +        // throw std::logic_error(fmt::format(
 +        //   "Stream {} should be uninitialised to start stream", stream_id));
++
++        stream_data->outgoing.state = StreamResponseState::Streaming;
++        return;
        }
  
        stream_data->outgoing.state = StreamResponseState::Streaming;
