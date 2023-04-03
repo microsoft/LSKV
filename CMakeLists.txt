@@ -10,10 +10,11 @@ project(
   LANGUAGES C CXX
   VERSION ${LSKV_VERSION_SHORT})
 
-option(
-  COMPILE_TARGET
-  "Compile target to build for, one of [virtual;sgx;snp], defaults to virtual"
-  virtual)
+set(COMPILE_TARGET
+    "virtual"
+    CACHE STRING
+    "Compile target to build for, one of [virtual;sgx;snp], defaults to virtual"
+)
 
 set(CCF "ccf_${COMPILE_TARGET}")
 
@@ -41,6 +42,12 @@ option(PUBLIC_LEASES
 option(VERBOSE_LOGGING "enable verbose logging" OFF)
 
 add_compile_definitions(LSKV_VERSION="${LSKV_VERSION}")
+
+# disable log deprecation warnings, we're using old versions of things that
+# might not be fully compatible
+add_compile_definitions(CCF_LOGGER_NO_DEPRECATE)
+# Not sure why this is needed but it gets the protobuf stuff to build
+add_compile_definitions(GOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0)
 
 add_ccf_app(
   lskv

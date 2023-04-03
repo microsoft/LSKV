@@ -308,22 +308,23 @@ namespace app
 
         auto const& create_payload = payload.create_request();
         auto watch_id = next_watch_id++;
-        Watch watch = {
-          watch_id, ccf::grpc::detach_stream(std::move(out_stream))};
-        watches.emplace(std::make_pair(create_payload.key(), std::move(watch)));
-
         // notify the client of creation
         {
           etcdserverpb::WatchResponse response;
-          response.set_watch_id(watch.id);
+          response.set_watch_id(watch_id);
           response.set_created(true);
-
           auto committed = last_committed_txid();
           fill_header(*response.mutable_header(), committed);
-          watches[create_payload.key()].stream->stream_msg(response);
+
+          out_stream->stream_msg(response);
         }
 
-        CCF_APP_DEBUG(
+        Watch watch = {
+          watch_id,
+          ccf::grpc::detach_stream(ctx.rpc_ctx, std::move(out_stream))};
+        watches.emplace(std::make_pair(create_payload.key(), std::move(watch)));
+
+        CCF_APP_INFO(
           "Created watch {} for key {}", watch_id, create_payload.key());
       }
     }
