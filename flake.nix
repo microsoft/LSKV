@@ -82,7 +82,11 @@
             python3Packages.pandas
             python3Packages.loguru
             python3Packages.seaborn
+            python3Packages.paramiko
             jupyter
+
+            # for go-ycsb
+            go
           ]
           ++ [
             nix.python3.pkgs.cimetrics
