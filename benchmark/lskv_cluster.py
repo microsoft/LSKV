@@ -514,7 +514,7 @@ class Operator:
         for file in ["member0_cert.pem", "member0_enc_pubk.pem"] + (
             ["service_cert.pem"] if self.nodes else []
         ):
-            src = os.path.join(self.workspace, "sandbox_common", file)
+            src = os.path.join(self.workspace, "common", file)
             dst = os.path.join(node_dir, "common", os.path.basename(file))
             runner.copy_file(src, dst)
         common_dir_abs = os.path.join(node_dir_abs, "common")
@@ -601,7 +601,7 @@ class Operator:
                 "curl",
                 f"https://{first_node.ip_address}:{first_node.client_port}/node/network/nodes",
                 "--cacert",
-                f"{self.workspace}/sandbox_common/service_cert.pem",
+                f"{self.workspace}/common/service_cert.pem",
             ]
         )
 
@@ -623,7 +623,7 @@ class Operator:
         """
         Set up the common directory for shared information.
         """
-        common_dir = os.path.join(self.workspace, "sandbox_common")
+        common_dir = os.path.join(self.workspace, "common")
         run(["mkdir", "-p", common_dir])
         run(
             [
@@ -645,7 +645,7 @@ class Operator:
         """
         name = self.make_name(0)
         run(
-            ["docker", "cp", f"{name}:/app/certs/service_cert.pem", "sandbox_common"],
+            ["docker", "cp", f"{name}:/app/certs/service_cert.pem", "common"],
             cwd=self.workspace,
         )
 
@@ -723,7 +723,7 @@ class Member:
         # pylint: disable=consider-using-with
         service_cert = "".join(
             open(
-                f"{self.workspace}/sandbox_common/service_cert.pem",
+                f"{self.workspace}/common/service_cert.pem",
                 "r",
                 encoding="utf-8",
             ).readlines()
@@ -798,7 +798,7 @@ def main(
 
         member0.activate_member()
 
-        member0.set_user(f"{workspace}/sandbox_common/user0_cert.pem")
+        member0.set_user(f"{workspace}/common/user0_cert.pem")
 
         member0.open_network()
 

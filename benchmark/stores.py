@@ -122,23 +122,10 @@ class LSKVStore(Store):
                 "w",
                 encoding="utf-8",
             ) as err:
-                package = "build/liblskv"
-                if self.config.enclave == "sgx":
-                    package += ".enclave.so.signed"
-                else:
-                    package += ".virtual.so"
-                bin_path = "sandbox.sh"
-                if shutil.which(bin_path) is None:
-                    bin_path = f"/opt/ccf_{self.config.enclave}/bin/sandbox.sh"
                 lskv_cmd = [
-                    bin_path,
-                    "--enclave-type",
+                    "benchmark/lskv_cluster.py",
+                    "--enclave",
                     "virtual" if self.config.enclave == "virtual" else "release",
-                    "--enclave-platform",
-                    self.config.enclave,
-                    "--package",
-                    package,
-                    "--verbose",
                     "--worker-threads",
                     str(self.config.worker_threads),
                     "--sig-tx-interval",
@@ -151,9 +138,9 @@ class LSKVStore(Store):
                     str(self.config.snapshot_tx_interval),
                     "--workspace",
                     self.workspace(),
+                    "--http-version",
+                    str(self.config.http_version)
                 ]
-                if self.config.http_version == 2:
-                    lskv_cmd.append("--http2")
 
                 for node in self.config.nodes:
                     lskv_cmd.append("--node")
@@ -172,19 +159,19 @@ class LSKVStore(Store):
         """
         Return the path to the CA certificate.
         """
-        return f"{self.workspace()}/sandbox_common/service_cert.pem"
+        return f"{self.workspace()}/common/service_cert.pem"
 
     def cert(self) -> str:
         """
         Return the path to the client certificate.
         """
-        return f"{self.workspace()}/sandbox_common/user0_cert.pem"
+        return f"{self.workspace()}/common/user0_cert.pem"
 
     def key(self) -> str:
         """
         Return the path to the key for the client certificate.
         """
-        return f"{self.workspace()}/sandbox_common/user0_privk.pem"
+        return f"{self.workspace()}/common/user0_privk.pem"
 
     def get_leader_address(self) -> str:
         """
