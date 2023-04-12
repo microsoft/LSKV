@@ -14,8 +14,8 @@
       "component": {
         "type": "git",
         "git": {
-          "repositoryUrl": "https://github.com/pingcap/go-ycsb",
-          "commitHash": "4d727a7e6c043fdda3e064476709ca7c672913c4"
+          "repositoryUrl": "https://github.com/jeffa5/go-ycsb",
+          "commitHash": "8d81c0f7548b61d7ef10bc205926fe36f83687d1"
         }
       }
     },
