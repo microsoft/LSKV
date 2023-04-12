@@ -165,7 +165,7 @@ class Runner:
             ]
 
         cmd_str = " ".join(cmd)
-        cmd_str = f"cd {self.node_dir()} && docker run --name {self.name()} -w /workspace --network host -v {self.node_dir()}:/workspace:ro {self.docker_image} {cmd_str} >out 2>err"
+        cmd_str = f"cd {self.node_dir()} && docker run --rm --name {self.name()} -w /workspace --network host -v {self.node_dir()}:/workspace:ro {self.docker_image} {cmd_str} >out 2>err"
 
         return cmd_str
 
