@@ -528,7 +528,7 @@ class Operator:
 
         runner.run(f"docker rm -f {node.name}")
 
-        docker_file = "/tmp/etcd-docker"
+        docker_file = "/tmp/lskv-docker"
         # make sure we have the image locally
         logger.info("Checking if image {} exists", self.image)
         res = subprocess.run(
