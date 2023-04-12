@@ -29,6 +29,7 @@ class YCSBConfig(common.Config):
     workload: str
     rate: int
     threads: int
+    serializable: bool
 
     def bench_name(self) -> str:
         """
@@ -66,6 +67,8 @@ class YCSBenchmark(common.Benchmark):
             "--interval",
             "1",
         ]
+        if self.config.serializable:
+            bench += ["--prop", "etcd.serializable_reads=true"]
         if self.config.tls:
             bench += [
                 "--prop",
@@ -170,6 +173,12 @@ def get_arguments():
         default=[],
         help="Threads to use in ycsb",
     )
+    parser.add_argument(
+        "--serializable",
+        action="store_true",
+        default=False,
+        help="Whether to use serializable reads",
+    )
 
     args = parser.parse_args()
 
@@ -225,6 +234,7 @@ def make_configurations(args: argparse.Namespace) -> List[YCSBConfig]:
                         workload=workload,
                         rate=rate,
                         threads=threads,
+                        serializable=args.serializable,
                     )
                     configs.append(conf)
 

@@ -203,6 +203,7 @@ export function get_single(i = 0, tag = "get_single") {
     }
     const payload = {
       key: key(i),
+      serializable: true,
     };
     const response = grpc_client.invoke("etcdserverpb.KV/Range", payload);
 
@@ -220,6 +221,7 @@ export function get_single(i = 0, tag = "get_single") {
   } else {
     let payload = JSON.stringify({
       key: key(i),
+      serializable: true,
     });
     let params = {
       headers: {
@@ -248,6 +250,7 @@ export function get_range(i = 0, tag = "get_range") {
   let payload = JSON.stringify({
     key: key(i),
     range_end: key(i + 1000),
+    serializable: true,
   });
   let params = {
     headers: {
@@ -271,6 +274,7 @@ export function delete_single(i = 0, tag = "delete_single") {
     }
     const payload = {
       key: key(i),
+      serializable: true,
     };
     const response = grpc_client.invoke("etcdserverpb.KV/DeleteRange", payload);
 
