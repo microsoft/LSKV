@@ -79,12 +79,12 @@ class Runner:
             ["docker", "image", "inspect", self.docker_image], stdout=subprocess.DEVNULL
         )
         if res.returncode:
-            logger.info("Pulling image {}", self.docker_image)
+            logger.info("[{}] Pulling image {}", self.address, self.docker_image)
             subprocess.run(["docker", "pull", self.docker_image], check=True)
         else:
-            logger.info("Image {} exists locally", self.docker_image)
+            logger.info("[{}] Image {} exists locally", self.address, self.docker_image)
         # save image to file
-        logger.info("Saving image {} to file {}", self.docker_image, docker_file)
+        logger.info("[{}] Saving image {} to file {}", self.address, self.docker_image, docker_file)
         subprocess.run(
             ["docker", "save", "-o", docker_file, self.docker_image], check=True
         )
