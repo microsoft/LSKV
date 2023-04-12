@@ -71,7 +71,7 @@ class Runner:
         """
         Copy files needed to run to the working directory.
         """
-        docker_file = "/tmp/etcd-docker"
+        docker_file = "/tmp/etcd-docker.tar.gz"
         # make sure we have the image locally
         logger.info("Checking if image {} exists", self.docker_image)
         res = subprocess.run(
@@ -90,7 +90,7 @@ class Runner:
             docker_file,
         )
         subprocess.run(
-            ["docker", "save", "-o", docker_file, self.docker_image], check=True
+            f"docker save {self.docker_image} | gzip > {docker_file}", check=True, shell=True,
         )
         # copy file over
         src = os.path.abspath(docker_file)

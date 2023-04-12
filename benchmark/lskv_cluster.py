@@ -528,7 +528,7 @@ class Operator:
 
         runner.run(f"docker rm -f {node.name}")
 
-        docker_file = "/tmp/lskv-docker"
+        docker_file = "/tmp/lskv-docker.tar.gz"
         # make sure we have the image locally
         logger.info("Checking if image {} exists", self.image)
         res = subprocess.run(
@@ -543,7 +543,9 @@ class Operator:
         logger.info(
             "[{}] Saving image {} to file {}", runner.address, self.image, docker_file
         )
-        subprocess.run(["docker", "save", "-o", docker_file, self.image], check=True)
+        subprocess.run(
+            f"docker save {self.image} | gzip > {docker_file}", check=True, shell=True,
+        )
         # copy file over
         src = os.path.abspath(docker_file)
         dst = os.path.join(node_dir, os.path.basename(docker_file))
