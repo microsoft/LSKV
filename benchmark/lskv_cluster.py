@@ -528,6 +528,29 @@ class Operator:
 
         runner.run(f"docker rm -f {node.name}")
 
+        docker_file = "/tmp/etcd-docker"
+        # make sure we have the image locally
+        logger.info("Checking if image {} exists", self.image)
+        res = subprocess.run(
+            ["docker", "image", "inspect", self.image], stdout=subprocess.DEVNULL
+        )
+        if res.returncode:
+            logger.info("[{}] Pulling image {}", runner.address, self.image)
+            subprocess.run(["docker", "pull", self.image], check=True)
+        else:
+            logger.info("[{}] Image {} exists locally", runner.address, self.image)
+        # save image to file
+        logger.info("[{}] Saving image {} to file {}", runner.address, self.image, docker_file)
+        subprocess.run(
+            ["docker", "save", "-o", docker_file, self.image], check=True
+        )
+        # copy file over
+        src = os.path.abspath(docker_file)
+        dst = os.path.join(node_dir, os.path.basename(docker_file))
+        runner.copy_file(src, dst)
+        # load docker image on other end
+        runner.run(f"docker load -i {dst}")
+
         cmd = [
             "docker",
             "run",
