@@ -37,6 +37,15 @@ def run(cmd: List[str], **kwargs) -> subprocess.CompletedProcess:
     return proc
 
 
+def spawn(cmd: str, **kwargs) -> subprocess.Popen:
+    """
+    Spawn a command.
+    """
+    logger.debug("Spawning command: {}", cmd)
+    proc = subprocess.Popen(cmd, shell=True, **kwargs)
+    return proc
+
+
 # pylint: disable=too-few-public-methods
 class Curl:
     """
@@ -133,6 +142,7 @@ class Node:
     # ip address of the first node to connect to
     first_ip: str
     ip_address: str
+    client_port: int
     worker_threads: int
     sig_tx_interval: int
     sig_ms_interval: int
@@ -140,10 +150,7 @@ class Node:
     snapshot_tx_interval: int
 
     def __post_init__(self):
-        base_client_port = 8000
-        base_peer_port = 8001
-        self.client_port = base_client_port + (2 * self.index)
-        self.peer_port = base_peer_port + (2 * self.index)
+        self.peer_port = self.client_port + 1
 
     def config(self):
         """
@@ -183,7 +190,7 @@ class Node:
                     }
                 },
             },
-            "node_certificate": {"subject_alt_names": ["iPAddress:127.0.0.1"]},
+            "node_certificate": {"subject_alt_names": [f"iPAddress:{self.ip_address}"]},
             "command": {
                 "type": "Start",
                 "service_certificate_file": "/app/certs/service_cert.pem",
@@ -244,7 +251,7 @@ class Node:
                     }
                 },
             },
-            "node_certificate": {"subject_alt_names": ["iPAddress:127.0.0.1"]},
+            "node_certificate": {"subject_alt_names": [f"iPAddress:{self.ip_address}"]},
             "command": {
                 "type": "Join",
                 "service_certificate_file": "/app/common/service_cert.pem",
@@ -287,36 +294,17 @@ class Operator:
         self.name = "lskv"
         self.nodes: List[Node] = []
         self.image = image
+        if enclave == "sgx":
+            self.image += "-sgx"
+        else:
+            self.image += "-virtual"
         self.enclave = enclave
         self.http_version = http_version
-        self.subnet_prefix = "172.20.5"
         self.worker_threads = worker_threads
         self.sig_tx_interval = sig_tx_interval
         self.sig_ms_interval = sig_ms_interval
         self.ledger_chunk_bytes = ledger_chunk_bytes
         self.snapshot_tx_interval = snapshot_tx_interval
-        self.create_network()
-
-    def create_network(self):
-        """
-        Create a Docker network for the nodes.
-        """
-        run(
-            [
-                "docker",
-                "network",
-                "create",
-                "--subnet",
-                f"{self.subnet_prefix}.0/16",
-                "lskv",
-            ]
-        )
-
-    def remove_network(self):
-        """
-        Remove the Docker network for the nodes.
-        """
-        run(["docker", "network", "rm", "lskv"])
 
     def make_name(self, i: int) -> str:
         """
@@ -337,7 +325,7 @@ class Operator:
                         "curl",
                         "--silent",
                         "-k",
-                        f"https://127.0.0.1:{node.client_port}/node/state",
+                        f"https://{node.ip_address}:{node.client_port}/node/state",
                     ]
                 )
                 status = json.loads(proc.stdout)["state"]
@@ -370,13 +358,15 @@ class Operator:
             json.dump(config, config_f)
         return config_file
 
-    def make_node(self) -> Node:
+    def make_node(self, address: str) -> Node:
         """
         Make a node.
         """
         i = len(self.nodes)
         first_ip = self.first_ip()
-        ip_address = f"{self.subnet_prefix}.{i+1}"
+        ip_address_port = address.split("://")[1].split(":")
+        ip_address = ip_address_port[0]
+        port = int(ip_address_port[1])
         return Node(
             i,
             name=self.make_name(i),
@@ -384,6 +374,7 @@ class Operator:
             http_version=self.http_version,
             first_ip=first_ip,
             ip_address=ip_address,
+            client_port=port,
             worker_threads=self.worker_threads,
             sig_tx_interval=self.sig_tx_interval,
             sig_ms_interval=self.sig_ms_interval,
@@ -399,29 +390,36 @@ class Operator:
             return self.nodes[0].ip_address
         return ""
 
-    def add_node(self):
+    def first_port(self) -> int:
+        """
+        Get the IP address of the first node.
+        """
+        if len(self.nodes) > 0:
+            return self.nodes[0].client_port
+        return 0
+
+    def add_node(self, address: str):
         """
         Add a node to the network.
         """
-        node = self.make_node()
+        node = self.make_node(address)
         node_dir = self.make_node_dir(node.name)
+        node_dir_abs = os.path.abspath(node_dir)
         config_file = self.make_node_config(node, node_dir)
         config_file_abs = os.path.abspath(config_file)
         common_dir_abs = os.path.abspath(os.path.join(self.workspace, "sandbox_common"))
         constitution_dir_abs = os.path.abspath("constitution")
+
+        run(["docker", "rm", "-f", node.name])
+
         cmd = [
             "docker",
             "run",
             "--network",
-            "lskv",
-            "--ip",
-            node.ip_address,
+            "host",
             "--rm",
-            "-d",
             "--name",
             node.name,
-            "-p",
-            f"{node.client_port}:{node.client_port}",
             "-v",
             f"{config_file_abs}:/app/config/config.json:ro",
             "-v",
@@ -438,11 +436,10 @@ class Operator:
                 "-v",
                 "/dev/sgx:/dev/sgx",
             ]
-            self.image += "-sgx"
-        else:
-            self.image += "-virtual"
         cmd.append(self.image)
-        run(cmd)
+        cmd_str = subprocess.list2cmdline(cmd)
+        cmd_str = f"cd {node_dir_abs} && {cmd_str} >out 2>err"
+        spawn(cmd_str)
         self.nodes.append(node)
         self.wait_node(node)
         logger.info("Added node {}", node)
@@ -455,21 +452,22 @@ class Operator:
         """
         List the nodes in the network.
         """
+        first_node = self.nodes[0]
         run(
             [
                 "curl",
-                "https://127.0.0.1:8000/node/network/nodes",
+                f"https://{first_node.ip_address}:{first_node.client_port}/node/network/nodes",
                 "--cacert",
                 f"{self.workspace}/sandbox_common/service_cert.pem",
             ]
         )
 
-    def add_nodes(self, num: int):
+    def add_nodes(self, addresses: List[str]):
         """
         Add multiple nodes to the network.
         """
-        for _ in range(num):
-            self.add_node()
+        for address in addresses:
+            self.add_node(address)
 
     def stop_all(self):
         """
@@ -477,7 +475,6 @@ class Operator:
         """
         for node in self.nodes:
             run(["docker", "rm", "-f", node.name])
-        self.remove_network()
 
     def setup_common(self):
         """
@@ -515,13 +512,13 @@ class Member:
     A governance member.
     """
 
-    def __init__(self, workspace: str, name: str):
+    def __init__(self, workspace: str, name: str, ip_address: str, port: int):
         self.workspace = workspace
         self.name = name
         self.public_key = f"{self.workspace}/sandbox_common/{name}_cert.pem"
         self.private_key = f"{self.workspace}/sandbox_common/{name}_privk.pem"
         self.curl = Curl(
-            "https://127.0.0.1:8000",
+            f"https://{ip_address}:{port}",
             f"{self.workspace}/sandbox_common/service_cert.pem",
             self.public_key,
             self.private_key,
@@ -620,7 +617,7 @@ class Member:
 # pylint: disable=too-many-arguments
 def main(
     workspace: str,
-    nodes: int,
+    nodes: List[str],
     enclave: str,
     image: str,
     http_version: int,
@@ -652,8 +649,7 @@ def main(
         operator.add_nodes(nodes)
 
         member0 = Member(
-            workspace,
-            "member0",
+            workspace, "member0", operator.first_ip(), operator.first_port()
         )
 
         member0.activate_member()
@@ -680,7 +676,13 @@ def main(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--workspace", type=str, default="workspace")
-    parser.add_argument("--nodes", type=int, default=1)
+    parser.add_argument(
+        "--node",
+        action="extend",
+        nargs="+",
+        type=str,
+        help="The nodes to launch in the form local://ip:port or ssh://ip:port",
+    )
     parser.add_argument("--enclave", type=str, default="virtual")
     parser.add_argument("--image", type=str, default="lskv:latest")
     parser.add_argument("--http-version", type=int, default="2")
@@ -692,10 +694,23 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    if not args.node:
+        parser.error("must have at least one node to run")
+
+    node_addresses_full = [n.split("://") for n in args.node]
+    prefixes = list({n[0] for n in node_addresses_full})
+    if len(prefixes) != 1:
+        parser.error("nodes should all have the same prefix")
+
+    node_addresses = [
+        (n[1].split(":")[0], int(n[1].split(":")[1])) for n in node_addresses_full
+    ]
+    logger.info("Made addresses {}", node_addresses)
+
     logger.info("Using arguments: {}", args)
     main(
         args.workspace,
-        args.nodes,
+        args.node,
         args.enclave,
         args.image,
         args.http_version,
