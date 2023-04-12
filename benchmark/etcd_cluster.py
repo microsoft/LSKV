@@ -198,7 +198,7 @@ class LocalRunner(Runner):
         os.makedirs(self.node_dir())
         self.setup_files()
         logger.info("[{}] Removing containers {}", self.address, self.name())
-        subprocess.run(["docker", "remove", "-f", self.name()], check=True)
+        subprocess.run(["docker", "rm", "-f", self.name()], check=True)
         cmd = self.cmd()
 
         logger.info("running etcd node: {}", cmd)
