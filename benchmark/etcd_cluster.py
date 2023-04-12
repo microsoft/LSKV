@@ -34,6 +34,7 @@ class Runner:
         scheme: str,
         workspace: str,
         initial_cluster: str,
+        docker_image: str,
     ):
         self.address = address
         self.port = port
@@ -41,6 +42,7 @@ class Runner:
         self.scheme = scheme
         self.workspace = workspace
         self.initial_cluster = initial_cluster
+        self.docker_image = docker_image
 
     def name(self) -> str:
         """
@@ -60,15 +62,38 @@ class Runner:
         """
         raise NotImplementedError("copy_file not implemented.")
 
+    def run(self, cmd: str):
+        """
+        Run a command.
+        """
+        raise NotImplementedError("run not implemented.")
+
     def setup_files(self):
         """
         Copy files needed to run to the working directory.
         """
-        # copy binary files to node dir
-        for file in ["bin/etcd"]:
-            src = os.path.abspath(file)
-            dst = os.path.join(self.node_dir(), os.path.basename(file))
-            self.copy_file(src, dst)
+        docker_file = "/tmp/etcd-docker"
+        # make sure we have the image locally
+        logger.info("Checking if image {} exists", self.docker_image)
+        res = subprocess.run(
+            ["docker", "image", "inspect", self.docker_image], stdout=subprocess.DEVNULL
+        )
+        if res.returncode:
+            logger.info("Pulling image {}", self.docker_image)
+            subprocess.run(["docker", "pull", self.docker_image], check=True)
+        else:
+            logger.info("Image {} exists locally", self.docker_image)
+        # save image to file
+        logger.info("Saving image {} to file {}", self.docker_image, docker_file)
+        subprocess.run(
+            ["docker", "save", "-o", docker_file, self.docker_image], check=True
+        )
+        # copy file over
+        src = os.path.abspath(docker_file)
+        dst = os.path.join(self.node_dir(), os.path.basename(docker_file))
+        self.copy_file(src, dst)
+        # load docker image on other end
+        self.run(f"docker load -i {dst}")
 
         ca_cert = "ca.pem"
         server_cert = "server.pem"
@@ -94,9 +119,9 @@ class Runner:
         metrics_port = client_port + 2
 
         cmd = [
-            "./etcd",
+            "etcd",
             "--data-dir",
-            "data",
+            "/data",
             "--listen-client-urls",
             f"{self.scheme}://{self.address}:{client_port}",
             "--advertise-client-urls",
@@ -140,7 +165,7 @@ class Runner:
             ]
 
         cmd_str = " ".join(cmd)
-        cmd_str = f"cd {self.node_dir()} && {cmd_str} > out 2> err"
+        cmd_str = f"cd {self.node_dir()} && docker run --name {self.name()} -w /workspace --network host -v {self.node_dir()}:/workspace:ro {self.docker_image} {cmd_str} >out 2>err"
 
         return cmd_str
 
@@ -161,6 +186,10 @@ class LocalRunner(Runner):
         logger.info("[{}] Copying file from {} to {}", self.address, src, dst)
         shutil.copy(src, dst)
 
+    def run(self, cmd: str):
+        logger.info("[{}] Running command '{}'", self.address, cmd)
+        subprocess.run(cmd, check=True, shell=True)
+
     def start(self):
         """
         Start a node, copying required files first.
@@ -168,6 +197,7 @@ class LocalRunner(Runner):
         shutil.rmtree(self.node_dir(), ignore_errors=True)
         os.makedirs(self.node_dir())
         self.setup_files()
+        subprocess.run(["docker", "remove", "-f", self.name()], check=True)
         cmd = self.cmd()
 
         logger.info("running etcd node: {}", cmd)
@@ -207,6 +237,11 @@ class RemoteRunner(Runner):
         self.session.put(src, dst)
         stat = os.stat(src)
         self.session.chmod(dst, stat.st_mode)
+
+    def run(self, cmd: str):
+        logger.info("[{}] Running command '{}'", self.address, cmd)
+        _, stdout, _ = self.client.exec_command(cmd)
+        stdout.channel.recv_exit_status()
 
     def start(self):
         """
@@ -292,6 +327,12 @@ def main():
     parser.add_argument(
         "--workspace", type=str, default="workspace", help="the workspace dir to use"
     )
+    parser.add_argument(
+        "--docker-image",
+        type=str,
+        default="gcr.io/etcd-development/etcd:v3.5.4",
+        help="Which docker image to use",
+    )
     args = parser.parse_args()
 
     if not args.node:
@@ -336,6 +377,7 @@ def main():
                     scheme=args.scheme,
                     workspace=args.workspace,
                     initial_cluster=initial_cluster,
+                    docker_image=args.docker_image,
                 )
             )
     elif prefixes[0] == "ssh":
@@ -349,6 +391,7 @@ def main():
                     scheme=args.scheme,
                     workspace=args.workspace,
                     initial_cluster=initial_cluster,
+                    docker_image=args.docker_image,
                 )
             )
     else:
