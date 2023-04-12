@@ -9,6 +9,7 @@ Run a cluster of lskv nodes.
 import argparse
 import json
 import os
+import shutil
 import signal
 import subprocess
 import tempfile
@@ -16,7 +17,99 @@ import time
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
+import paramiko
 from loguru import logger
+
+
+class Runner:
+    """
+    Class to manage running nodes.
+    """
+
+    address: str
+
+    def __init__(self, address: str):
+        self.address = address
+
+    def copy_file(self, _src: str, _dst: str):
+        """
+        Copy a file.
+        """
+        raise NotImplementedError("copy_file not implemented.")
+
+    def create_dir(self, _dst: str):
+        """
+        Copy a file.
+        """
+        raise NotImplementedError("create_dir not implemented.")
+
+    def run(self, cmd: str):
+        """
+        Run a command.
+        """
+        raise NotImplementedError("run not implemented.")
+
+
+class LocalRunner(Runner):
+    """
+    Run a local node.
+    """
+
+    def copy_file(self, src: str, dst: str):
+        """
+        Copy a file.
+        """
+        logger.info("[{}] Copying file from {} to {}", self.address, src, dst)
+        shutil.copy(src, dst)
+
+    def create_dir(self, dst:str):
+        """
+        Create a directory.
+        """
+        logger.info("[{}] Creating directory", self.address, dst)
+        os.makedirs(dst)
+
+    def run(self, cmd: str):
+        logger.info("[{}] Running command '{}'", self.address, cmd)
+        subprocess.run(cmd, check=True, shell=True)
+
+
+class RemoteRunner(Runner):
+    """
+    Run a node on a remote machine.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(self.address)
+
+        self.client = client
+
+        self.session = self.client.open_sftp()
+
+    def copy_file(self, src: str, dst: str):
+        """
+        Copy a file.
+        """
+        logger.info("[{}] Copying file from {} to {}", self.address, src, dst)
+        self.session.put(src, dst)
+        stat = os.stat(src)
+        self.session.chmod(dst, stat.st_mode)
+
+    def create_dir(self, dst: str):
+        """
+        Create a directory.
+        """
+        logger.info("[{}] Creating directory", self.address, dst)
+        _, stdout, _ = self.client.exec_command(f"mkdir -p {dst}")
+        stdout.channel.recv_exit_status()
+
+    def run(self, cmd: str):
+        logger.info("[{}] Running command '{}'", self.address, cmd)
+        _, stdout, _ = self.client.exec_command(cmd)
+        stdout.channel.recv_exit_status()
 
 
 def run(cmd: List[str], **kwargs) -> subprocess.CompletedProcess:
@@ -398,7 +491,7 @@ class Operator:
             return self.nodes[0].client_port
         return 0
 
-    def add_node(self, address: str):
+    def add_node(self, address: str, runner: Runner):
         """
         Add a node to the network.
         """
@@ -407,8 +500,22 @@ class Operator:
         node_dir_abs = os.path.abspath(node_dir)
         config_file = self.make_node_config(node, node_dir)
         config_file_abs = os.path.abspath(config_file)
-        common_dir_abs = os.path.abspath(os.path.join(self.workspace, "sandbox_common"))
-        constitution_dir_abs = os.path.abspath("constitution")
+
+        runner.create_dir(os.path.join(node_dir, "common"))
+        for file in ["member0_cert.pem", "member0_enc_pubk.pem"] + (
+            ["service_cert.pem"] if self.nodes else []
+        ):
+            src = os.path.join(self.workspace, "sandbox_common", file)
+            dst = os.path.join(node_dir, "common", os.path.basename(file))
+            runner.copy_file(src, dst)
+        common_dir_abs = os.path.join(node_dir_abs, "common")
+
+        runner.create_dir(os.path.join(node_dir, "constitution"))
+        for file in ["actions.js", "apply.js", "resolve.js", "validate.js"]:
+            src = os.path.join("constitution", file)
+            dst = os.path.join(node_dir, "constitution", os.path.basename(file))
+            runner.copy_file(src, dst)
+        constitution_dir_abs = os.path.join(node_dir_abs, "constitution")
 
         run(["docker", "rm", "-f", node.name])
 
@@ -424,9 +531,13 @@ class Operator:
             f"{config_file_abs}:/app/config/config.json:ro",
             "-v",
             f"{common_dir_abs}:/app/common:ro",
-            "-v",
-            f"{constitution_dir_abs}:/app/constitution:ro",
         ]
+        if not self.nodes:
+            cmd += [
+                "-v",
+                f"{constitution_dir_abs}:/app/constitution:ro",
+            ]
+
         if self.enclave == "sgx":
             cmd += [
                 "--device",
@@ -462,12 +573,12 @@ class Operator:
             ]
         )
 
-    def add_nodes(self, addresses: List[str]):
+    def add_nodes(self, addresses: List[str], runners: List[Runner]):
         """
         Add multiple nodes to the network.
         """
-        for address in addresses:
-            self.add_node(address)
+        for (address, runner) in zip(addresses, runners):
+            self.add_node(address, runner)
 
     def stop_all(self):
         """
@@ -626,6 +737,7 @@ def main(
     sig_ms_interval: int,
     ledger_chunk_bytes: str,
     snapshot_tx_interval: int,
+    runners: List[Runner],
 ):
     """
     Main entry point.
@@ -646,7 +758,7 @@ def main(
     )
     try:
         operator.setup_common()
-        operator.add_nodes(nodes)
+        operator.add_nodes(nodes, runners)
 
         member0 = Member(
             workspace, "member0", operator.first_ip(), operator.first_port()
@@ -707,6 +819,15 @@ if __name__ == "__main__":
     ]
     logger.info("Made addresses {}", node_addresses)
 
+    if prefixes[0] == "local":
+        logger.info("Using local")
+        runners = [LocalRunner(f"{ip}:{port}") for (ip, port) in node_addresses]
+    elif prefixes[0] == "ssh":
+        logger.info("Using ssh")
+        runners = [RemoteRunner(f"{ip}:{port}") for (ip, port) in node_addresses]
+    else:
+        parser.error("Found unexpected prefix")
+
     logger.info("Using arguments: {}", args)
     main(
         args.workspace,
@@ -719,4 +840,5 @@ if __name__ == "__main__":
         args.sig_ms_interval,
         args.ledger_chunk_bytes,
         args.snapshot_tx_interval,
+        runners,
     )
