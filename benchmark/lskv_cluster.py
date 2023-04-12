@@ -89,11 +89,11 @@ class RemoteRunner(Runner):
     Run a node on a remote machine.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, username: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(self.address)
+        client.connect(self.address, username=username)
 
         self.client = client
 
@@ -540,10 +540,10 @@ class Operator:
         else:
             logger.info("[{}] Image {} exists locally", runner.address, self.image)
         # save image to file
-        logger.info("[{}] Saving image {} to file {}", runner.address, self.image, docker_file)
-        subprocess.run(
-            ["docker", "save", "-o", docker_file, self.image], check=True
+        logger.info(
+            "[{}] Saving image {} to file {}", runner.address, self.image, docker_file
         )
+        subprocess.run(["docker", "save", "-o", docker_file, self.image], check=True)
         # copy file over
         src = os.path.abspath(docker_file)
         dst = os.path.join(node_dir, os.path.basename(docker_file))
@@ -836,6 +836,8 @@ if __name__ == "__main__":
     parser.add_argument("--ledger-chunk-bytes", type=str, default="5MB")
     parser.add_argument("--snapshot-tx-interval", type=int, default="10000")
 
+    parser.add_argument("--ssh-user", type=str, default="")
+
     args = parser.parse_args()
 
     if not args.node:
@@ -856,7 +858,9 @@ if __name__ == "__main__":
         runners = [LocalRunner(f"{ip}:{port}") for (ip, port) in node_addresses]
     elif prefixes[0] == "ssh":
         logger.info("Using ssh")
-        runners = [RemoteRunner(f"{ip}:{port}") for (ip, port) in node_addresses]
+        runners = [
+            RemoteRunner(args.ssh_user, f"{ip}:{port}") for (ip, port) in node_addresses
+        ]
     else:
         parser.error("Found unexpected prefix")
 

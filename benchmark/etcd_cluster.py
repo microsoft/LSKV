@@ -14,10 +14,9 @@ import signal
 import subprocess
 from typing import List, Tuple
 
+import certs
 import paramiko
 from loguru import logger
-
-import certs
 
 
 class Runner:
@@ -84,7 +83,12 @@ class Runner:
         else:
             logger.info("[{}] Image {} exists locally", self.address, self.docker_image)
         # save image to file
-        logger.info("[{}] Saving image {} to file {}", self.address, self.docker_image, docker_file)
+        logger.info(
+            "[{}] Saving image {} to file {}",
+            self.address,
+            self.docker_image,
+            docker_file,
+        )
         subprocess.run(
             ["docker", "save", "-o", docker_file, self.docker_image], check=True
         )
@@ -220,11 +224,11 @@ class RemoteRunner(Runner):
     Run a node on a remote machine.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, username: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(self.address)
+        client.connect(self.address, username=username)
 
         self.client = client
 
@@ -334,6 +338,11 @@ def main():
         default="gcr.io/etcd-development/etcd:v3.5.4",
         help="Which docker image to use",
     )
+    parser.add_argument(
+        "--ssh-user",
+        type=str,
+        default="",
+    )
     args = parser.parse_args()
 
     if not args.node:
@@ -386,6 +395,7 @@ def main():
         for i, (ip_addr, port) in enumerate(node_addresses):
             nodes.append(
                 RemoteRunner(
+                    username=args.ssh_user,
                     address=ip_addr,
                     port=port,
                     node_index=i,
