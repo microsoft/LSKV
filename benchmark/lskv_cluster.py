@@ -49,6 +49,12 @@ class Runner:
         """
         raise NotImplementedError("run not implemented.")
 
+    def spawn(self, cmd: str):
+        """
+        Spawn a command.
+        """
+        raise NotImplementedError("spawn not implemented.")
+
 
 class LocalRunner(Runner):
     """
@@ -62,7 +68,7 @@ class LocalRunner(Runner):
         logger.info("[{}] Copying file from {} to {}", self.address, src, dst)
         shutil.copy(src, dst)
 
-    def create_dir(self, dst:str):
+    def create_dir(self, dst: str):
         """
         Create a directory.
         """
@@ -72,6 +78,10 @@ class LocalRunner(Runner):
     def run(self, cmd: str):
         logger.info("[{}] Running command '{}'", self.address, cmd)
         subprocess.run(cmd, check=True, shell=True)
+
+    def spawn(self, cmd: str):
+        logger.info("[{}] Spawning command '{}'", self.address, cmd)
+        subprocess.Popen(cmd, shell=True)
 
 
 class RemoteRunner(Runner):
@@ -111,6 +121,10 @@ class RemoteRunner(Runner):
         _, stdout, _ = self.client.exec_command(cmd)
         stdout.channel.recv_exit_status()
 
+    def spawn(self, cmd: str):
+        logger.info("[{}] Spawning command '{}'", self.address, cmd)
+        self.client.exec_command(cmd)
+
 
 def run(cmd: List[str], **kwargs) -> subprocess.CompletedProcess:
     """
@@ -127,15 +141,6 @@ def run(cmd: List[str], **kwargs) -> subprocess.CompletedProcess:
     if proc.stderr:
         logger.debug("stderr: {}", proc.stderr)
     proc.check_returncode()
-    return proc
-
-
-def spawn(cmd: str, **kwargs) -> subprocess.Popen:
-    """
-    Spawn a command.
-    """
-    logger.debug("Spawning command: {}", cmd)
-    proc = subprocess.Popen(cmd, shell=True, **kwargs)
     return proc
 
 
@@ -241,6 +246,9 @@ class Node:
     sig_ms_interval: int
     ledger_chunk_bytes: str
     snapshot_tx_interval: int
+
+    # to be able to work with it
+    runner: Runner
 
     def __post_init__(self):
         self.peer_port = self.client_port + 1
@@ -431,12 +439,12 @@ class Operator:
             time.sleep(1)
         raise RuntimeError("Failed to wait for node to be ready")
 
-    def make_node_dir(self, name: str) -> str:
+    def make_node_dir(self, name: str, runner: Runner) -> str:
         """
         Make a directory for a node's config.
         """
         node_dir = os.path.join(self.workspace, name)
-        run(["mkdir", "-p", node_dir])
+        runner.create_dir(node_dir)
         return node_dir
 
     def make_node_config(self, node: Node, node_dir: str) -> str:
@@ -451,7 +459,7 @@ class Operator:
             json.dump(config, config_f)
         return config_file
 
-    def make_node(self, address: str) -> Node:
+    def make_node(self, address: str, runner: Runner) -> Node:
         """
         Make a node.
         """
@@ -473,6 +481,7 @@ class Operator:
             sig_ms_interval=self.sig_ms_interval,
             ledger_chunk_bytes=self.ledger_chunk_bytes,
             snapshot_tx_interval=self.snapshot_tx_interval,
+            runner=runner,
         )
 
     def first_ip(self) -> str:
@@ -495,8 +504,8 @@ class Operator:
         """
         Add a node to the network.
         """
-        node = self.make_node(address)
-        node_dir = self.make_node_dir(node.name)
+        node = self.make_node(address, runner)
+        node_dir = self.make_node_dir(node.name, node.runner)
         node_dir_abs = os.path.abspath(node_dir)
         config_file = self.make_node_config(node, node_dir)
         config_file_abs = os.path.abspath(config_file)
@@ -517,7 +526,7 @@ class Operator:
             runner.copy_file(src, dst)
         constitution_dir_abs = os.path.join(node_dir_abs, "constitution")
 
-        run(["docker", "rm", "-f", node.name])
+        runner.run(f"docker rm -f {node.name}")
 
         cmd = [
             "docker",
@@ -550,7 +559,7 @@ class Operator:
         cmd.append(self.image)
         cmd_str = subprocess.list2cmdline(cmd)
         cmd_str = f"cd {node_dir_abs} && {cmd_str} >out 2>err"
-        spawn(cmd_str)
+        runner.spawn(cmd_str)
         self.nodes.append(node)
         self.wait_node(node)
         logger.info("Added node {}", node)
@@ -585,7 +594,7 @@ class Operator:
         Stop all nodes in the network and remove the network.
         """
         for node in self.nodes:
-            run(["docker", "rm", "-f", node.name])
+            node.runner.run(f"docker rm -f {node.name}")
 
     def setup_common(self):
         """
