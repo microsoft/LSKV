@@ -197,6 +197,7 @@ class LocalRunner(Runner):
         shutil.rmtree(self.node_dir(), ignore_errors=True)
         os.makedirs(self.node_dir())
         self.setup_files()
+        logger.info("[{}] Removing containers {}", self.address, self.name())
         subprocess.run(["docker", "remove", "-f", self.name()], check=True)
         cmd = self.cmd()
 
