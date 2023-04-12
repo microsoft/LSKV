@@ -112,7 +112,7 @@ class RemoteRunner(Runner):
         """
         Create a directory.
         """
-        logger.info("[{}] Creating directory", self.address, dst)
+        logger.info("[{}] Creating directory {}", self.address, dst)
         _, stdout, _ = self.client.exec_command(f"mkdir -p {dst}")
         stdout.channel.recv_exit_status()
 
@@ -445,6 +445,7 @@ class Operator:
         """
         node_dir = os.path.join(self.workspace, name)
         runner.create_dir(node_dir)
+        os.makedirs(node_dir)
         return node_dir
 
     def make_node_config(self, node: Node, node_dir: str) -> str:
@@ -861,7 +862,7 @@ if __name__ == "__main__":
     elif prefixes[0] == "ssh":
         logger.info("Using ssh")
         runners = [
-            RemoteRunner(args.ssh_user, f"{ip}:{port}") for (ip, port) in node_addresses
+            RemoteRunner(args.ssh_user, ip) for (ip, _port) in node_addresses
         ]
     else:
         parser.error("Found unexpected prefix")
