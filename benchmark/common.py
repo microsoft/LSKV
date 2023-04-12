@@ -49,6 +49,7 @@ class Config:
     ledger_chunk_bytes: str
     snapshot_tx_interval: int
     http_version: int
+    repeat: int
 
     def bench_name(self) -> str:
         """
@@ -290,6 +291,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--sig-ms-intervals", action="extend", nargs="+", type=int)
     parser.add_argument("--ledger-chunk-bytes", action="extend", nargs="+", type=str)
     parser.add_argument("--snapshot-tx-intervals", action="extend", nargs="+", type=int)
+    parser.add_argument("--repeats", type=int)
     return parser
 
 
@@ -355,15 +357,33 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
     """
     configs = []
     # pylint: disable=too-many-nested-blocks
-    if args.etcd:
-        if args.insecure:
-            logger.debug("adding insecure etcd")
+    for repeat in range(1, args.repeats+1):
+        if args.etcd:
+            if args.insecure:
+                logger.debug("adding insecure etcd")
+                etcd_config = Config(
+                    store="etcd",
+                    tls=False,
+                    enclave="virtual",
+                    nodes=args.nodes,
+                    http_version=2,
+                    repeat=repeat,
+                    worker_threads=0,
+                    sig_tx_interval=0,
+                    sig_ms_interval=0,
+                    ledger_chunk_bytes="",
+                    snapshot_tx_interval=0,
+                )
+                configs.append(etcd_config)
+
+            logger.debug("adding tls etcd")
             etcd_config = Config(
                 store="etcd",
-                tls=False,
+                tls=True,
                 enclave="virtual",
                 nodes=args.nodes,
                 http_version=2,
+                repeat=repeat,
                 worker_threads=0,
                 sig_tx_interval=0,
                 sig_ms_interval=0,
@@ -372,75 +392,61 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
             )
             configs.append(etcd_config)
 
-        logger.debug("adding tls etcd")
-        etcd_config = Config(
-            store="etcd",
-            tls=True,
-            enclave="virtual",
-            nodes=args.nodes,
-            http_version=2,
-            worker_threads=0,
-            sig_tx_interval=0,
-            sig_ms_interval=0,
-            ledger_chunk_bytes="",
-            snapshot_tx_interval=0,
-        )
-        configs.append(etcd_config)
+        # pylint: disable=too-many-nested-blocks
+        for worker_threads in args.worker_threads:
+            logger.debug("adding worker threads: {}", worker_threads)
+            for sig_tx_interval in args.sig_tx_intervals:
+                logger.debug("adding sig_tx_interval: {}", sig_tx_interval)
+                for sig_ms_interval in args.sig_ms_intervals:
+                    logger.debug("adding sig_ms_interval: {}", sig_ms_interval)
+                    for ledger_chunk_bytes in args.ledger_chunk_bytes:
+                        logger.debug("adding ledger_chunk_bytes: {}", ledger_chunk_bytes)
+                        for snapshot_tx_interval in args.snapshot_tx_intervals:
+                            logger.debug(
+                                "adding snapshot_tx_interval: {}", snapshot_tx_interval
+                            )
+                            lskv_config = Config(
+                                store="lskv",
+                                tls=True,
+                                enclave="virtual",
+                                nodes=args.nodes,
+                                http_version=1,
+                                repeat=repeat,
+                                worker_threads=worker_threads,
+                                sig_tx_interval=sig_tx_interval,
+                                sig_ms_interval=sig_ms_interval,
+                                ledger_chunk_bytes=ledger_chunk_bytes,
+                                snapshot_tx_interval=snapshot_tx_interval,
+                            )
+                            if "virtual" in args.enclave:
+                                lskv_config = copy.deepcopy(lskv_config)
+                                logger.debug("adding virtual lskv")
+                                if args.http1:
+                                    lskv_config = copy.deepcopy(lskv_config)
+                                    lskv_config.http_version = 1
+                                    logger.debug("adding http1 lskv")
+                                    configs.append(lskv_config)
+                                if args.http2:
+                                    lskv_config = copy.deepcopy(lskv_config)
+                                    lskv_config.http_version = 2
+                                    logger.debug("adding http2 lskv")
+                                    configs.append(lskv_config)
 
-    # pylint: disable=too-many-nested-blocks
-    for worker_threads in args.worker_threads:
-        logger.debug("adding worker threads: {}", worker_threads)
-        for sig_tx_interval in args.sig_tx_intervals:
-            logger.debug("adding sig_tx_interval: {}", sig_tx_interval)
-            for sig_ms_interval in args.sig_ms_intervals:
-                logger.debug("adding sig_ms_interval: {}", sig_ms_interval)
-                for ledger_chunk_bytes in args.ledger_chunk_bytes:
-                    logger.debug("adding ledger_chunk_bytes: {}", ledger_chunk_bytes)
-                    for snapshot_tx_interval in args.snapshot_tx_intervals:
-                        logger.debug(
-                            "adding snapshot_tx_interval: {}", snapshot_tx_interval
-                        )
-                        lskv_config = Config(
-                            store="lskv",
-                            tls=True,
-                            enclave="virtual",
-                            nodes=args.nodes,
-                            http_version=1,
-                            worker_threads=worker_threads,
-                            sig_tx_interval=sig_tx_interval,
-                            sig_ms_interval=sig_ms_interval,
-                            ledger_chunk_bytes=ledger_chunk_bytes,
-                            snapshot_tx_interval=snapshot_tx_interval,
-                        )
-                        if "virtual" in args.enclave:
-                            lskv_config = copy.deepcopy(lskv_config)
-                            logger.debug("adding virtual lskv")
-                            if args.http1:
+                            # sgx
+                            if "sgx" in args.enclave:
+                                logger.debug("adding sgx lskv")
                                 lskv_config = copy.deepcopy(lskv_config)
-                                lskv_config.http_version = 1
-                                logger.debug("adding http1 lskv")
-                                configs.append(lskv_config)
-                            if args.http2:
-                                lskv_config = copy.deepcopy(lskv_config)
-                                lskv_config.http_version = 2
-                                logger.debug("adding http2 lskv")
-                                configs.append(lskv_config)
-
-                        # sgx
-                        if "sgx" in args.enclave:
-                            logger.debug("adding sgx lskv")
-                            lskv_config = copy.deepcopy(lskv_config)
-                            lskv_config.enclave = "sgx"
-                            if args.http1:
-                                lskv_config = copy.deepcopy(lskv_config)
-                                lskv_config.http_version = 1
-                                logger.debug("adding http1 lskv")
-                                configs.append(lskv_config)
-                            if args.http2:
-                                lskv_config = copy.deepcopy(lskv_config)
-                                lskv_config.http_version = 2
-                                logger.debug("adding http2 lskv")
-                                configs.append(lskv_config)
+                                lskv_config.enclave = "sgx"
+                                if args.http1:
+                                    lskv_config = copy.deepcopy(lskv_config)
+                                    lskv_config.http_version = 1
+                                    logger.debug("adding http1 lskv")
+                                    configs.append(lskv_config)
+                                if args.http2:
+                                    lskv_config = copy.deepcopy(lskv_config)
+                                    lskv_config.http_version = 2
+                                    logger.debug("adding http2 lskv")
+                                    configs.append(lskv_config)
 
     return configs
 
