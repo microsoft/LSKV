@@ -73,7 +73,7 @@ class LocalRunner(Runner):
         Create a directory.
         """
         logger.info("[{}] Creating directory", self.address, dst)
-        os.makedirs(dst)
+        os.makedirs(dst, exist_ok=True)
 
     def run(self, cmd: str):
         logger.info("[{}] Running command '{}'", self.address, cmd)
@@ -445,7 +445,7 @@ class Operator:
         """
         node_dir = os.path.join(self.workspace, name)
         runner.create_dir(node_dir)
-        os.makedirs(node_dir)
+        os.makedirs(node_dir, exist_ok=True)
         return node_dir
 
     def make_node_config(self, node: Node, node_dir: str) -> str:
@@ -619,7 +619,9 @@ class Operator:
         """
         Stop all nodes in the network and remove the network.
         """
+        logger.info("Stopping all nodes")
         for node in self.nodes:
+            logger.info("Stopping {}", node.name)
             node.runner.run(f"docker rm -f {node.name}")
 
     def setup_common(self):
