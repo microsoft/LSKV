@@ -50,8 +50,8 @@ class YCSBenchmark(common.Benchmark):
         """
         Make a core ycsb command.
         """
-        write_endpoints = f"{self.config.scheme()}://{store.get_leader_address()}",
-        read_endpoints = store.config.get_node_addresses()
+        write_endpoints = f"{self.config.scheme()}://{store.get_leader_address()}"
+        read_endpoints = ",".join(store.config.get_node_addresses())
         bench = [
             "bin/go-ycsb",
             subcmd,
