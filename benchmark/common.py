@@ -84,7 +84,7 @@ class Config:
         """
         Return the address of all nodes.
         """
-        return [f"{self.scheme()}://{n.split("://")[-1]}" for n in self.nodes]
+        return [f"{self.scheme()}://{n.split('://')[-1]}" for n in self.nodes]
 
     def to_str(self) -> str:
         """
