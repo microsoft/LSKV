@@ -125,7 +125,7 @@ class LSKVStore(Store):
                 lskv_cmd = [
                     "benchmark/lskv_cluster.py",
                     "--enclave",
-                    "virtual" if self.config.enclave == "virtual" else "release",
+                    self.config.enclave,
                     "--worker-threads",
                     str(self.config.worker_threads),
                     "--sig-tx-interval",
@@ -139,7 +139,7 @@ class LSKVStore(Store):
                     "--workspace",
                     self.workspace(),
                     "--http-version",
-                    str(self.config.http_version)
+                    str(self.config.http_version),
                 ]
 
                 for node in self.config.nodes:
