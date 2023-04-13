@@ -40,6 +40,7 @@ def etcd_configurations(_args: argparse.Namespace) -> List[etcd.EtcdConfig]:
                 snapshot_tx_interval=10000,
                 http_version=2,
                 repeat=repeat,
+                tmpfs=True,
                 rate=10000,
                 bench_args=["txn-mixed", "benchme0000", "benchme1000"],
                 clients=100,
@@ -76,6 +77,7 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                     snapshot_tx_interval=10000,
                     http_version=2,
                     repeat=repeat,
+                    tmpfs=True,
                     serializable=True,
                     rate=10000,
                     workload=f"workload{workload}",
@@ -96,6 +98,7 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                     snapshot_tx_interval=10000,
                     http_version=2,
                     repeat=repeat,
+                    tmpfs=True,
                     serializable=True,
                     rate=10000,
                     workload=f"workload{workload}",
@@ -116,6 +119,7 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                     snapshot_tx_interval=10000,
                     http_version=2,
                     repeat=repeat,
+                    tmpfs=True,
                     serializable=True,
                     rate=10000,
                     workload=f"workload{workload}",
@@ -164,6 +168,7 @@ def k6_configurations(_args: argparse.Namespace) -> List[k6.K6Config]:
                     snapshot_tx_interval=10000,
                     http_version=http_version,
                     repeat=repeat,
+                    tmpfs=True,
                     rate=10000,
                     vus=100,
                     func="mixed_single",
@@ -186,6 +191,7 @@ def k6_configurations(_args: argparse.Namespace) -> List[k6.K6Config]:
                     snapshot_tx_interval=10000,
                     http_version=2,
                     repeat=repeat,
+                    tmpfs=True,
                     rate=10000,
                     vus=100,
                     func="mixed_single",
@@ -208,6 +214,7 @@ def k6_configurations(_args: argparse.Namespace) -> List[k6.K6Config]:
                     snapshot_tx_interval=10000,
                     http_version=2,
                     repeat=repeat,
+                    tmpfs=True,
                     rate=10000,
                     vus=100,
                     func="mixed_single",
@@ -230,6 +237,7 @@ def k6_configurations(_args: argparse.Namespace) -> List[k6.K6Config]:
                     snapshot_tx_interval=10000,
                     http_version=2,
                     repeat=repeat,
+                    tmpfs=True,
                     rate=10000,
                     vus=100,
                     func="mixed_single",
@@ -244,8 +252,8 @@ def k6_configurations(_args: argparse.Namespace) -> List[k6.K6Config]:
 
 
 if __name__ == "__main__":
-    logger.info("Running etcd")
-    common.main("etcd", etcd.get_arguments, etcd_configurations, etcd.execute_config)
+    # logger.info("Running etcd")
+    # common.main("etcd", etcd.get_arguments, etcd_configurations, etcd.execute_config)
     logger.info("Running ycsb")
     common.main("ycsb", ycsb.get_arguments, ycsb_configurations, ycsb.execute_config)
     # logger.info("Running perf")

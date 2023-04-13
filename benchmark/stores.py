@@ -37,6 +37,8 @@ class EtcdStore(Store):
                     "--workspace",
                     self.workspace(),
                 ]
+                if self.config.tmpfs:
+                    etcd_cmd.append("--tmpfs")
                 for node in self.config.nodes:
                     etcd_cmd.append("--node")
                     etcd_cmd.append(node)

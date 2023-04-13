@@ -50,6 +50,7 @@ class Config:
     snapshot_tx_interval: int
     http_version: int
     repeat: int
+    tmpfs: bool
 
     def bench_name(self) -> str:
         """
@@ -343,7 +344,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
     """
     configs = []
     # pylint: disable=too-many-nested-blocks
-    for repeat in range(1, args.repeats+1):
+    for repeat in range(1, args.repeats + 1):
         if args.etcd:
             if args.insecure:
                 logger.debug("adding insecure etcd")
@@ -354,6 +355,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                     nodes=args.nodes,
                     http_version=2,
                     repeat=repeat,
+                    tmpfs=True,
                     worker_threads=0,
                     sig_tx_interval=0,
                     sig_ms_interval=0,
@@ -370,6 +372,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                 nodes=args.nodes,
                 http_version=2,
                 repeat=repeat,
+                tmpfs=True,
                 worker_threads=0,
                 sig_tx_interval=0,
                 sig_ms_interval=0,
@@ -386,7 +389,9 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                 for sig_ms_interval in args.sig_ms_intervals:
                     logger.debug("adding sig_ms_interval: {}", sig_ms_interval)
                     for ledger_chunk_bytes in args.ledger_chunk_bytes:
-                        logger.debug("adding ledger_chunk_bytes: {}", ledger_chunk_bytes)
+                        logger.debug(
+                            "adding ledger_chunk_bytes: {}", ledger_chunk_bytes
+                        )
                         for snapshot_tx_interval in args.snapshot_tx_intervals:
                             logger.debug(
                                 "adding snapshot_tx_interval: {}", snapshot_tx_interval
@@ -398,6 +403,7 @@ def make_common_configurations(args: argparse.Namespace) -> List[Config]:
                                 nodes=args.nodes,
                                 http_version=1,
                                 repeat=repeat,
+                                tmpfs=True,
                                 worker_threads=worker_threads,
                                 sig_tx_interval=sig_tx_interval,
                                 sig_ms_interval=sig_ms_interval,
