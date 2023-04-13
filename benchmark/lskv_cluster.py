@@ -531,25 +531,8 @@ class Operator:
 
         runner.run(f"docker rm -f {node.name}")
 
-        docker_file = "/tmp/lskv-docker.tar.gz"
-        # make sure we have the image locally
-        logger.info("Checking if image {} exists", self.image)
-        res = subprocess.run(
-            ["docker", "image", "inspect", self.image], stdout=subprocess.DEVNULL
-        )
-        if res.returncode:
-            logger.info("[{}] Pulling image {}", runner.address, self.image)
-            subprocess.run(["docker", "pull", self.image], check=True)
-        else:
-            logger.info("[{}] Image {} exists locally", runner.address, self.image)
-        # save image to file
-        logger.info(
-            "[{}] Saving image {} to file {}", runner.address, self.image, docker_file
-        )
-        subprocess.run(
-            f"docker save {self.image} | gzip > {docker_file}", check=True, shell=True,
-        )
         # copy file over
+        docker_file = os.path.join(self.workspace, "common", "lskv-docker.tar.gz")
         src = os.path.abspath(docker_file)
         dst = os.path.join(node_dir, os.path.basename(docker_file))
         runner.copy_file(src, dst)
@@ -644,6 +627,25 @@ class Operator:
         run(
             ["keygenerator.sh", "--name", "user0"],
             cwd=common_dir,
+        )
+
+        docker_file = os.path.join(self.workspace, "common", "lskv-docker.tar.gz")
+        # make sure we have the image locally
+        logger.info("Checking if image {} exists", self.image)
+        res = subprocess.run(
+            ["docker", "image", "inspect", self.image], stdout=subprocess.DEVNULL
+        )
+        if res.returncode:
+            logger.info("Pulling image {}", self.image)
+            subprocess.run(["docker", "pull", self.image], check=True)
+        else:
+            logger.info("Image {} exists locally", self.image)
+        # save image to file
+        logger.info("Saving image {} to file {}", self.image, docker_file)
+        subprocess.run(
+            f"docker save {self.image} | gzip > {docker_file}",
+            check=True,
+            shell=True,
         )
 
     def copy_certs(self):
@@ -865,9 +867,7 @@ if __name__ == "__main__":
         runners = [LocalRunner(f"{ip}:{port}") for (ip, port) in node_addresses]
     elif prefixes[0] == "ssh":
         logger.info("Using ssh")
-        runners = [
-            RemoteRunner(args.ssh_user, ip) for (ip, _port) in node_addresses
-        ]
+        runners = [RemoteRunner(args.ssh_user, ip) for (ip, _port) in node_addresses]
     else:
         parser.error("Found unexpected prefix")
 

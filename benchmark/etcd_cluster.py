@@ -70,11 +70,15 @@ class Runner:
         """
         raise NotImplementedError("run not implemented.")
 
-    def setup_files(self):
+    def setup_common(self):
         """
-        Copy files needed to run to the working directory.
+        Set up common files.
         """
-        docker_file = "/tmp/etcd-docker.tar.gz"
+
+        common_dir = os.path.join(self.workspace, "common")
+        subprocess.run(["mkdir", "-p", common_dir], check=True)
+
+        docker_file = os.path.join(common_dir, "etcd-docker.tar.gz")
         # make sure we have the image locally
         logger.info("Checking if image {} exists", self.docker_image)
         res = subprocess.run(
@@ -97,7 +101,13 @@ class Runner:
             check=True,
             shell=True,
         )
+
+    def setup_files(self):
+        """
+        Copy files needed to run to the working directory.
+        """
         # copy file over
+        docker_file = os.path.join(self.workspace, "common", "etcd-docker.tar.gz")
         src = os.path.abspath(docker_file)
         dst = os.path.join(self.node_dir(), os.path.basename(docker_file))
         self.copy_file(src, dst)
@@ -425,6 +435,7 @@ def main():
         generate_certs(args.workspace, node_addresses)
 
     try:
+        nodes[0].setup_common()
         for i, node in enumerate(nodes):
             logger.info("spawning node {}: {}", i, node.address, node.port)
             node.start()
