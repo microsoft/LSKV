@@ -2,14 +2,14 @@
 # Licensed under the MIT License.
 
 # Build
-FROM mcr.microsoft.com/ccf/app/dev:4.0.7-virtual as builder
+FROM mcr.microsoft.com/ccf/app/dev:lskv-virtual as builder
 
 COPY . /src/
 WORKDIR /build
 RUN CC=$(command -v clang-15) CXX=$(command -v clang++-15) cmake -GNinja -DCOMPILE_TARGET=virtual /src && ninja
 
 # Run
-FROM mcr.microsoft.com/ccf/app/run:4.0.7-virtual
+FROM mcr.microsoft.com/ccf/app/dev:lskv-virtual
 
 LABEL org.opencontainers.image.source=https://github.com/microsoft/lskv
 LABEL org.opencontainers.image.description="LSKV virtual node"
@@ -19,4 +19,4 @@ COPY --from=builder /build/liblskv.virtual.so /app/
 WORKDIR /app
 RUN mkdir -p /app/certs # somewhere for the cchost to place the service_cert.pem
 
-CMD ["/usr/bin/cchost", "--config", "/app/config/config.json"]
+CMD ["/opt/ccf_virtual/bin/cchost", "--config", "/app/config/config.json"]
