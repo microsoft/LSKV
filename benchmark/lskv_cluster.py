@@ -285,8 +285,9 @@ class Node:
                     "bind_address": f"{self.ip_address}:{self.peer_port}"
                 },
                 "rpc_interfaces": {
-                    "main_interface": {
+                    "primary_rpc_interface": {
                         "bind_address": f"0.0.0.0:{self.client_port}",
+                        "published_address": f"{self.ip_address}:{self.client_port}",
                         "app_protocol": app_protocol,
                     }
                 },
@@ -346,8 +347,9 @@ class Node:
                     "bind_address": f"{self.ip_address}:{self.peer_port}"
                 },
                 "rpc_interfaces": {
-                    "main_interface": {
+                    "primary_rpc_interface": {
                         "bind_address": f"0.0.0.0:{self.client_port}",
+                        "published_address": f"{self.ip_address}:{self.client_port}",
                         "app_protocol": app_protocol,
                     }
                 },
