@@ -80,6 +80,12 @@ class Config:
         """
         return self.nodes[node].split("://")[-1]
 
+    def get_node_addresses(self) -> List[str]:
+        """
+        Return the address of all nodes.
+        """
+        return [n.split("://")[-1] for n in self.nodes]
+
     def to_str(self) -> str:
         """
         Convert the config to a string.

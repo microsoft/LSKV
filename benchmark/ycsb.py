@@ -50,6 +50,8 @@ class YCSBenchmark(common.Benchmark):
         """
         Make a core ycsb command.
         """
+        write_endpoints = f"{self.config.scheme()}://{store.get_leader_address()}",
+        read_endpoints = store.config.get_node_addresses()
         bench = [
             "bin/go-ycsb",
             subcmd,
@@ -61,7 +63,9 @@ class YCSBenchmark(common.Benchmark):
             "--prop",
             "silence=false",
             "--prop",
-            f"etcd.endpoints={self.config.scheme()}://{store.get_leader_address()}",
+            f"etcd.write_endpoints={write_endpoints}",
+            "--prop",
+            f"etcd.read_endpoints={read_endpoints}",
             "--property_file",
             self.path_to_workload(),
             "--interval",
