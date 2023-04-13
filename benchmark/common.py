@@ -125,26 +125,6 @@ class Store(abc.ABC):
                 self.proc.kill()
             self.proc.wait()
             logger.info("stopped {}", self.config.to_str())
-            logger.info("killing cchost")
-            hosts = [
-                n.split("://")[1].split(":")[0]
-                for n in self.config.nodes
-                if n.split("://")[0] == "ssh"
-            ]
-            if hosts:
-                # run remotely
-                for host in hosts:
-                    client = paramiko.SSHClient()
-                    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                    client.connect(host)
-                    _stdin, stdout, _stderr = client.exec_command("pkill cchost")
-                    stdout.channel.recv_exit_status()
-                    _stdin, stdout, _stderr = client.exec_command("pkill etcd")
-                    stdout.channel.recv_exit_status()
-                    time.sleep(1)
-            else:
-                subprocess.run(["pkill", "cchost"], check=False)
-                subprocess.run(["pkill", "etcd"], check=False)
 
         return False
 
