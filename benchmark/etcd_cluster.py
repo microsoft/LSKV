@@ -14,9 +14,10 @@ import signal
 import subprocess
 from typing import List, Tuple
 
-import certs
 import paramiko
 from loguru import logger
+
+import certs
 
 
 class Runner:
@@ -34,6 +35,7 @@ class Runner:
         workspace: str,
         initial_cluster: str,
         docker_image: str,
+        tmpfs: bool,
     ):
         self.address = address
         self.port = port
@@ -42,6 +44,7 @@ class Runner:
         self.workspace = workspace
         self.initial_cluster = initial_cluster
         self.docker_image = docker_image
+        self.tmpfs = tmpfs
 
     def name(self) -> str:
         """
@@ -90,7 +93,9 @@ class Runner:
             docker_file,
         )
         subprocess.run(
-            f"docker save {self.docker_image} | gzip > {docker_file}", check=True, shell=True,
+            f"docker save {self.docker_image} | gzip > {docker_file}",
+            check=True,
+            shell=True,
         )
         # copy file over
         src = os.path.abspath(docker_file)
@@ -169,7 +174,10 @@ class Runner:
             ]
 
         cmd_str = " ".join(cmd)
-        cmd_str = f"cd {self.node_dir()} && docker run --rm --name {self.name()} -w /workspace --network host -v {self.node_dir()}:/workspace:ro {self.docker_image} {cmd_str} >out 2>err"
+        tmpfs_mount = ""
+        if self.tmpfs:
+            tmpfs_mount = "--mount type=tmpfs,destination=/data"
+        cmd_str = f"cd {self.node_dir()} && docker run --rm --name {self.name()} -w /workspace --network host {tmpfs_mount} -v {self.node_dir()}:/workspace:ro {self.docker_image} {cmd_str} >out 2>err"
 
         return cmd_str
 
@@ -333,6 +341,9 @@ def main():
         "--workspace", type=str, default="workspace", help="the workspace dir to use"
     )
     parser.add_argument(
+        "--tmpfs", action="store_true", help="Whether to store data on tmpfs"
+    )
+    parser.add_argument(
         "--docker-image",
         type=str,
         default="gcr.io/etcd-development/etcd:v3.5.4",
@@ -388,6 +399,7 @@ def main():
                     workspace=args.workspace,
                     initial_cluster=initial_cluster,
                     docker_image=args.docker_image,
+                    tmpfs=args.tmpfs,
                 )
             )
     elif prefixes[0] == "ssh":
@@ -403,6 +415,7 @@ def main():
                     workspace=args.workspace,
                     initial_cluster=initial_cluster,
                     docker_image=args.docker_image,
+                    tmpfs=args.tmpfs,
                 )
             )
     else:
