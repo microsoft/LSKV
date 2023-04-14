@@ -23,6 +23,8 @@ CCF_VER_LOWER=ccf_virtual_4.0.7
 CCF_SGX_VER_LOWER=ccf_sgx_4.0.7
 CCF_SGX_UNSAFE_VER_LOWER=ccf_sgx_unsafe_4.0.7
 
+IMAGE_NAME=ghcr.io/jeffa5/lskv
+
 .PHONY: install-ccf-virtual
 install-ccf-virtual:
 	wget -c https://github.com/microsoft/CCF/releases/download/$(CCF_VER)/$(CCF_VER_LOWER)_amd64.deb # download deb
@@ -61,14 +63,25 @@ build-sgx: .venv
 
 .PHONY: build-docker-virtual
 build-docker-virtual:
-	docker build -t lskv:latest-virtual -f Dockerfile.virtual .
+	docker build -t $(IMAGE_NAME):latest-virtual -f Dockerfile.virtual .
 
 .PHONY: build-docker-sgx
 build-docker-sgx:
-	docker build -t lskv:latest-sgx -f Dockerfile.sgx .
+	docker build -t $(IMAGE_NAME):latest-sgx -f Dockerfile.sgx .
 
 .PHONY: build-docker
 build-docker: build-docker-virtual build-docker-sgx
+
+.PHONY: push-docker-virtual
+push-docker-virtual:
+	docker push $(IMAGE_NAME):latest-virtual
+
+.PHONY: push-docker-sgx
+push-docker-sgx:
+	docker push $(IMAGE_NAME):latest-sgx
+
+.PHONY: push-docker
+push-docker: push-docker-virtual push-docker-sgx
 
 .PHONY: run-docker-virtual
 run-docker-virtual: .venv
