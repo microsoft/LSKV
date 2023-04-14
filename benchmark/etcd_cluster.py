@@ -167,10 +167,6 @@ class LocalRunner(Runner):
     Run a local node as a unix process.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.process = None
-
     def copy_file(self, src: str, dst: str):
         """
         Copy a file.
@@ -196,15 +192,13 @@ class LocalRunner(Runner):
         logger.info("running etcd node: {}", cmd)
 
         # pylint: disable=consider-using-with
-        self.process = subprocess.Popen(cmd, shell=True)
+        subprocess.Popen(cmd, shell=True)
 
     def stop(self):
         """
         Stop a node.
         """
-        if self.process:
-            self.process.kill()
-            self.process.wait()
+        subprocess.run(["docker", "rm", "-f", self.name()], check=True)
 
 
 class RemoteRunner(Runner):
@@ -258,7 +252,7 @@ class RemoteRunner(Runner):
         """
         Stop a node.
         """
-        _, stdout, _ = self.client.exec_command("pkill etcd")
+        _, stdout, _ = self.client.exec_command(f"docker rm -f {self.name()}")
         stdout.channel.recv_exit_status()
         out_file = os.path.join(self.node_dir(), "out")
         self.session.get(out_file, out_file)
