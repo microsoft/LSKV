@@ -155,7 +155,7 @@ class Store(abc.ABC):
         """
         self._wait_for_ready()
 
-    def _wait_for_ready(self, tries=120) -> bool:
+    def _wait_for_ready(self, tries=300) -> bool:
         client = self.client()
         client += ["get", "missing key", "-w", "json"]
         addr = self.config.get_node_addr(0)
