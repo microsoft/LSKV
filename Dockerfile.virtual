@@ -9,7 +9,7 @@ WORKDIR /build
 RUN CC=$(command -v clang-15) CXX=$(command -v clang++-15) cmake -GNinja -DCOMPILE_TARGET=virtual /src && ninja
 
 # Run
-FROM ghcr.io/jeffa5/ccf:lskv-virtual as builder
+FROM ghcr.io/jeffa5/ccf:lskv-virtual
 
 LABEL org.opencontainers.image.source=https://github.com/microsoft/lskv
 LABEL org.opencontainers.image.description="LSKV virtual node"

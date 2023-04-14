@@ -9,7 +9,7 @@ WORKDIR /build
 RUN CC=$(command -v clang-11) CXX=$(command -v clang++-11) cmake -GNinja -DCOMPILE_TARGET=sgx /src && ninja
 
 # Run
-FROM ghcr.io/jeffa5/ccf:lskv-sgx as builder
+FROM ghcr.io/jeffa5/ccf:lskv-sgx
 
 LABEL org.opencontainers.image.source=https://github.com/microsoft/lskv
 LABEL org.opencontainers.image.description="LSKV SGX node"
