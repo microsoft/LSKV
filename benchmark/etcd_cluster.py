@@ -78,41 +78,11 @@ class Runner:
         common_dir = os.path.join(self.workspace, "common")
         subprocess.run(["mkdir", "-p", common_dir], check=True)
 
-        docker_file = os.path.join(common_dir, "etcd-docker.tar.gz")
-        # make sure we have the image locally
-        logger.info("Checking if image {} exists", self.docker_image)
-        res = subprocess.run(
-            ["docker", "image", "inspect", self.docker_image], stdout=subprocess.DEVNULL
-        )
-        if res.returncode:
-            logger.info("[{}] Pulling image {}", self.address, self.docker_image)
-            subprocess.run(["docker", "pull", self.docker_image], check=True)
-        else:
-            logger.info("[{}] Image {} exists locally", self.address, self.docker_image)
-        # save image to file
-        logger.info(
-            "[{}] Saving image {} to file {}",
-            self.address,
-            self.docker_image,
-            docker_file,
-        )
-        subprocess.run(
-            f"docker save {self.docker_image} | gzip > {docker_file}",
-            check=True,
-            shell=True,
-        )
-
     def setup_files(self):
         """
         Copy files needed to run to the working directory.
         """
-        # copy file over
-        docker_file = os.path.join(self.workspace, "common", "etcd-docker.tar.gz")
-        src = os.path.abspath(docker_file)
-        dst = os.path.join(self.node_dir(), os.path.basename(docker_file))
-        self.copy_file(src, dst)
-        # load docker image on other end
-        self.run(f"docker load -i {dst}")
+        self.run(f"docker pull {self.docker_image}")
 
         ca_cert = "ca.pem"
         server_cert = "server.pem"

@@ -531,13 +531,8 @@ class Operator:
 
         runner.run(f"docker rm -f {node.name}")
 
-        # copy file over
-        docker_file = os.path.join(self.workspace, "common", "lskv-docker.tar.gz")
-        src = os.path.abspath(docker_file)
-        dst = os.path.join(node_dir, os.path.basename(docker_file))
-        runner.copy_file(src, dst)
-        # load docker image on other end
-        runner.run(f"docker load -i {dst}")
+        # make sure we have the image
+        runner.run(f"docker pull {self.image}")
 
         cmd = [
             "docker",
@@ -627,25 +622,6 @@ class Operator:
         run(
             ["keygenerator.sh", "--name", "user0"],
             cwd=common_dir,
-        )
-
-        docker_file = os.path.join(self.workspace, "common", "lskv-docker.tar.gz")
-        # make sure we have the image locally
-        logger.info("Checking if image {} exists", self.image)
-        res = subprocess.run(
-            ["docker", "image", "inspect", self.image], stdout=subprocess.DEVNULL
-        )
-        if res.returncode:
-            logger.info("Pulling image {}", self.image)
-            subprocess.run(["docker", "pull", self.image], check=True)
-        else:
-            logger.info("Image {} exists locally", self.image)
-        # save image to file
-        logger.info("Saving image {} to file {}", self.image, docker_file)
-        subprocess.run(
-            f"docker save {self.image} | gzip > {docker_file}",
-            check=True,
-            shell=True,
         )
 
     def copy_certs(self):
