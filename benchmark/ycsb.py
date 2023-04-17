@@ -71,7 +71,7 @@ class YCSBenchmark(common.Benchmark):
             "--interval",
             "1",
         ]
-        if self.config.serializable:
+        if self.config.serializable or self.config.store == "lskv":
             bench += ["--prop", "etcd.serializable_reads=true"]
         if self.config.tls:
             bench += [
