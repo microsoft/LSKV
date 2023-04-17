@@ -813,7 +813,9 @@ if __name__ == "__main__":
         help="The nodes to launch in the form local://ip:port or ssh://ip:port",
     )
     parser.add_argument("--enclave", type=str, default="virtual")
-    parser.add_argument("--image", type=str, default="lskv:latest")
+    parser.add_argument(
+        "--image", type=str, default="ghcr.io/jeffa5/lskv:latest"
+    )
     parser.add_argument("--http-version", type=int, default="2")
     parser.add_argument("--worker-threads", type=int, default="0")
     parser.add_argument("--sig-tx-interval", type=int, default="5000")
