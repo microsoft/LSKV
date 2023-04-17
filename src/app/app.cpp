@@ -600,7 +600,7 @@ namespace app
             "filtering out kv from range return as already have the limit {}",
             limit);
           // don't add this item as we already have enough
-          return;
+          return false;
         }
 
         // check that the lease for this value has not expired
@@ -614,7 +614,7 @@ namespace app
             "filtering out kv from range return as lease {} is missing or "
             "expired",
             value.lease);
-          return;
+          return true;
         }
 
         count++;
@@ -627,6 +627,8 @@ namespace app
         kv->set_mod_revision(value.mod_revision);
         kv->set_version(value.version);
         kv->set_lease(value.lease);
+
+        return limit == 0 || count < limit;
       };
 
       if (payload.range_end().empty())
@@ -854,6 +856,8 @@ namespace app
               prev_kv->set_mod_revision(old.mod_revision);
               prev_kv->set_version(old.version);
             }
+
+            return true;
           },
           start,
           end);

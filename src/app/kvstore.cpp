@@ -135,7 +135,7 @@ namespace app::kvstore
   }
 
   void KVStore::range(
-    const std::function<void(KVStore::K&, KVStore::V&)>& fn,
+    const std::function<bool(KVStore::K&, KVStore::V&)>& fn,
     const KVStore::K& from,
     const std::optional<KVStore::K>& to_opt)
   {
@@ -153,7 +153,7 @@ namespace app::kvstore
         auto k = KVStore::KSerialiser::from_serialised(key);
         auto v = KVStore::VSerialiser::from_serialised(value);
         hydrate_value(k, v);
-        fn(k, v);
+        return fn(k, v);
       },
       KVStore::KSerialiser::to_serialised(from),
       to);

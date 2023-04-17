@@ -73,7 +73,7 @@ namespace app::kvstore
     void foreach(const std::function<bool(const K&, const V&)>& fn);
 
     void range(
-      const std::function<void(K&, V&)>& fn,
+      const std::function<bool(K&, V&)>& fn,
       const K& from,
       const std::optional<K>& to);
 
