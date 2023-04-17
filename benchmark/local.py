@@ -24,7 +24,7 @@ def etcd_configurations(_args: argparse.Namespace) -> List[etcd.EtcdConfig]:
     Set args for all etcd configurations.
     """
     nodes = ["local://127.0.0.1:8000"]
-    repeats = 2
+    repeats = 3
     configurations = []
     for repeat in range(1, repeats + 1):
         configurations += [
@@ -59,8 +59,10 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     Set args for all ycsb configurations.
     """
     nodes = ["local://127.0.0.1:8000"]
-    repeats = 2
+    repeats = 3
     configurations = []
+    workloads = ["a", "b", "c", "d", "e", "f"]
+    # workloads = ["e"]
     for repeat in range(1, repeats + 1):
         configurations += (
             [
@@ -83,7 +85,7 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                     workload=f"workload{workload}",
                     threads=10,
                 )
-                for workload in ["a", "b", "c", "d", "e", "f"]
+                for workload in workloads
             ]
             + [
                 ycsb.YCSBConfig(
@@ -104,7 +106,7 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                     workload=f"workload{workload}",
                     threads=10,
                 )
-                for workload in ["a", "b", "c", "d", "e", "f"]
+                for workload in workloads
             ]
             + [
                 ycsb.YCSBConfig(
@@ -125,7 +127,7 @@ def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                     workload=f"workload{workload}",
                     threads=10,
                 )
-                for workload in ["a", "b", "c", "d", "e", "f"]
+                for workload in workloads
             ]
         )
 
@@ -150,7 +152,7 @@ def k6_configurations(_args: argparse.Namespace) -> List[k6.K6Config]:
     Set args for all k6 configurations.
     """
     nodes = ["local://127.0.0.1:8000"]
-    repeats = 2
+    repeats = 3
     configurations = []
     for repeat in range(1, repeats + 1):
         configurations += (
