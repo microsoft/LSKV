@@ -64,6 +64,13 @@ class Runner:
         """
         raise NotImplementedError("copy_file not implemented.")
 
+    def fetch_file(self, _src: str, _dst: str):
+        """
+        Copy a file.
+        """
+        raise NotImplementedError("fetch_file not implemented.")
+
+
     def run(self, cmd: str):
         """
         Run a command.
@@ -174,6 +181,13 @@ class LocalRunner(Runner):
         logger.info("[{}] Copying file from {} to {}", self.address, src, dst)
         shutil.copy(src, dst)
 
+    def fetch_file(self, src: str, dst: str):
+        """
+        Fetch a remote file.
+        """
+        logger.info("[{}] Fetching file from {} to {}", self.address, src, dst)
+
+
     def run(self, cmd: str):
         logger.info("[{}] Running command '{}'", self.address, cmd)
         subprocess.run(cmd, check=True, shell=True)
@@ -224,6 +238,13 @@ class RemoteRunner(Runner):
         self.session.put(src, dst)
         stat = os.stat(src)
         self.session.chmod(dst, stat.st_mode)
+
+    def fetch_file(self, src: str, dst: str):
+        """
+        Fetch a remote file.
+        """
+        logger.info("[{}] Fetching file from {} to {}", self.address, src, dst)
+        self.session.get(src, dst)
 
     def run(self, cmd: str):
         logger.info("[{}] Running command '{}'", self.address, cmd)
@@ -419,6 +440,12 @@ def main():
         for i, node in enumerate(nodes):
             logger.info("stopping node {}", i)
             node.stop()
+            logger.info("Fetching node logs for {}", i)
+
+            out_file = os.path.join(node.node_dir(), "out")
+            err_file = os.path.join(node.node_dir(), "err")
+            node.runner.fetch_file(out_file, out_file)
+            node.runner.fetch_file(err_file, err_file)
 
         logger.info("all nodes finished")
 

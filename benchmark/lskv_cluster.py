@@ -37,6 +37,12 @@ class Runner:
         """
         raise NotImplementedError("copy_file not implemented.")
 
+    def fetch_file(self, src:str, dst:str):
+        """
+        Fetch a remote file to the local workspace.
+        """
+        raise NotImplementedError("fetch_file not implemented")
+
     def create_dir(self, _dst: str):
         """
         Copy a file.
@@ -68,6 +74,12 @@ class LocalRunner(Runner):
         logger.info("[{}] Copying file from {} to {}", self.address, src, dst)
         shutil.copy(src, dst)
 
+    def fetch_file(self, src:str, dst:str):
+        """
+        Fetch a remote file to the local workspace.
+        """
+        logger.info("[{}] Fetching file from {} to {}", self.address, src, dst)
+
     def create_dir(self, dst: str):
         """
         Create a directory.
@@ -93,6 +105,9 @@ class RemoteRunner(Runner):
         super().__init__(*args, **kwargs)
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        if not username:
+            username = os.getlogin()
+        logger.info("Connecting to ssh, user={} address={}", username, self.address)
         client.connect(self.address, username=username)
 
         self.client = client
@@ -107,6 +122,13 @@ class RemoteRunner(Runner):
         self.session.put(src, dst)
         stat = os.stat(src)
         self.session.chmod(dst, stat.st_mode)
+
+    def fetch_file(self, src:str, dst:str):
+        """
+        Fetch a remote file to the local workspace.
+        """
+        logger.info("[{}] Fetching file from {} to {}", self.address, src, dst)
+        self.session.get(src, dst)
 
     def create_dir(self, dst: str):
         """
@@ -441,11 +463,14 @@ class Operator:
             time.sleep(1)
         raise RuntimeError("Failed to wait for node to be ready")
 
+    def node_dir(self, name:str)->str:
+        return os.path.join(self.workspace, name)
+
     def make_node_dir(self, name: str, runner: Runner) -> str:
         """
         Make a directory for a node's config.
         """
-        node_dir = os.path.join(self.workspace, name)
+        node_dir = self.node_dir(name)
         runner.create_dir(node_dir)
         os.makedirs(node_dir, exist_ok=True)
         return node_dir
@@ -603,6 +628,17 @@ class Operator:
         for node in self.nodes:
             logger.info("Stopping {}", node.name)
             node.runner.run(f"docker rm -f {node.name}")
+
+    def fetch_logs(self):
+        """
+        Fetch logs of nodes.
+        """
+        logger.info("Fetching node logs")
+        for node in self.nodes:
+            out_file = os.path.join(self.node_dir(node.name), "out")
+            err_file = os.path.join(self.node_dir(node.name), "err")
+            node.runner.fetch_file(out_file, out_file)
+            node.runner.fetch_file(err_file, err_file)
 
     def setup_common(self):
         """
@@ -800,6 +836,7 @@ def main(
         logger.info("Failed: {}", exception)
     finally:
         operator.stop_all()
+        operator.fetch_logs()
 
 
 if __name__ == "__main__":
