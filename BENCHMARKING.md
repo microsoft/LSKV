@@ -17,7 +17,7 @@ az vmss list-instance-public-ips --name <vmss_name> --resource-group <vmss_rg> |
 For VMs with private IP addresses reachable from a jumpbox you'll be running the commands from:
 
 ```sh
-az vmss nic list --vmss-name <vmss_name> --resource-group <vmss_rg> | jq -r '.[].ipConfigurations[].privateIpAddress' | tee hosts
+az vmss nic list --vmss-name <vmss_name> --resource-group <vmss_rg> | jq -r '.[].ipConfigurations[].privateIPAddress' | tee hosts
 ```
 
 After provisioning the nodes, they need to be setup with the correct dependencies:
