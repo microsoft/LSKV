@@ -37,7 +37,7 @@ class Runner:
         """
         raise NotImplementedError("copy_file not implemented.")
 
-    def fetch_file(self, src:str, dst:str):
+    def fetch_file(self, src: str, dst: str):
         """
         Fetch a remote file to the local workspace.
         """
@@ -55,7 +55,7 @@ class Runner:
         """
         raise NotImplementedError("remove_dir not implemented.")
 
-    def make_workspace_dir(self, d:str):
+    def make_workspace_dir(self, d: str):
         """
         Create the workspace dir.
         """
@@ -86,7 +86,7 @@ class LocalRunner(Runner):
         logger.info("[{}] Copying file from {} to {}", self.address, src, dst)
         shutil.copy(src, dst)
 
-    def fetch_file(self, src:str, dst:str):
+    def fetch_file(self, src: str, dst: str):
         """
         Fetch a remote file to the local workspace.
         """
@@ -106,7 +106,7 @@ class LocalRunner(Runner):
         logger.info("[{}] Removing directory {}", self.address, dst)
         shutil.rmtree(dst)
 
-    def make_workspace_dir(self, _d:str):
+    def make_workspace_dir(self, _d: str):
         """
         Create the workspace dir.
         """
@@ -147,7 +147,7 @@ class RemoteRunner(Runner):
         stat = os.stat(src)
         self.session.chmod(dst, stat.st_mode)
 
-    def fetch_file(self, src:str, dst:str):
+    def fetch_file(self, src: str, dst: str):
         """
         Fetch a remote file to the local workspace.
         """
@@ -169,7 +169,7 @@ class RemoteRunner(Runner):
         logger.info("[{}] Removing directory {}", self.address, dst)
         self.run(f"rm -rf {dst}")
 
-    def make_workspace_dir(self, d:str):
+    def make_workspace_dir(self, d: str):
         """
         Create the workspace dir.
         """
@@ -501,7 +501,7 @@ class Operator:
             time.sleep(1)
         raise RuntimeError("Failed to wait for node to be ready")
 
-    def node_dir(self, name:str)->str:
+    def node_dir(self, name: str) -> str:
         return os.path.join(self.workspace, name)
 
     def make_node_dir(self, name: str, runner: Runner) -> str:
@@ -893,9 +893,7 @@ if __name__ == "__main__":
         help="The nodes to launch in the form local://ip:port or ssh://ip:port",
     )
     parser.add_argument("--enclave", type=str, default="virtual")
-    parser.add_argument(
-        "--image", type=str, default="ghcr.io/jeffa5/lskv:latest"
-    )
+    parser.add_argument("--image", type=str, default="ghcr.io/jeffa5/lskv:latest")
     parser.add_argument("--http-version", type=int, default="2")
     parser.add_argument("--worker-threads", type=int, default="0")
     parser.add_argument("--sig-tx-interval", type=int, default="5000")
