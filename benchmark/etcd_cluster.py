@@ -224,6 +224,8 @@ class RemoteRunner(Runner):
         super().__init__(*args, **kwargs)
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        if not username:
+            username = os.getlogin()
         client.connect(self.address, username=username)
 
         self.client = client
@@ -444,8 +446,8 @@ def main():
 
             out_file = os.path.join(node.node_dir(), "out")
             err_file = os.path.join(node.node_dir(), "err")
-            node.runner.fetch_file(out_file, out_file)
-            node.runner.fetch_file(err_file, err_file)
+            node.fetch_file(out_file, out_file)
+            node.fetch_file(err_file, err_file)
 
         logger.info("all nodes finished")
 
