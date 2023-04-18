@@ -41,7 +41,7 @@ def etcd_configurations(_: argparse.Namespace) -> List[etcd.EtcdConfig]:
     Set args for all etcd configurations.
     """
     nodes = get_nodes()
-    repeats = 2
+    repeats = 3
     configurations = []
     for repeat in range(1, repeats + 1):
         configurations += [
@@ -175,12 +175,14 @@ def ycsb_configurations(_: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     Set args for all ycsb configurations.
     """
     nodes = get_nodes()
-    repeats = 2
+    repeats = 3
     configurations = []
+    workload_letters = ["a", "b", "c", "d", "e", "f"]
+    workloads = [f"workload{l}" for l in workload_letters]
     for repeat in range(1, repeats + 1):
         configurations += (
             [
-                # lskv vs etcd
+                # lskv sgx
                 ycsb.YCSBConfig(
                     store="lskv",
                     tls=True,
@@ -196,13 +198,13 @@ def ycsb_configurations(_: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                     tmpfs=True,
                     serializable=True,
                     rate=10000,
-                    workload=f"workload{workload}",
+                    workload=workload,
                     threads=10,
                 )
-                for workload in ["a", "b", "c", "d", "e", "f"]
+                for workload in workloads
             ]
             + [
-                # lskv vs etcd
+                # lskv virtual
                 ycsb.YCSBConfig(
                     store="lskv",
                     tls=True,
@@ -218,10 +220,10 @@ def ycsb_configurations(_: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                     tmpfs=True,
                     serializable=True,
                     rate=10000,
-                    workload=f"workload{workload}",
+                    workload=workload,
                     threads=10,
                 )
-                for workload in ["a", "b", "c", "d", "e", "f"]
+                for workload in workloads
             ]
             + [
                 ycsb.YCSBConfig(
@@ -239,13 +241,13 @@ def ycsb_configurations(_: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                     tmpfs=True,
                     serializable=True,
                     rate=10000,
-                    workload=f"workload{workload}",
+                    workload=workload,
                     threads=10,
                 )
-                for workload in ["a", "b", "c", "d", "e", "f"]
+                for workload in workloads
             ]
             + [
-                # lskv vs etcd
+                # lskv sgx
                 ycsb.YCSBConfig(
                     store="lskv",
                     tls=True,
@@ -261,13 +263,13 @@ def ycsb_configurations(_: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                     tmpfs=True,
                     serializable=True,
                     rate=10000,
-                    workload=f"workload{workload}",
+                    workload=workload,
                     threads=10,
                 )
-                for workload in ["a", "b", "c", "d", "e", "f"]
+                for workload in workloads
             ]
             + [
-                # lskv vs etcd
+                # lskv virtual
                 ycsb.YCSBConfig(
                     store="lskv",
                     tls=True,
@@ -283,10 +285,10 @@ def ycsb_configurations(_: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                     tmpfs=True,
                     serializable=True,
                     rate=10000,
-                    workload=f"workload{workload}",
+                    workload=workload,
                     threads=10,
                 )
-                for workload in ["a", "b", "c", "d", "e", "f"]
+                for workload in workloads
             ]
             + [
                 ycsb.YCSBConfig(
@@ -304,10 +306,10 @@ def ycsb_configurations(_: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                     tmpfs=True,
                     serializable=True,
                     rate=10000,
-                    workload=f"workload{workload}",
+                    workload=workload,
                     threads=10,
                 )
-                for workload in ["a", "b", "c", "d", "e", "f"]
+                for workload in workloads
             ]
         )
 
@@ -319,7 +321,7 @@ def k6_configurations(_: argparse.Namespace) -> List[k6.K6Config]:
     Set args for all k6 configurations.
     """
     nodes = get_nodes()
-    repeats = 2
+    repeats = 3
     configurations = []
     for repeat in range(1, repeats + 1):
         configurations += (
@@ -448,5 +450,5 @@ if __name__ == "__main__":
     # common.main("etcd", etcd.get_arguments, etcd_configurations, etcd.execute_config)
     logger.info("Running ycsb")
     common.main("ycsb", ycsb.get_arguments, ycsb_configurations, ycsb.execute_config)
-    logger.info("Running k6")
-    common.main("k6", k6.get_arguments, k6_configurations, k6.execute_config)
+    # logger.info("Running k6")
+    # common.main("k6", k6.get_arguments, k6_configurations, k6.execute_config)
