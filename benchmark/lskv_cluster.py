@@ -473,7 +473,7 @@ class Operator:
         """
         Make a name for a node.
         """
-        return f"{self.name}-{i}"
+        return f"node{i}"
 
     def wait_node(self, node: Node):
         """
