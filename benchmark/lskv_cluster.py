@@ -45,9 +45,21 @@ class Runner:
 
     def create_dir(self, _dst: str):
         """
-        Copy a file.
+        Create a dir.
         """
         raise NotImplementedError("create_dir not implemented.")
+
+    def remove_dir(self, _dst: str):
+        """
+        Remove a dir.
+        """
+        raise NotImplementedError("remove_dir not implemented.")
+
+    def make_workspace_dir(self, d:str):
+        """
+        Create the workspace dir.
+        """
+        raise NotImplementedError("make_workspace_dir not implemented.")
 
     def run(self, cmd: str):
         """
@@ -84,8 +96,20 @@ class LocalRunner(Runner):
         """
         Create a directory.
         """
-        logger.info("[{}] Creating directory", self.address, dst)
+        logger.info("[{}] Creating directory {}", self.address, dst)
         os.makedirs(dst, exist_ok=True)
+
+    def remove_dir(self, dst: str):
+        """
+        Remove a dir
+        """
+        logger.info("[{}] Removing directory {}", self.address, dst)
+        shutil.rmtree(dst)
+
+    def make_workspace_dir(self, _d:str):
+        """
+        Create the workspace dir.
+        """
 
     def run(self, cmd: str):
         logger.info("[{}] Running command '{}'", self.address, cmd)
@@ -137,6 +161,20 @@ class RemoteRunner(Runner):
         logger.info("[{}] Creating directory {}", self.address, dst)
         _, stdout, _ = self.client.exec_command(f"mkdir -p {dst}")
         stdout.channel.recv_exit_status()
+
+    def remove_dir(self, dst: str):
+        """
+        Remove a dir
+        """
+        logger.info("[{}] Removing directory {}", self.address, dst)
+        self.run(f"rm -rf {dst}")
+
+    def make_workspace_dir(self, d:str):
+        """
+        Create the workspace dir.
+        """
+        self.create_dir(d)
+        self.create_dir(os.path.join(d, "common"))
 
     def run(self, cmd: str):
         logger.info("[{}] Running command '{}'", self.address, cmd)
@@ -471,6 +509,7 @@ class Operator:
         Make a directory for a node's config.
         """
         node_dir = self.node_dir(name)
+        runner.remove_dir(node_dir)
         runner.create_dir(node_dir)
         os.makedirs(node_dir, exist_ok=True)
         return node_dir
@@ -533,10 +572,12 @@ class Operator:
         Add a node to the network.
         """
         node = self.make_node(address, runner)
+        runner.make_workspace_dir(self.workspace)
         node_dir = self.make_node_dir(node.name, node.runner)
         node_dir_abs = os.path.abspath(node_dir)
         config_file = self.make_node_config(node, node_dir)
         config_file_abs = os.path.abspath(config_file)
+        runner.copy_file(config_file_abs, config_file_abs)
 
         runner.create_dir(os.path.join(node_dir, "common"))
         for file in ["member0_cert.pem", "member0_enc_pubk.pem"] + (
@@ -665,10 +706,12 @@ class Operator:
         Copy certificates from the first node to the common directory.
         """
         name = self.make_name(0)
-        run(
-            ["docker", "cp", f"{name}:/app/certs/service_cert.pem", "common"],
-            cwd=self.workspace,
+        common_dir = os.path.join(self.workspace, "common")
+        cert_file = os.path.join(common_dir, "service_cert.pem")
+        self.nodes[0].runner.run(
+            f"docker cp {name}:/app/certs/service_cert.pem {cert_file}",
         )
+        self.nodes[0].runner.fetch_file(cert_file, cert_file)
 
 
 class Member:
