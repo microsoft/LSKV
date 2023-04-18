@@ -42,70 +42,52 @@
         user: "{{ vm_user }}"
         key: "{{ lookup('file', 'bench_id_rsa.pub') }}"
 
+    - name: Add Docker GPG apt Key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      become: true
+
+    - name: Add Docker Repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu focal stable
+        state: present
+      become: true
+
+    - name: Update apt and install docker-ce
+      apt:
+        name: docker-ce
+        state: latest
+        update_cache: true
+      become: true
+
+    - name: "Add {{vm_user}} to docker group"
+      ansible.builtin.user:
+        name: "{{ vm_user }}"
+        group: docker
+
+- hosts: all[0]
+  remote_user: "{{ vm_user }}"
+  gather_facts: false
+  tasks:
     - name: Copy lskv repo over
       ansible.posix.synchronize:
         src: "{{ playbook_dir }}/../../"
         dest: /tmp/lskv
       tags: copy
 
-    - name: Clone the CCF repo
-      ansible.builtin.git:
-        repo: "https://github.com/microsoft/CCF"
-        dest: /tmp/CCF
-        version: ccf-{{ ccf_ver }}
-
-    - name: Run the CCF sgx getting started playbook
-      shell: ./getting_started/setup_vm/run.sh ./getting_started/setup_vm/app-run.yml --extra-vars 'platform=sgx' --extra-vars 'ccf_ver={{ ccf_ver }}'
-      args:
-        chdir: /tmp/CCF
-
-    - name: Run the CCF virtual getting started playbook
-      shell: ./getting_started/setup_vm/run.sh ./getting_started/setup_vm/app-run.yml --extra-vars 'platform=virtual' --extra-vars 'ccf_ver={{ ccf_ver }}'
-      args:
-        chdir: /tmp/CCF
-
-    - name: Patch virtual sandbox infra
-      ansible.posix.patch:
-        src: ccf-binary-dir.diff
-        dest: /opt/ccf_virtual/bin/infra/remote.py
-      become: true
-
-    - name: Patch sgx sandbox infra
-      ansible.posix.patch:
-        src: ccf-binary-dir.diff
-        dest: /opt/ccf_sgx/bin/infra/remote.py
-      become: true
-
     - name: Install apt packages
       ansible.builtin.apt:
         name:
-          - make
           - python3.8
           - python3.8-venv
-          - gcc
         update_cache: true
       become: true
 
-- hosts: all[0]
-  remote_user: "{{ vm_user }}"
-  gather_facts: false
-  tasks:
     - name: Install pip for sandbox
       ansible.builtin.pip:
         name: pip
-        virtualenv: /tmp/lskv/.venv_ccf_sandbox
-        virtualenv_command: python3 -m venv
-
-    - name: Install ccf for sandbox
-      ansible.builtin.pip:
-        name: ccf=={{ py_ccf_ver }}
-        virtualenv: /tmp/lskv/.venv_ccf_sandbox
-        virtualenv_command: python3 -m venv
-
-    - name: Install requirements for sandbox
-      ansible.builtin.pip:
-        requirements: /opt/ccf_sgx/bin/requirements.txt
-        virtualenv: /tmp/lskv/.venv_ccf_sandbox
+        virtualenv: /tmp/lskv/.venv
         virtualenv_command: python3 -m venv
 
     - name: Install requirements for benchmarking
