@@ -10,7 +10,7 @@ import argparse
 from typing import List
 
 import common
-import etcd
+# import etcd
 import k6
 import perf_system as perf
 import ycsb
@@ -19,40 +19,40 @@ import ycsb
 from loguru import logger
 
 
-def etcd_configurations(_args: argparse.Namespace) -> List[etcd.EtcdConfig]:
-    """
-    Set args for all etcd configurations.
-    """
-    nodes = ["local://127.0.0.1:8000"]
-    repeats = 3
-    configurations = []
-    for repeat in range(1, repeats + 1):
-        configurations += [
-            etcd.EtcdConfig(
-                store=store,
-                tls=True,
-                enclave="virtual",
-                nodes=nodes,
-                worker_threads=0,
-                sig_tx_interval=5000,
-                sig_ms_interval=1000,
-                ledger_chunk_bytes="5MB",
-                snapshot_tx_interval=10000,
-                http_version=2,
-                repeat=repeat,
-                tmpfs=True,
-                rate=10000,
-                bench_args=["txn-mixed", "benchme0000", "benchme1000"],
-                clients=100,
-                connections=100,
-                prefill_num_keys=0,
-                prefill_value_size=0,
-            )
-            for store in ["lskv", "etcd"]
-        ]
-
-    return configurations
-
+# def etcd_configurations(_args: argparse.Namespace) -> List[etcd.EtcdConfig]:
+#     """
+#     Set args for all etcd configurations.
+#     """
+#     nodes = ["local://127.0.0.1:8000"]
+#     repeats = 3
+#     configurations = []
+#     for repeat in range(1, repeats + 1):
+#         configurations += [
+#             etcd.EtcdConfig(
+#                 store=store,
+#                 tls=True,
+#                 enclave="virtual",
+#                 nodes=nodes,
+#                 worker_threads=0,
+#                 sig_tx_interval=5000,
+#                 sig_ms_interval=1000,
+#                 ledger_chunk_bytes="5MB",
+#                 snapshot_tx_interval=10000,
+#                 http_version=2,
+#                 repeat=repeat,
+#                 tmpfs=True,
+#                 rate=10000,
+#                 bench_args=["txn-mixed", "benchme0000", "benchme1000"],
+#                 clients=100,
+#                 connections=100,
+#                 prefill_num_keys=0,
+#                 prefill_value_size=0,
+#             )
+#             for store in ["lskv", "etcd"]
+#         ]
+#
+#     return configurations
+#
 
 def ycsb_configurations(_args: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     """
@@ -256,9 +256,9 @@ def k6_configurations(_args: argparse.Namespace) -> List[k6.K6Config]:
 if __name__ == "__main__":
     # logger.info("Running etcd")
     # common.main("etcd", etcd.get_arguments, etcd_configurations, etcd.execute_config)
-    logger.info("Running ycsb")
-    common.main("ycsb", ycsb.get_arguments, ycsb_configurations, ycsb.execute_config)
+    # logger.info("Running ycsb")
+    # common.main("ycsb", ycsb.get_arguments, ycsb_configurations, ycsb.execute_config)
     # logger.info("Running perf")
     # common.main("perf", perf.get_arguments, perf_configurations, perf.execute_config)
-    # logger.info("Running k6")
-    # common.main("k6", k6.get_arguments, k6_configurations, k6.execute_config)
+    logger.info("Running k6")
+    common.main("k6", k6.get_arguments, k6_configurations, k6.execute_config)

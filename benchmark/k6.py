@@ -55,6 +55,7 @@ class K6Benchmark(common.Benchmark):
         log_file = os.path.join(self.config.output_dir(), "console.log")
         workspace = store.cert()
         workspace = os.path.dirname(workspace)
+        read_endpoints = ",".join(store.config.get_node_addresses())
         bench = [
             "bin/k6",
             "run",
@@ -76,6 +77,8 @@ class K6Benchmark(common.Benchmark):
             f"MAX_VUS={self.config.vus}",
             "--env",
             f"WRITE_ADDRESS={store.get_leader_address()}",
+            "--env",
+            f"READ_ADDRESSES={read_endpoints}",
             "benchmark/k6.js",
             "--console-output",
             log_file,

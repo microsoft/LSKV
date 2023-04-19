@@ -13,6 +13,7 @@ const maxVUs = __ENV.MAX_VUS;
 const func = __ENV.FUNC;
 const content_type = __ENV.CONTENT_TYPE;
 const writeAddr = __ENV.WRITE_ADDRESS;
+const readAddrs = __ENV.READ_ADDRESSES;
 const valueSize = __ENV.VALUE_SIZE;
 
 const duration_s = 5;
@@ -72,6 +73,14 @@ function key(i) {
 const val0 = encoding.b64encode("v".repeat(valueSize));
 
 const writeHost = `https://${writeAddr}`;
+const readHosts = readAddrs.split(",").map(addr=>`https://${writeAddr}`);
+console.log(`readHosts: ${readHosts}`);
+
+function readHost() {
+  const index = exec.vu.iterationInInstance % readHosts.length;
+  console.log(`getting read host ${index}`)
+  return readHosts[index];
+}
 
 export function setup() {
   randomSeed(123);
@@ -162,7 +171,7 @@ export function put_single(i = 0, tag = "put_single") {
 
 // check the status of a transaction id with the service
 function get_tx_status(txid) {
-  const response = http.get(`${writeHost}/app/tx?transaction_id=${txid}`);
+  const response = http.get(`${readHost()}/app/tx?transaction_id=${txid}`);
   const res = response.json();
   const req_resp = {
     method: "get_tx_status",
@@ -232,7 +241,7 @@ export function get_single(i = 0, tag = "get_single") {
       },
     };
 
-    let response = http.post(`${writeHost}/v3/kv/range`, payload, params);
+    let response = http.post(`${readHost()}/v3/kv/range`, payload, params);
 
     check_success(response);
     const req_resp = {
@@ -261,7 +270,7 @@ export function get_range(i = 0, tag = "get_range") {
     },
   };
 
-  let response = http.post(`${writeHost}/v3/kv/range`, payload, params);
+  let response = http.post(`${readHost()}/v3/kv/range`, payload, params);
 
   check_success(response);
 }
@@ -412,13 +421,13 @@ export function get_receipt(txid, tag = "get_receipt") {
     },
   };
 
-  var response = http.post(`${writeHost}/v3/receipt/get_receipt`, payload, params);
+  var response = http.post(`${readHost()}/v3/receipt/get_receipt`, payload, params);
   check_success(response);
   while (response.status == 202) {
     // sleep for 10ms to give the node a chance to process the receipt
     sleep(0.01);
     // try again
-    response = http.post(`${writeHost}/v3/receipt/get_receipt`, payload, params);
+    response = http.post(`${readHost()}/v3/receipt/get_receipt`, payload, params);
     check_success(response);
   }
 
