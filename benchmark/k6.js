@@ -12,7 +12,7 @@ const preAllocatedVUs = __ENV.PRE_ALLOCATED_VUS;
 const maxVUs = __ENV.MAX_VUS;
 const func = __ENV.FUNC;
 const content_type = __ENV.CONTENT_TYPE;
-const addr = __ENV.ADDR;
+const writeAddr = __ENV.WRITE_ADDRESS;
 const valueSize = __ENV.VALUE_SIZE;
 
 const duration_s = 5;
@@ -42,8 +42,8 @@ function getStages() {
   return stages;
 }
 
-const grpc_client = new grpc.Client();
-grpc_client.load(["definitions"], "../../proto/etcd.proto");
+const write_grpc_client = new grpc.Client();
+write_grpc_client.load(["definitions"], "../../proto/etcd.proto");
 
 export let options = {
   tlsAuth: [
@@ -71,13 +71,13 @@ function key(i) {
 }
 const val0 = encoding.b64encode("v".repeat(valueSize));
 
-const host = `https://${addr}`;
+const writeHost = `https://${writeAddr}`;
 
 export function setup() {
   randomSeed(123);
 
   if (content_type == "grpc") {
-    grpc_client.connect(addr, {});
+    write_grpc_client.connect(writeAddr, {});
   }
 }
 
@@ -98,13 +98,13 @@ function check_committed(status) {
 export function put_single(i = 0, tag = "put_single") {
   if (content_type == "grpc") {
     if (tag != "setup" && exec.vu.iterationInInstance == 0) {
-      grpc_client.connect(addr, {});
+      write_grpc_client.connect(writeAddr, {});
     }
     const payload = {
       key: key(i),
       value: val0,
     };
-    const response = grpc_client.invoke("etcdserverpb.KV/Put", payload);
+    const response = write_grpc_client.invoke("etcdserverpb.KV/Put", payload);
 
     check(response, {
       "status is 200": (r) => r && r.status === grpc.StatusOK,
@@ -139,7 +139,7 @@ export function put_single(i = 0, tag = "put_single") {
       },
     };
 
-    let response = http.post(`${host}/v3/kv/put`, payload, params);
+    let response = http.post(`${writeHost}/v3/kv/put`, payload, params);
 
     check_success(response);
 
@@ -162,7 +162,7 @@ export function put_single(i = 0, tag = "put_single") {
 
 // check the status of a transaction id with the service
 function get_tx_status(txid) {
-  const response = http.get(`${host}/app/tx?transaction_id=${txid}`);
+  const response = http.get(`${writeHost}/app/tx?transaction_id=${txid}`);
   const res = response.json();
   const req_resp = {
     method: "get_tx_status",
@@ -199,13 +199,13 @@ export function put_single_wait(i = 0) {
 export function get_single(i = 0, tag = "get_single") {
   if (content_type == "grpc") {
     if (tag != "setup" && exec.vu.iterationInInstance == 0) {
-      grpc_client.connect(addr, {});
+      write_grpc_client.connect(writeAddr, {});
     }
     const payload = {
       key: key(i),
       serializable: true,
     };
-    const response = grpc_client.invoke("etcdserverpb.KV/Range", payload);
+    const response = write_grpc_client.invoke("etcdserverpb.KV/Range", payload);
 
     check(response, {
       "status is 200": (r) => r && r.status === grpc.StatusOK,
@@ -232,7 +232,7 @@ export function get_single(i = 0, tag = "get_single") {
       },
     };
 
-    let response = http.post(`${host}/v3/kv/range`, payload, params);
+    let response = http.post(`${writeHost}/v3/kv/range`, payload, params);
 
     check_success(response);
     const req_resp = {
@@ -261,7 +261,7 @@ export function get_range(i = 0, tag = "get_range") {
     },
   };
 
-  let response = http.post(`${host}/v3/kv/range`, payload, params);
+  let response = http.post(`${writeHost}/v3/kv/range`, payload, params);
 
   check_success(response);
 }
@@ -270,13 +270,13 @@ export function get_range(i = 0, tag = "get_range") {
 export function delete_single(i = 0, tag = "delete_single") {
   if (content_type == "grpc") {
     if (tag != "setup" && exec.vu.iterationInInstance == 0) {
-      grpc_client.connect(addr, {});
+      write_grpc_client.connect(writeAddr, {});
     }
     const payload = {
       key: key(i),
       serializable: true,
     };
-    const response = grpc_client.invoke("etcdserverpb.KV/DeleteRange", payload);
+    const response = write_grpc_client.invoke("etcdserverpb.KV/DeleteRange", payload);
 
     check(response, {
       "status is 200": (r) => r && r.status === grpc.StatusOK,
@@ -310,7 +310,7 @@ export function delete_single(i = 0, tag = "delete_single") {
       },
     };
 
-    let response = http.post(`${host}/v3/kv/delete_range`, payload, params);
+    let response = http.post(`${writeHost}/v3/kv/delete_range`, payload, params);
 
     const res = response.json();
     const header = res["header"];
@@ -412,13 +412,13 @@ export function get_receipt(txid, tag = "get_receipt") {
     },
   };
 
-  var response = http.post(`${host}/v3/receipt/get_receipt`, payload, params);
+  var response = http.post(`${writeHost}/v3/receipt/get_receipt`, payload, params);
   check_success(response);
   while (response.status == 202) {
     // sleep for 10ms to give the node a chance to process the receipt
     sleep(0.01);
     // try again
-    response = http.post(`${host}/v3/receipt/get_receipt`, payload, params);
+    response = http.post(`${writeHost}/v3/receipt/get_receipt`, payload, params);
     check_success(response);
   }
 
