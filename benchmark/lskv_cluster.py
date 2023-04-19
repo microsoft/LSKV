@@ -83,6 +83,9 @@ class LocalRunner(Runner):
         """
         Copy a file.
         """
+        if src == dst:
+            logger.info("[{}] Skipping copying file from {} to {}", self.address, src, dst)
+            return
         logger.info("[{}] Copying file from {} to {}", self.address, src, dst)
         shutil.copy(src, dst)
 
@@ -104,7 +107,7 @@ class LocalRunner(Runner):
         Remove a dir
         """
         logger.info("[{}] Removing directory {}", self.address, dst)
-        shutil.rmtree(dst)
+        shutil.rmtree(dst, ignore_errors=True)
 
     def make_workspace_dir(self, _d: str):
         """
