@@ -203,6 +203,27 @@ def ycsb_configurations(_: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                 for workload in workloads
             ]
             + [
+                ycsb.YCSBConfig(
+                    store="etcd",
+                    tls=True,
+                    enclave="virtual",
+                    nodes=nodes[:3],
+                    worker_threads=0,
+                    sig_tx_interval=5000,
+                    sig_ms_interval=1000,
+                    ledger_chunk_bytes="5MB",
+                    snapshot_tx_interval=10000,
+                    http_version=2,
+                    repeat=repeat,
+                    tmpfs=False,
+                    serializable=False,
+                    rate=10000,
+                    workload=workload,
+                    threads=10,
+                )
+                for workload in workloads
+            ]
+            + [
                 # lskv sgx
                 ycsb.YCSBConfig(
                     store="lskv",
@@ -240,6 +261,27 @@ def ycsb_configurations(_: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                     repeat=repeat,
                     tmpfs=True,
                     serializable=True,
+                    rate=10000,
+                    workload=workload,
+                    threads=10,
+                )
+                for workload in workloads
+            ]
+            + [
+                ycsb.YCSBConfig(
+                    store="etcd",
+                    tls=True,
+                    enclave="virtual",
+                    nodes=nodes[:3],
+                    worker_threads=0,
+                    sig_tx_interval=5000,
+                    sig_ms_interval=1000,
+                    ledger_chunk_bytes="5MB",
+                    snapshot_tx_interval=10000,
+                    http_version=2,
+                    repeat=repeat,
+                    tmpfs=True,
+                    serializable=False,
                     rate=10000,
                     workload=workload,
                     threads=10,
