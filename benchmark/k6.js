@@ -76,17 +76,15 @@ function key(i) {
 const val0 = encoding.b64encode("v".repeat(valueSize));
 
 const writeHost = `https://${writeAddr}`;
-const readHosts = readAddrs.map(addr=>`https://${writeAddr}`);
+const readHosts = readAddrs.map(addr=>`https://${addr}`);
 
 function readAddr() {
   const index = exec.vu.iterationInInstance % readAddrs.length;
-  console.log(`getting read addr ${index}`)
   return readAddrs[index];
 }
 
 function readHost() {
   const index = exec.vu.iterationInInstance % readHosts.length;
-  console.log(`getting read host ${index}`)
   return readHosts[index];
 }
 

@@ -55,7 +55,7 @@ class K6Benchmark(common.Benchmark):
         log_file = os.path.join(self.config.output_dir(), "console.log")
         workspace = store.cert()
         workspace = os.path.dirname(workspace)
-        read_endpoints = ",".join(store.config.get_node_addresses())
+        read_endpoints = ",".join([a.split("://")[-1] for a in store.config.get_node_addresses()])
         bench = [
             "bin/k6",
             "run",
