@@ -175,7 +175,7 @@ def ycsb_configurations(_: argparse.Namespace) -> List[ycsb.YCSBConfig]:
     Set args for all ycsb configurations.
     """
     nodes = get_nodes()
-    repeats = 3
+    repeats = 10
     configurations = []
     workload_letters = ["a", "b", "c", "d", "e", "f"]
     workloads = [f"workload{l}" for l in workload_letters]
@@ -384,7 +384,7 @@ def k6_configurations(_: argparse.Namespace) -> List[k6.K6Config]:
     Set args for all k6 configurations.
     """
     nodes = get_nodes()
-    repeats = 3
+    repeats = 10
     configurations = []
     for repeat in range(1, repeats + 1):
         configurations += (
@@ -513,5 +513,5 @@ if __name__ == "__main__":
     # common.main("etcd", etcd.get_arguments, etcd_configurations, etcd.execute_config)
     logger.info("Running ycsb")
     common.main("ycsb", ycsb.get_arguments, ycsb_configurations, ycsb.execute_config)
-    # logger.info("Running k6")
-    # common.main("k6", k6.get_arguments, k6_configurations, k6.execute_config)
+    logger.info("Running k6")
+    common.main("k6", k6.get_arguments, k6_configurations, k6.execute_config)
