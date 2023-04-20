@@ -65,6 +65,7 @@
       ansible.builtin.user:
         name: "{{ vm_user }}"
         group: docker
+      become: true
 
 - hosts: all[0]
   remote_user: "{{ vm_user }}"
