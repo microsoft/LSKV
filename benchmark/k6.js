@@ -13,7 +13,7 @@ const maxVUs = __ENV.MAX_VUS;
 const func = __ENV.FUNC;
 const content_type = __ENV.CONTENT_TYPE;
 const writeAddr = __ENV.WRITE_ADDRESS;
-const readAddrs = __ENV.READ_ADDRESSES;
+const readAddrs = __ENV.READ_ADDRESSES.split(",");
 const valueSize = __ENV.VALUE_SIZE;
 
 const duration_s = 5;
@@ -46,6 +46,9 @@ function getStages() {
 const write_grpc_client = new grpc.Client();
 write_grpc_client.load(["definitions"], "../../proto/etcd.proto");
 
+const read_grpc_client = new grpc.Client();
+read_grpc_client.load(["definitions"], "../../proto/etcd.proto");
+
 export let options = {
   tlsAuth: [
     {
@@ -73,8 +76,13 @@ function key(i) {
 const val0 = encoding.b64encode("v".repeat(valueSize));
 
 const writeHost = `https://${writeAddr}`;
-const readHosts = readAddrs.split(",").map(addr=>`https://${writeAddr}`);
-console.log(`readHosts: ${readHosts}`);
+const readHosts = readAddrs.map(addr=>`https://${writeAddr}`);
+
+function readAddr() {
+  const index = exec.vu.iterationInInstance % readAddrs.length;
+  console.log(`getting read addr ${index}`)
+  return readAddrs[index];
+}
 
 function readHost() {
   const index = exec.vu.iterationInInstance % readHosts.length;
@@ -87,6 +95,7 @@ export function setup() {
 
   if (content_type == "grpc") {
     write_grpc_client.connect(writeAddr, {});
+    read_grpc_client.connect(readAddr(), {});
   }
 }
 
@@ -208,13 +217,13 @@ export function put_single_wait(i = 0) {
 export function get_single(i = 0, tag = "get_single") {
   if (content_type == "grpc") {
     if (tag != "setup" && exec.vu.iterationInInstance == 0) {
-      write_grpc_client.connect(writeAddr, {});
+      read_grpc_client.connect(readAddr(), {});
     }
     const payload = {
       key: key(i),
       serializable: true,
     };
-    const response = write_grpc_client.invoke("etcdserverpb.KV/Range", payload);
+    const response = read_grpc_client.invoke("etcdserverpb.KV/Range", payload);
 
     check(response, {
       "status is 200": (r) => r && r.status === grpc.StatusOK,
