@@ -192,7 +192,17 @@ class Analyser:
         for col in all_data.columns:
             nunique = all_data[col].nunique()
             dtype = all_data[col].dtype
-            if nunique < 100 and dtype not in ["int64", "float64", "bool", "category"]:
+            if nunique == 1:
+                print(
+                    f"Dropping column {col} of type {dtype} as it has only one value: {all_data[col][0]}"
+                )
+                all_data.drop(columns=[col], inplace=True)
+            elif nunique < 100 and dtype not in [
+                "int64",
+                "float64",
+                "bool",
+                "category",
+            ]:
                 all_data[col] = all_data[col].astype("category")
                 print(
                     f"Converted column {col} from {dtype} to "
