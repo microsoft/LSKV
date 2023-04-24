@@ -93,15 +93,19 @@ function readHost() {
   return readHosts[index];
 }
 
-export function setup() {
-  randomSeed(123);
-
-  if (content_type == "grpc") {
+function connect() {
     write_grpc_client.connect(writeAddr, {});
     for (var i = 0; i < read_grpc_clients.length; i++) {
       const readAddr = readAddrs[i];
       read_grpc_clients[i].connect(readAddr, {});
     }
+}
+
+export function setup() {
+  randomSeed(123);
+
+  if (content_type == "grpc") {
+    connect()
   }
 }
 
@@ -122,7 +126,7 @@ function check_committed(status) {
 export function put_single(i = 0, tag = "put_single") {
   if (content_type == "grpc") {
     if (tag != "setup" && exec.vu.iterationInInstance == 0) {
-      write_grpc_client.connect(writeAddr, {});
+      connect();
     }
     const payload = {
       key: key(i),
@@ -223,10 +227,7 @@ export function put_single_wait(i = 0) {
 export function get_single(i = 0, tag = "get_single") {
   if (content_type == "grpc") {
     if (tag != "setup" && exec.vu.iterationInInstance == 0) {
-      for (var i = 0; i < read_grpc_clients.length; i++) {
-        const readAddr = readAddrs[i];
-        read_grpc_clients[i].connect(readAddr, {});
-      }
+      connect()
     }
     const payload = {
       key: key(i),
@@ -297,7 +298,7 @@ export function get_range(i = 0, tag = "get_range") {
 export function delete_single(i = 0, tag = "delete_single") {
   if (content_type == "grpc") {
     if (tag != "setup" && exec.vu.iterationInInstance == 0) {
-      write_grpc_client.connect(writeAddr, {});
+      connect()
     }
     const payload = {
       key: key(i),
