@@ -301,7 +301,6 @@ export function delete_single(i = 0, tag = "delete_single") {
     }
     const payload = {
       key: key(i),
-      serializable: true,
     };
     const response = write_grpc_client.invoke("etcdserverpb.KV/DeleteRange", payload);
 
