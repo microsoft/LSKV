@@ -46,8 +46,13 @@ function getStages() {
 const write_grpc_client = new grpc.Client();
 write_grpc_client.load(["definitions"], "../../proto/etcd.proto");
 
-const read_grpc_client = new grpc.Client();
-read_grpc_client.load(["definitions"], "../../proto/etcd.proto");
+
+let read_grpc_clients = [];
+for (const readAddr of readAddrs) {
+  const read_grpc_client = new grpc.Client();
+  read_grpc_client.load(["definitions"], "../../proto/etcd.proto");
+  read_grpc_clients.push(read_grpc_client);
+}
 
 export let options = {
   tlsAuth: [
@@ -78,9 +83,9 @@ const val0 = encoding.b64encode("v".repeat(valueSize));
 const writeHost = `https://${writeAddr}`;
 const readHosts = readAddrs.map(addr=>`https://${addr}`);
 
-function readAddr() {
-  const index = exec.vu.iterationInInstance % readAddrs.length;
-  return readAddrs[index];
+function get_read_grpc_client() {
+  const index = exec.vu.iterationInInstance % read_grpc_clients.length;
+  return read_grpc_clients[index];
 }
 
 function readHost() {
@@ -93,7 +98,10 @@ export function setup() {
 
   if (content_type == "grpc") {
     write_grpc_client.connect(writeAddr, {});
-    read_grpc_client.connect(readAddr(), {});
+    for (var i = 0; i < read_grpc_clients.length; i++) {
+      const readAddr = readAddrs[i];
+      read_grpc_clients[i].connect(readAddr, {});
+    }
   }
 }
 
@@ -215,13 +223,16 @@ export function put_single_wait(i = 0) {
 export function get_single(i = 0, tag = "get_single") {
   if (content_type == "grpc") {
     if (tag != "setup" && exec.vu.iterationInInstance == 0) {
-      read_grpc_client.connect(readAddr(), {});
+      for (var i = 0; i < read_grpc_clients.length; i++) {
+        const readAddr = readAddrs[i];
+        read_grpc_clients[i].connect(readAddr, {});
+      }
     }
     const payload = {
       key: key(i),
       serializable: true,
     };
-    const response = read_grpc_client.invoke("etcdserverpb.KV/Range", payload);
+    const response = get_read_grpc_client().invoke("etcdserverpb.KV/Range", payload);
 
     check(response, {
       "status is 200": (r) => r && r.status === grpc.StatusOK,
