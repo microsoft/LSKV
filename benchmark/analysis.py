@@ -133,7 +133,7 @@ class Analyser:
 
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-branches
-    def get_data(self) -> pd.DataFrame:
+    def get_data(self, columns=None, filter_data=None) -> pd.DataFrame:
         """
         Load the data for the benchmark, adding config values as columns.
         """
@@ -142,8 +142,9 @@ class Analyser:
         bench_dir = self.bench_dir()
         print(f"loading from {bench_dir}")
 
-        for config_hash in os.listdir(bench_dir):
-            print(f"processing {config_hash}")
+        config_dirs = os.listdir(bench_dir)
+        for i, config_hash in enumerate(config_dirs):
+            print(f"processing {config_hash} {i}/{len(config_dirs)}")
             with open(
                 os.path.join(bench_dir, config_hash, "config.json"),
                 "r",
@@ -162,7 +163,10 @@ class Analyser:
             if self.benchmark == "perf":
                 dataframe = pd.read_parquet(file)
             else:
-                dataframe = pd.read_csv(file)
+                dataframe = pd.read_csv(file, usecols=columns)
+
+            if filter_data:
+                dataframe = filter_data(dataframe)
 
             if self.benchmark == "perf":
                 # parse the send dataframe too and store that
