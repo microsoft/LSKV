@@ -57,7 +57,7 @@ def etcd_configurations(_: argparse.Namespace) -> List[etcd.EtcdConfig]:
                 snapshot_tx_interval=10000,
                 http_version=2,
                 repeat=repeat,
-                tmpfs=True,
+                tmpfs=False,
                 rate=1000,
                 bench_args=["put"],
                 clients=100,
@@ -77,7 +77,7 @@ def etcd_configurations(_: argparse.Namespace) -> List[etcd.EtcdConfig]:
                 snapshot_tx_interval=10000,
                 http_version=2,
                 repeat=repeat,
-                tmpfs=True,
+                tmpfs=False,
                 rate=2000,
                 bench_args=["put"],
                 clients=100,
@@ -97,7 +97,7 @@ def etcd_configurations(_: argparse.Namespace) -> List[etcd.EtcdConfig]:
                 snapshot_tx_interval=10000,
                 http_version=2,
                 repeat=repeat,
-                tmpfs=True,
+                tmpfs=False,
                 rate=3000,
                 bench_args=["put"],
                 clients=100,
@@ -117,7 +117,7 @@ def etcd_configurations(_: argparse.Namespace) -> List[etcd.EtcdConfig]:
                 snapshot_tx_interval=10000,
                 http_version=2,
                 repeat=repeat,
-                tmpfs=True,
+                tmpfs=False,
                 rate=4000,
                 bench_args=["put"],
                 clients=100,
@@ -137,7 +137,7 @@ def etcd_configurations(_: argparse.Namespace) -> List[etcd.EtcdConfig]:
                 snapshot_tx_interval=10000,
                 http_version=2,
                 repeat=repeat,
-                tmpfs=True,
+                tmpfs=False,
                 rate=5000,
                 bench_args=["put"],
                 clients=100,
@@ -157,7 +157,7 @@ def etcd_configurations(_: argparse.Namespace) -> List[etcd.EtcdConfig]:
                 snapshot_tx_interval=10000,
                 http_version=2,
                 repeat=repeat,
-                tmpfs=True,
+                tmpfs=False,
                 rate=6000,
                 bench_args=["put"],
                 clients=100,
@@ -224,7 +224,7 @@ def ycsb_configurations(_: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                 for workload in workloads
             ]
             + [
-                # lskv sgx
+                # lskv sgx on tmpfs
                 ycsb.YCSBConfig(
                     store="lskv",
                     tls=True,
@@ -246,7 +246,7 @@ def ycsb_configurations(_: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                 for workload in workloads
             ]
             + [
-                # lskv virtual
+                # lskv virtual on tmpfs
                 ycsb.YCSBConfig(
                     store="lskv",
                     tls=True,
@@ -260,6 +260,50 @@ def ycsb_configurations(_: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                     http_version=2,
                     repeat=repeat,
                     tmpfs=True,
+                    serializable=True,
+                    rate=10000,
+                    workload=workload,
+                    threads=10,
+                )
+                for workload in workloads
+            ]
+            + [
+                # lskv sgx
+                ycsb.YCSBConfig(
+                    store="lskv",
+                    tls=True,
+                    enclave="sgx",
+                    nodes=nodes[:3],
+                    worker_threads=0,
+                    sig_tx_interval=5000,
+                    sig_ms_interval=1000,
+                    ledger_chunk_bytes="5MB",
+                    snapshot_tx_interval=10000,
+                    http_version=2,
+                    repeat=repeat,
+                    tmpfs=False,
+                    serializable=True,
+                    rate=10000,
+                    workload=workload,
+                    threads=10,
+                )
+                for workload in workloads
+            ]
+            + [
+                # lskv virtual
+                ycsb.YCSBConfig(
+                    store="lskv",
+                    tls=True,
+                    enclave="virtual",
+                    nodes=nodes[:3],
+                    worker_threads=0,
+                    sig_tx_interval=5000,
+                    sig_ms_interval=1000,
+                    ledger_chunk_bytes="5MB",
+                    snapshot_tx_interval=10000,
+                    http_version=2,
+                    repeat=repeat,
+                    tmpfs=False,
                     serializable=True,
                     rate=10000,
                     workload=workload,
@@ -323,7 +367,7 @@ def ycsb_configurations(_: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                     snapshot_tx_interval=10000,
                     http_version=2,
                     repeat=repeat,
-                    tmpfs=True,
+                    tmpfs=False,
                     serializable=True,
                     rate=10000,
                     workload=workload,
@@ -345,7 +389,7 @@ def ycsb_configurations(_: argparse.Namespace) -> List[ycsb.YCSBConfig]:
                     snapshot_tx_interval=10000,
                     http_version=2,
                     repeat=repeat,
-                    tmpfs=True,
+                    tmpfs=False,
                     serializable=True,
                     rate=10000,
                     workload=workload,
@@ -402,7 +446,7 @@ def k6_configurations(_: argparse.Namespace) -> List[k6.K6Config]:
                     snapshot_tx_interval=10000,
                     http_version=http_version,
                     repeat=repeat,
-                    tmpfs=True,
+                    tmpfs=False,
                     rate=10000,
                     vus=100,
                     func="mixed_single",
@@ -425,7 +469,7 @@ def k6_configurations(_: argparse.Namespace) -> List[k6.K6Config]:
                     snapshot_tx_interval=10000,
                     http_version=2,
                     repeat=repeat,
-                    tmpfs=True,
+                    tmpfs=False,
                     rate=10000,
                     vus=100,
                     func="mixed_single",
@@ -448,7 +492,7 @@ def k6_configurations(_: argparse.Namespace) -> List[k6.K6Config]:
                     snapshot_tx_interval=10000,
                     http_version=2,
                     repeat=repeat,
-                    tmpfs=True,
+                    tmpfs=False,
                     rate=10000,
                     vus=100,
                     func="mixed_single",
@@ -471,7 +515,7 @@ def k6_configurations(_: argparse.Namespace) -> List[k6.K6Config]:
                     snapshot_tx_interval=10000,
                     http_version=2,
                     repeat=repeat,
-                    tmpfs=True,
+                    tmpfs=False,
                     rate=10000,
                     vus=100,
                     func="mixed_single",
@@ -494,7 +538,7 @@ def k6_configurations(_: argparse.Namespace) -> List[k6.K6Config]:
                     snapshot_tx_interval=10000,
                     http_version=2,
                     repeat=repeat,
-                    tmpfs=True,
+                    tmpfs=False,
                     rate=10000,
                     vus=100,
                     func="mixed_single_receipt",
@@ -513,5 +557,5 @@ if __name__ == "__main__":
     # common.main("etcd", etcd.get_arguments, etcd_configurations, etcd.execute_config)
     logger.info("Running ycsb")
     common.main("ycsb", ycsb.get_arguments, ycsb_configurations, ycsb.execute_config)
-    logger.info("Running k6")
-    common.main("k6", k6.get_arguments, k6_configurations, k6.execute_config)
+    # logger.info("Running k6")
+    # common.main("k6", k6.get_arguments, k6_configurations, k6.execute_config)
