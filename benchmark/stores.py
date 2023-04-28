@@ -143,6 +143,8 @@ class LSKVStore(Store):
                     "--http-version",
                     str(self.config.http_version),
                 ]
+                if self.config.tmpfs:
+                    lskv_cmd.append("--tmpfs")
 
                 for node in self.config.nodes:
                     lskv_cmd.append("--node")

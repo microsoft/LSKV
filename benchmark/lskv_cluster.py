@@ -84,7 +84,9 @@ class LocalRunner(Runner):
         Copy a file.
         """
         if src == dst:
-            logger.info("[{}] Skipping copying file from {} to {}", self.address, src, dst)
+            logger.info(
+                "[{}] Skipping copying file from {} to {}", self.address, src, dst
+            )
             return
         logger.info("[{}] Copying file from {} to {}", self.address, src, dst)
         shutil.copy(src, dst)
@@ -309,6 +311,7 @@ class Node:
     sig_ms_interval: int
     ledger_chunk_bytes: str
     snapshot_tx_interval: int
+    data_dir: str
 
     # to be able to work with it
     runner: Runner
@@ -382,7 +385,10 @@ class Node:
                 "tx_count": self.sig_tx_interval,
                 "delay": f"{self.sig_ms_interval}ms",
             },
-            "ledger": {"chunk_size": self.ledger_chunk_bytes},
+            "ledger": {
+                "directory": os.path.join(self.data_dir, "ledger"),
+                "chunk_size": self.ledger_chunk_bytes,
+            },
         }
 
     def join_config(self) -> Dict[str, Any]:
@@ -455,6 +461,7 @@ class Operator:
         sig_ms_interval: int,
         ledger_chunk_bytes: str,
         snapshot_tx_interval: int,
+        tmpfs: bool,
     ):
         self.workspace = workspace
         self.name = "lskv"
@@ -471,6 +478,7 @@ class Operator:
         self.sig_ms_interval = sig_ms_interval
         self.ledger_chunk_bytes = ledger_chunk_bytes
         self.snapshot_tx_interval = snapshot_tx_interval
+        self.tmpfs = tmpfs
 
     def make_name(self, i: int) -> str:
         """
@@ -552,6 +560,7 @@ class Operator:
             ledger_chunk_bytes=self.ledger_chunk_bytes,
             snapshot_tx_interval=self.snapshot_tx_interval,
             runner=runner,
+            data_dir="/data" if self.tmpfs else ".",
         )
 
     def first_ip(self) -> str:
@@ -631,6 +640,9 @@ class Operator:
                 "-v",
                 "/dev/sgx:/dev/sgx",
             ]
+        if self.tmpfs:
+            cmd += ["--mount", f"type=tmpfs,destination=/{node.data_dir}"]
+
         cmd.append(self.image)
         cmd_str = subprocess.list2cmdline(cmd)
         cmd_str = f"cd {node_dir_abs} && {cmd_str} >out 2>err"
@@ -836,6 +848,7 @@ def main(
     sig_ms_interval: int,
     ledger_chunk_bytes: str,
     snapshot_tx_interval: int,
+    tmpfs: bool,
     runners: List[Runner],
 ):
     """
@@ -854,6 +867,7 @@ def main(
         sig_ms_interval,
         ledger_chunk_bytes,
         snapshot_tx_interval,
+        tmpfs,
     )
     try:
         operator.setup_common()
@@ -903,6 +917,9 @@ if __name__ == "__main__":
     parser.add_argument("--sig-ms-interval", type=int, default="1000")
     parser.add_argument("--ledger-chunk-bytes", type=str, default="5MB")
     parser.add_argument("--snapshot-tx-interval", type=int, default="10000")
+    parser.add_argument(
+        "--tmpfs", action="store_true", help="Whether to store data on tmpfs"
+    )
 
     parser.add_argument("--ssh-user", type=str, default="")
 
@@ -942,5 +959,6 @@ if __name__ == "__main__":
         args.sig_ms_interval,
         args.ledger_chunk_bytes,
         args.snapshot_tx_interval,
+        args.tmpfs,
         runners,
     )
