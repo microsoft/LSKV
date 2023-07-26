@@ -1,5 +1,4 @@
 {
-  llvmPackages_15,
   stdenv,
   fetchurl,
   fetchzip,
@@ -23,22 +22,21 @@
     sha256 = "sha256-/OhdYPlbNHMxX2VxlurkOspC1OyPDmyUqXvZKxzwkTg=";
   };
   symcrypt = fetchzip {
-    url = "https://github.com/microsoft/SymCrypt/releases/download/v101.3.0/symcrypt_AMD64_oe_full_v101.3.0-31e06ae.tgz";
-    sha256 = "sha256-diA653HZ4Mn4JbeT6+U0anhP3ySVWZWjcXH7KVVkqkY=";
+    url = "https://github.com/microsoft/SymCrypt/releases/download/v103.0.1/symcrypt-linux-oe_full-AMD64-103.0.1-69dbff3.tar.gz";
+    sha256 = "sha256-VCJlAOnbY2kYlnNv6SxumD4BinntAvpBFkUs9hBxCY4=";
     stripRoot = false;
   };
 in
-  llvmPackages_15.libcxxStdenv.mkDerivation rec {
+  stdenv.mkDerivation rec {
     pname = "openenclave";
     version = openenclave-version;
     src = openenclave-src;
-    # patches = [patches/openenclave.diff];
     cmakeFlags = [
       "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
       "-DFETCHCONTENT_SOURCE_DIR_COMPILER-RT-SOURCES=${compiler-rt}"
       "-DFETCHCONTENT_SOURCE_DIR_LIBCXX_SOURCES=${libcxx}"
       "-DFETCHCONTENT_SOURCE_DIR_SYMCRYPT_PACKAGE=${symcrypt}"
-      "-DCLANG_INTRINSIC_HEADERS_DIR=${toString llvmPackages_15.libcxxStdenv.cc.cc.lib}/lib/clang/10.0.1/include"
+      "-DCLANG_INTRINSIC_HEADERS_DIR=${toString stdenv.cc.cc.lib}/lib/clang/${stdenv.cc.version}/include"
       "-DENABLE_REFMAN=OFF"
       "-DBUILD_TESTS=OFF"
 

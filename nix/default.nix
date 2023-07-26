@@ -64,7 +64,7 @@ pkgs.lib.makeScope pkgs.newScope (
       lvi-mitigation = self.callPackage ./lvi-mitigation.nix {};
       openenclave = self.callPackage ./openenclave.nix {
         # Openenclave doesn't build with libcxx, for some reason.
-        inherit (pkgs.llvmPackages_10) stdenv;
+        inherit (pkgs.llvmPackages_11) stdenv;
       };
 
       k6 = self.callPackage ./k6.nix {};
