@@ -53,12 +53,12 @@ pkgs.lib.makeScope pkgs.newScope (
       az-dcap = self.callPackage ./az-dcap.nix {};
       sgx-dcap = self.callPackage ./sgx-dcap.nix {};
 
-      openenclave-version = "0.18.4";
+      openenclave-version = "0.19.3";
       openenclave-src = pkgs.fetchFromGitHub {
         owner = "openenclave";
         repo = "openenclave";
         rev = "v${openenclave-version}";
-        hash = "sha256-65LHXKfDWUvLCMupJkF7o7d6ljsO7nwcmQxRU8H2Xls=";
+        hash = "sha256-RN7Mq6RO09CZOEoi/nYpPfa7TT1I5FYKqET8wRXnIxU=";
         fetchSubmodules = true;
       };
       lvi-mitigation = self.callPackage ./lvi-mitigation.nix {};

@@ -1,10 +1,10 @@
 {
+  llvmPackages_15,
   stdenv,
   fetchurl,
   fetchzip,
   openenclave-version,
   openenclave-src,
-  lvi-mitigation,
   cmake,
   ninja,
   perl,
@@ -28,17 +28,17 @@
     stripRoot = false;
   };
 in
-  stdenv.mkDerivation rec {
+  llvmPackages_15.libcxxStdenv.mkDerivation rec {
     pname = "openenclave";
     version = openenclave-version;
     src = openenclave-src;
-    patches = [patches/openenclave.diff];
+    # patches = [patches/openenclave.diff];
     cmakeFlags = [
       "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
       "-DFETCHCONTENT_SOURCE_DIR_COMPILER-RT-SOURCES=${compiler-rt}"
       "-DFETCHCONTENT_SOURCE_DIR_LIBCXX_SOURCES=${libcxx}"
       "-DFETCHCONTENT_SOURCE_DIR_SYMCRYPT_PACKAGE=${symcrypt}"
-      "-DCLANG_INTRINSIC_HEADERS_DIR=${toString stdenv.cc.cc.lib}/lib/clang/10.0.1/include"
+      "-DCLANG_INTRINSIC_HEADERS_DIR=${toString llvmPackages_15.libcxxStdenv.cc.cc.lib}/lib/clang/10.0.1/include"
       "-DENABLE_REFMAN=OFF"
       "-DBUILD_TESTS=OFF"
 
@@ -48,8 +48,6 @@ in
 
       "-DCMAKE_BUILD_WITH_INSTALL_RPATH:BOOL=ON"
       "-DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=ON"
-
-      "-DLVI_MITIGATION=ControlFlow"
     ];
 
     preConfigure = ''
@@ -58,7 +56,6 @@ in
       ln -s ${compiler-rt} 3rdparty/compiler-rt/compiler-rt
       ln -s ${libcxx} 3rdparty/libcxx/libcxx
       ln -s ${symcrypt} build/3rdparty/symcrypt_engine/SymCrypt
-      ln -s ${lvi-mitigation}/bin build/lvi_mitigation_bin
 
       patchShebangs tools/oeutil/gen_pubkey_header.sh
       patchShebangs tools/oeapkman/oeapkman
@@ -69,7 +66,6 @@ in
       substituteInPlace pkgconfig/*.pc --replace \''${prefix}/@CMAKE_INSTALL_INCLUDEDIR@ @CMAKE_INSTALL_INCLUDEDIR@
 
       # since expansion isn't possible in cmakeFlags
-      cmakeFlags="$cmakeFlags -DLVI_MITIGATION_BINDIR=$PWD/build/lvi_mitigation_bin"
     '';
 
     nativeBuildInputs = [cmake ninja perl];
