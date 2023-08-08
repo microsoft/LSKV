@@ -6,7 +6,7 @@ FROM mcr.microsoft.com/ccf/app/dev:4.0.7-sgx as builder
 
 COPY . /src/
 WORKDIR /build
-RUN CC="/opt/oe_lvi/clang-11" CXX="/opt/oe_lvi/clang++-11" cmake -GNinja -DCOMPILE_TARGET=sgx /src && ninja
+RUN CC=$(command -v clang-11) CXX=$(command -v clang++-11) cmake -GNinja -DCOMPILE_TARGET=sgx /src && ninja
 
 # Run
 FROM mcr.microsoft.com/ccf/app/run:4.0.7-sgx
