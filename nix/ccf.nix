@@ -25,7 +25,7 @@
 in
   stdenv.mkDerivation rec {
     pname = "ccf-${platform}";
-    version = "4.0.0-dev3";
+    version = "4.0.7";
     src = fetchFromGitHub {
       owner = "microsoft";
       repo = "CCF";
