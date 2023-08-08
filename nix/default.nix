@@ -28,12 +28,12 @@ pkgs.lib.makeScope pkgs.newScope (
     };
 
     ccf = self.callPackage ./ccf.nix {
-      stdenv = pkgs.llvmPackages_15.libcxxStdenv;
+      stdenv = pkgs.llvmPackages_16.libcxxStdenv;
     };
     ccf-sandbox = self.callPackage ./ccf-sandbox.nix {inherit ccf;};
     lskv = self.callPackage ./lskv.nix {
       inherit ccf;
-      stdenv = pkgs.llvmPackages_15.libcxxStdenv;
+      stdenv = pkgs.llvmPackages_16.libcxxStdenv;
     };
     lskv-sandbox = self.callPackage ./lskv-sandbox.nix {inherit ccf-sandbox lskv;};
     packages = lskvlib.forAllPlatforms {
@@ -71,7 +71,7 @@ pkgs.lib.makeScope pkgs.newScope (
 
       mkShell = args:
         (pkgs.mkShell.override {
-          stdenv = pkgs.llvmPackages_15.libcxxStdenv;
+          stdenv = pkgs.llvmPackages_16.libcxxStdenv;
         }) ({
             NIX_CFLAGS_COMPILE = "-Wno-unused-command-line-argument";
             NIX_NO_SELF_RPATH = "1";
