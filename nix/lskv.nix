@@ -1,7 +1,7 @@
 {
   stdenv,
   cmake,
-  sgx-dcap,
+  # sgx-dcap,
   openenclave,
   ninja,
   protobuf,
@@ -27,7 +27,7 @@ stdenv.mkDerivation rec {
     cmake
     ninja
     protobuf
-    sgx-dcap
+    # sgx-dcap
     (ccf.override {inherit platform;})
     openenclave
   ];

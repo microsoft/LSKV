@@ -28,12 +28,12 @@ pkgs.lib.makeScope pkgs.newScope (
     };
 
     ccf = self.callPackage ./ccf.nix {
-      stdenv = pkgs.llvmPackages_10.libcxxStdenv;
+      stdenv = pkgs.llvmPackages_15.libcxxStdenv;
     };
     ccf-sandbox = self.callPackage ./ccf-sandbox.nix {inherit ccf;};
     lskv = self.callPackage ./lskv.nix {
       inherit ccf;
-      stdenv = pkgs.llvmPackages_10.libcxxStdenv;
+      stdenv = pkgs.llvmPackages_15.libcxxStdenv;
     };
     lskv-sandbox = self.callPackage ./lskv-sandbox.nix {inherit ccf-sandbox lskv;};
     packages = lskvlib.forAllPlatforms {
@@ -53,25 +53,25 @@ pkgs.lib.makeScope pkgs.newScope (
       az-dcap = self.callPackage ./az-dcap.nix {};
       sgx-dcap = self.callPackage ./sgx-dcap.nix {};
 
-      openenclave-version = "0.18.4";
+      openenclave-version = "0.19.3";
       openenclave-src = pkgs.fetchFromGitHub {
         owner = "openenclave";
         repo = "openenclave";
         rev = "v${openenclave-version}";
-        hash = "sha256-65LHXKfDWUvLCMupJkF7o7d6ljsO7nwcmQxRU8H2Xls=";
+        hash = "sha256-RN7Mq6RO09CZOEoi/nYpPfa7TT1I5FYKqET8wRXnIxU=";
         fetchSubmodules = true;
       };
       lvi-mitigation = self.callPackage ./lvi-mitigation.nix {};
       openenclave = self.callPackage ./openenclave.nix {
-        # Openenclave doesn't build with libcxx, for some reason.
-        inherit (pkgs.llvmPackages_10) stdenv;
+        stdenv = pkgs.llvmPackages_11.libcxxStdenv;
+        openssl = pkgs.openssl_1_1;
       };
 
       k6 = self.callPackage ./k6.nix {};
 
       mkShell = args:
         (pkgs.mkShell.override {
-          stdenv = pkgs.llvmPackages_10.libcxxStdenv;
+          stdenv = pkgs.llvmPackages_15.libcxxStdenv;
         }) ({
             NIX_CFLAGS_COMPILE = "-Wno-unused-command-line-argument";
             NIX_NO_SELF_RPATH = "1";

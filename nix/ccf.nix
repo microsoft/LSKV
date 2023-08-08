@@ -1,13 +1,14 @@
 {
   fetchFromGitHub,
+  pkg-config,
   cmake,
   ninja,
   stdenv,
   openenclave,
   libuv,
-  az-dcap,
-  sgx-dcap,
-  sgx-psw,
+  # az-dcap,
+  # sgx-dcap,
+  # sgx-psw,
   makeWrapper,
   protobuf,
   openssl,
@@ -31,24 +32,25 @@ in
       repo = "CCF";
       name = "ccf-${version}";
       rev = "ccf-${version}";
-      hash = "sha256-IG5lgtiq/VPTJm9hMYcj9JTxsapD7+H1aw5+b6pY0ko=";
+      hash = "sha256-CofADLExBTo3CH7iACKKNxMsSpy/ZBWBRaXc3ELHAd4=";
     };
     patches = [
-      patches/ccf-no-python.diff
-      patches/ccf-no-python-pb2.diff
+      # patches/ccf-no-python.diff
+      # patches/ccf-no-python-pb2.diff
       patches/ccf-protoc-binary.diff
-      patches/ccf-ignore-submitter.diff
+      # patches/ccf-ignore-submitter.diff
     ];
 
     nativeBuildInputs = [
       cmake
       ninja
+      pkg-config
       libuv
       protobuf
-      arrow-cpp
-      sgx-dcap
+      # arrow-cpp
+      # sgx-dcap
       openenclave
-      makeWrapper
+      # makeWrapper
     ];
 
     cmakeFlags = [
@@ -62,12 +64,12 @@ in
     NIX_NO_SELF_RPATH = "1";
 
     postInstall = ''
-      wrapProgram $out/bin/cchost \
-        --suffix LD_LIBRARY_PATH ':' "${az-dcap}/lib:${sgx-psw}/lib:${sgx-dcap}/lib"
-
-      wrapProgram $out/bin/keygenerator.sh \
-        --prefix PATH ':' "${openssl}/bin"
-
-      ${toRemove}
+      # wrapProgram $out/bin/cchost \
+      #   --suffix LD_LIBRARY_PATH ':' "''${az-dcap}/lib:''${sgx-psw}/lib:''${sgx-dcap}/lib"
+      #
+      # wrapProgram $out/bin/keygenerator.sh \
+      #   --prefix PATH ':' "${openssl}/bin"
+      #
+      # ${toRemove}
     '';
   }

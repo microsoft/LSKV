@@ -1,0 +1,308 @@
+diff --git a/pkgconfig/oeenclave-clang++-lvi-cfg.pc b/pkgconfig/oeenclave-clang++-lvi-cfg.pc
+index 6ac9d6ec7..380ae3ba2 100644
+--- a/pkgconfig/oeenclave-clang++-lvi-cfg.pc
++++ b/pkgconfig/oeenclave-clang++-lvi-cfg.pc
+@@ -1,10 +1,9 @@
+ # Copyright (c) Open Enclave SDK contributors.
+ # Licensed under the MIT License.
+ 
+-prefix=${pcfiledir}/../..
+-exec_prefix=${prefix}
+-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
++exec_prefix=@CMAKE_INSTALL_PREFIX@
++includedir=@CMAKE_INSTALL_INCLUDEDIR@
++libdir=@CMAKE_INSTALL_LIBDIR@
+ 
+ mbedtlslibslvicfg=@LVI_MITIGATION_MBEDTLS_CRYPTO_LIBS@
+ openssllibslvicfg=@LVI_MITIGATION_OPENSSL_CRYPTO_LIBS@
+diff --git a/pkgconfig/oeenclave-clang++.pc b/pkgconfig/oeenclave-clang++.pc
+index f588fa1fd..2108e0657 100644
+--- a/pkgconfig/oeenclave-clang++.pc
++++ b/pkgconfig/oeenclave-clang++.pc
+@@ -1,10 +1,9 @@
+ # Copyright (c) Open Enclave SDK contributors.
+ # Licensed under the MIT License.
+ 
+-prefix=${pcfiledir}/../..
+-exec_prefix=${prefix}
+-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
++exec_prefix=@CMAKE_INSTALL_PREFIX@
++includedir=@CMAKE_INSTALL_INCLUDEDIR@
++libdir=@CMAKE_INSTALL_LIBDIR@
+ 
+ mbedtlslibs=@ENCLAVE_MBEDTLS_CRYPTO_LIBS@
+ openssllibs=@ENCLAVE_OPENSSL_CRYPTO_LIBS@
+diff --git a/pkgconfig/oeenclave-clang-lvi-cfg.pc b/pkgconfig/oeenclave-clang-lvi-cfg.pc
+index a7a8c4e7c..ebb4bafc3 100644
+--- a/pkgconfig/oeenclave-clang-lvi-cfg.pc
++++ b/pkgconfig/oeenclave-clang-lvi-cfg.pc
+@@ -1,10 +1,9 @@
+ # Copyright (c) Open Enclave SDK contributors.
+ # Licensed under the MIT License.
+ 
+-prefix=${pcfiledir}/../..
+-exec_prefix=${prefix}
+-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
++exec_prefix=@CMAKE_INSTALL_PREFIX@
++includedir=@CMAKE_INSTALL_INCLUDEDIR@
++libdir=@CMAKE_INSTALL_LIBDIR@
+ 
+ mbedtlslibslvicfg=@LVI_MITIGATION_MBEDTLS_CRYPTO_LIBS@
+ openssllibslvicfg=@LVI_MITIGATION_OPENSSL_CRYPTO_LIBS@
+diff --git a/pkgconfig/oeenclave-clang.pc b/pkgconfig/oeenclave-clang.pc
+index 583a474d3..01d179059 100644
+--- a/pkgconfig/oeenclave-clang.pc
++++ b/pkgconfig/oeenclave-clang.pc
+@@ -1,10 +1,9 @@
+ # Copyright (c) Open Enclave SDK contributors.
+ # Licensed under the MIT License.
+ 
+-prefix=${pcfiledir}/../..
+-exec_prefix=${prefix}
+-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
++exec_prefix=@CMAKE_INSTALL_PREFIX@
++includedir=@CMAKE_INSTALL_INCLUDEDIR@
++libdir=@CMAKE_INSTALL_LIBDIR@
+ 
+ mbedtlslibs=@ENCLAVE_MBEDTLS_CRYPTO_LIBS@
+ openssllibs=@ENCLAVE_OPENSSL_CRYPTO_LIBS@
+diff --git a/pkgconfig/oeenclave-g++-lvi-cfg.pc b/pkgconfig/oeenclave-g++-lvi-cfg.pc
+index 44b6fe8fd..1f06128db 100644
+--- a/pkgconfig/oeenclave-g++-lvi-cfg.pc
++++ b/pkgconfig/oeenclave-g++-lvi-cfg.pc
+@@ -1,10 +1,9 @@
+ # Copyright (c) Open Enclave SDK contributors.
+ # Licensed under the MIT License.
+ 
+-prefix=${pcfiledir}/../..
+-exec_prefix=${prefix}
+-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
++exec_prefix=@CMAKE_INSTALL_PREFIX@
++includedir=@CMAKE_INSTALL_INCLUDEDIR@
++libdir=@CMAKE_INSTALL_LIBDIR@
+ 
+ mbedtlslibslvicfg=@LVI_MITIGATION_MBEDTLS_CRYPTO_LIBS@
+ openssllibslvicfg=@LVI_MITIGATION_OPENSSL_CRYPTO_LIBS@
+diff --git a/pkgconfig/oeenclave-g++.pc b/pkgconfig/oeenclave-g++.pc
+index 80ae85bd0..a1a45bd0b 100644
+--- a/pkgconfig/oeenclave-g++.pc
++++ b/pkgconfig/oeenclave-g++.pc
+@@ -1,10 +1,9 @@
+ # Copyright (c) Open Enclave SDK contributors.
+ # Licensed under the MIT License.
+ 
+-prefix=${pcfiledir}/../..
+-exec_prefix=${prefix}
+-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
++exec_prefix=@CMAKE_INSTALL_PREFIX@
++includedir=@CMAKE_INSTALL_INCLUDEDIR@
++libdir=@CMAKE_INSTALL_LIBDIR@
+ 
+ mbedtlslibs=@ENCLAVE_MBEDTLS_CRYPTO_LIBS@
+ openssllibs=@ENCLAVE_OPENSSL_CRYPTO_LIBS@
+diff --git a/pkgconfig/oeenclave-gcc-lvi-cfg.pc b/pkgconfig/oeenclave-gcc-lvi-cfg.pc
+index bae4563ab..4aa5843de 100644
+--- a/pkgconfig/oeenclave-gcc-lvi-cfg.pc
++++ b/pkgconfig/oeenclave-gcc-lvi-cfg.pc
+@@ -1,10 +1,9 @@
+ # Copyright (c) Open Enclave SDK contributors.
+ # Licensed under the MIT License.
+ 
+-prefix=${pcfiledir}/../..
+-exec_prefix=${prefix}
+-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
++exec_prefix=@CMAKE_INSTALL_PREFIX@
++includedir=@CMAKE_INSTALL_INCLUDEDIR@
++libdir=@CMAKE_INSTALL_LIBDIR@
+ 
+ mbedtlslibslvicfg=@LVI_MITIGATION_MBEDTLS_CRYPTO_LIBS@
+ openssllibslvicfg=@LVI_MITIGATION_OPENSSL_CRYPTO_LIBS@
+diff --git a/pkgconfig/oeenclave-gcc.pc b/pkgconfig/oeenclave-gcc.pc
+index 068c32f05..dd585c395 100644
+--- a/pkgconfig/oeenclave-gcc.pc
++++ b/pkgconfig/oeenclave-gcc.pc
+@@ -1,10 +1,9 @@
+ # Copyright (c) Open Enclave SDK contributors.
+ # Licensed under the MIT License.
+ 
+-prefix=${pcfiledir}/../..
+-exec_prefix=${prefix}
+-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
++exec_prefix=@CMAKE_INSTALL_PREFIX@
++includedir=@CMAKE_INSTALL_INCLUDEDIR@
++libdir=@CMAKE_INSTALL_LIBDIR@
+ 
+ mbedtlslibs=@ENCLAVE_MBEDTLS_CRYPTO_LIBS@
+ openssllibs=@ENCLAVE_OPENSSL_CRYPTO_LIBS@
+diff --git a/pkgconfig/oehost-clang++.pc b/pkgconfig/oehost-clang++.pc
+index 89b5c91e0..114630754 100644
+--- a/pkgconfig/oehost-clang++.pc
++++ b/pkgconfig/oehost-clang++.pc
+@@ -1,14 +1,13 @@
+ # Copyright (c) Open Enclave SDK contributors.
+ # Licensed under the MIT License.
+ 
+-prefix=${pcfiledir}/../..
+-exec_prefix=${prefix}
+-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
++exec_prefix=@CMAKE_INSTALL_PREFIX@
++includedir=@CMAKE_INSTALL_INCLUDEDIR@
++libdir=@CMAKE_INSTALL_LIBDIR@
+ 
+ Name: Open Enclave
+ Description: Open Enclave clang++ flags and libraries for building hosts.
+ Version: @OE_VERSION@
+ Requires: openssl
+-Cflags: @HOST_CXXFLAGS_CLANG@ @HOST_INCLUDES@ 
++Cflags: @HOST_CXXFLAGS_CLANG@ @HOST_INCLUDES@
+ Libs: @HOST_CXXLIBS@
+diff --git a/pkgconfig/oehost-clang.pc b/pkgconfig/oehost-clang.pc
+index 702ac7afb..3efa2d388 100644
+--- a/pkgconfig/oehost-clang.pc
++++ b/pkgconfig/oehost-clang.pc
+@@ -1,14 +1,13 @@
+ # Copyright (c) Open Enclave SDK contributors.
+ # Licensed under the MIT License.
+ 
+-prefix=${pcfiledir}/../..
+-exec_prefix=${prefix}
+-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
++exec_prefix=@CMAKE_INSTALL_PREFIX@
++includedir=@CMAKE_INSTALL_INCLUDEDIR@
++libdir=@CMAKE_INSTALL_LIBDIR@
+ 
+ Name: Open Enclave
+ Description: Open Enclave clang flags and libraries for building hosts.
+ Version: @OE_VERSION@
+ Requires: openssl
+-Cflags: @HOST_CFLAGS_CLANG@ @HOST_INCLUDES@ 
++Cflags: @HOST_CFLAGS_CLANG@ @HOST_INCLUDES@
+ Libs: @HOST_CLIBS@
+diff --git a/pkgconfig/oehost-g++.pc b/pkgconfig/oehost-g++.pc
+index 944f85875..da928c4b0 100644
+--- a/pkgconfig/oehost-g++.pc
++++ b/pkgconfig/oehost-g++.pc
+@@ -1,14 +1,13 @@
+ # Copyright (c) Open Enclave SDK contributors.
+ # Licensed under the MIT License.
+ 
+-prefix=${pcfiledir}/../..
+-exec_prefix=${prefix}
+-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
++exec_prefix=@CMAKE_INSTALL_PREFIX@
++includedir=@CMAKE_INSTALL_INCLUDEDIR@
++libdir=@CMAKE_INSTALL_LIBDIR@
+ 
+ Name: Open Enclave
+ Description: Open Enclave g++ flags and libraries for building hosts.
+ Version: @OE_VERSION@
+ Requires: openssl
+-Cflags: @HOST_CXXFLAGS_GCC@ @HOST_INCLUDES@ 
++Cflags: @HOST_CXXFLAGS_GCC@ @HOST_INCLUDES@
+ Libs: @HOST_CXXLIBS@
+diff --git a/pkgconfig/oehost-gcc.pc b/pkgconfig/oehost-gcc.pc
+index 6c86ba006..9b550b434 100644
+--- a/pkgconfig/oehost-gcc.pc
++++ b/pkgconfig/oehost-gcc.pc
+@@ -1,14 +1,13 @@
+ # Copyright (c) Open Enclave SDK contributors.
+ # Licensed under the MIT License.
+ 
+-prefix=${pcfiledir}/../..
+-exec_prefix=${prefix}
+-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
++exec_prefix=@CMAKE_INSTALL_PREFIX@
++includedir=@CMAKE_INSTALL_INCLUDEDIR@
++libdir=@CMAKE_INSTALL_LIBDIR@
+ 
+ Name: Open Enclave
+ Description: Open Enclave gcc flags and libraries for building hosts.
+ Version: @OE_VERSION@
+ Requires: openssl
+-Cflags: @HOST_CFLAGS_GCC@ @HOST_INCLUDES@ 
++Cflags: @HOST_CFLAGS_GCC@ @HOST_INCLUDES@
+ Libs: @HOST_CLIBS@
+diff --git a/pkgconfig/oehostverify-clang++.pc b/pkgconfig/oehostverify-clang++.pc
+index 33c01b43f..3c1e0fc4f 100644
+--- a/pkgconfig/oehostverify-clang++.pc
++++ b/pkgconfig/oehostverify-clang++.pc
+@@ -1,10 +1,9 @@
+ # Copyright (c) Open Enclave SDK contributors.
+ # Licensed under the MIT License.
+ 
+-prefix=@PREFIX@
+-exec_prefix=${prefix}
+-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
++exec_prefix=@CMAKE_INSTALL_PREFIX@
++includedir=@CMAKE_INSTALL_INCLUDEDIR@
++libdir=@CMAKE_INSTALL_LIBDIR@
+ 
+ Name: Open Enclave
+ Description: Open Enclave clang++ flags and libraries verifying remote reports on hosts.
+diff --git a/pkgconfig/oehostverify-clang.pc b/pkgconfig/oehostverify-clang.pc
+index ed5b67a28..d643115d7 100644
+--- a/pkgconfig/oehostverify-clang.pc
++++ b/pkgconfig/oehostverify-clang.pc
+@@ -1,10 +1,9 @@
+ # Copyright (c) Open Enclave SDK contributors.
+ # Licensed under the MIT License.
+ 
+-prefix=@PREFIX@
+-exec_prefix=${prefix}
+-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
++exec_prefix=@CMAKE_INSTALL_PREFIX@
++includedir=@CMAKE_INSTALL_INCLUDEDIR@
++libdir=@CMAKE_INSTALL_LIBDIR@
+ 
+ Name: Open Enclave
+ Description: Open Enclave clang flags and libraries verifying remote reports on hosts.
+diff --git a/pkgconfig/oehostverify-g++.pc b/pkgconfig/oehostverify-g++.pc
+index da30cf65b..0d4535cf4 100644
+--- a/pkgconfig/oehostverify-g++.pc
++++ b/pkgconfig/oehostverify-g++.pc
+@@ -1,10 +1,9 @@
+ # Copyright (c) Open Enclave SDK contributors.
+ # Licensed under the MIT License.
+ 
+-prefix=@PREFIX@
+-exec_prefix=${prefix}
+-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
++exec_prefix=@CMAKE_INSTALL_PREFIX@
++includedir=@CMAKE_INSTALL_INCLUDEDIR@
++libdir=@CMAKE_INSTALL_LIBDIR@
+ 
+ Name: Open Enclave
+ Description: Open Enclave g++ flags and libraries verifying remote reports on hosts.
+diff --git a/pkgconfig/oehostverify-gcc.pc b/pkgconfig/oehostverify-gcc.pc
+index 0559e1f58..5a0cd10ed 100644
+--- a/pkgconfig/oehostverify-gcc.pc
++++ b/pkgconfig/oehostverify-gcc.pc
+@@ -1,10 +1,9 @@
+ # Copyright (c) Open Enclave SDK contributors.
+ # Licensed under the MIT License.
+ 
+-prefix=@PREFIX@
+-exec_prefix=${prefix}
+-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
++exec_prefix=@CMAKE_INSTALL_PREFIX@
++includedir=@CMAKE_INSTALL_INCLUDEDIR@
++libdir=@CMAKE_INSTALL_LIBDIR@
+ 
+ Name: Open Enclave
+ Description: Open Enclave gcc flags and libraries verifying remote reports on hosts.

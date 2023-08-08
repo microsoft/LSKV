@@ -6,7 +6,7 @@
   makeWrapper,
   fetchurl,
   lib,
-  openssl_1_1,
+  openssl,
 }: let
   fetchFromIntelGitHub = {path, ...} @ attrs:
     fetchurl ({
@@ -44,7 +44,7 @@ in
     };
     nativeBuildInputs = [makeWrapper];
     buildInputs = [
-      (curl.override {openssl = openssl_1_1;})
+      (curl.override {openssl = openssl;})
       nlohmann_json
     ];
 
