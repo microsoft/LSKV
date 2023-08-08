@@ -16,7 +16,7 @@ env:
 jobs:
   build-and-test:
     runs-on: ubuntu-20.04
-    container: mcr.microsoft.com/ccf/app/dev:4.0.0-dev3-virtual
+    container: mcr.microsoft.com/ccf/app/dev:4.0.7-virtual
 
     steps:
       - name: Checkout repository
