@@ -35,10 +35,10 @@ in
       hash = "sha256-CofADLExBTo3CH7iACKKNxMsSpy/ZBWBRaXc3ELHAd4=";
     };
     patches = [
-      # patches/ccf-no-python.diff
-      # patches/ccf-no-python-pb2.diff
+      patches/ccf-no-python.diff
+      patches/ccf-no-python-pb2.diff
       patches/ccf-protoc-binary.diff
-      # patches/ccf-ignore-submitter.diff
+      patches/ccf-ignore-submitter.diff
     ];
 
     nativeBuildInputs = [
