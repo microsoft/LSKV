@@ -1,8 +1,7 @@
 {
   description = "Confidential computing packages";
 
-  # inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-  inputs.nixpkgs.url = "github:rrbutani/nixpkgs/fix/llvm-15-libcxx-linker-script-bug";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.nix-filter.url = "github:numtide/nix-filter";
 
