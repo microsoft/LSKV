@@ -72,7 +72,7 @@ jobs:
 
   checks:
     runs-on: ubuntu-latest
-    container: ccfmsrc.azurecr.io/ccf/ci/sgx:oe-0.18.2-protoc
+    container: ccfmsrc.azurecr.io/ccf/ci:oe-0.19.3-virtual-clang15
 
     steps:
       - name: Make sure github workspace is git safe
