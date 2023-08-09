@@ -41,6 +41,7 @@ option(PUBLIC_LEASES
 option(VERBOSE_LOGGING "enable verbose logging" OFF)
 
 add_compile_definitions(LSKV_VERSION="${LSKV_VERSION}")
+add_compile_definitions(CCF_LOGGER_NO_DEPRECATE)
 
 add_ccf_app(
   lskv
