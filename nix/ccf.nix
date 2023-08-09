@@ -12,7 +12,6 @@
   makeWrapper,
   protobuf,
   openssl,
-  arrow-cpp,
   platform ? "virtual",
 }: let
   toRemove =
