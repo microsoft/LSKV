@@ -50,7 +50,7 @@ in
       # arrow-cpp
       # sgx-dcap
       openenclave
-      # makeWrapper
+      makeWrapper
     ];
 
     cmakeFlags = [
@@ -66,10 +66,10 @@ in
     postInstall = ''
       # wrapProgram $out/bin/cchost \
       #   --suffix LD_LIBRARY_PATH ':' "''${az-dcap}/lib:''${sgx-psw}/lib:''${sgx-dcap}/lib"
-      #
-      # wrapProgram $out/bin/keygenerator.sh \
-      #   --prefix PATH ':' "${openssl}/bin"
-      #
-      # ${toRemove}
+
+      wrapProgram $out/bin/keygenerator.sh \
+        --prefix PATH ':' "${openssl}/bin"
+
+      ${toRemove}
     '';
   }
