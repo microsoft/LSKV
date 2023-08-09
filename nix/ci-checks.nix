@@ -130,7 +130,7 @@ in {
     prettier =
       writeShellScriptBin "prettier"
       ''
-        git ls-files -- . ':!:3rdparty/' | grep -e '\.ts$' -e '\.js$' -e '\.md$' -e '\.yaml$' -e '\.yml$' -e '\.json$' | xargs npx ${nodePackages.prettier}/bin/prettier --write
+        git ls-files -- . ':!:3rdparty/' | grep -e '\.ts$' -e '\.js$' -e '\.md$' -e '\.yaml$' -e '\.yml$' -e '\.json$' | xargs ${nodePackages.prettier}/bin/prettier --write
       '';
 
     black =
