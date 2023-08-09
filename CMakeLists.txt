@@ -42,6 +42,9 @@ option(VERBOSE_LOGGING "enable verbose logging" OFF)
 
 add_compile_definitions(LSKV_VERSION="${LSKV_VERSION}")
 add_compile_definitions(CCF_LOGGER_NO_DEPRECATE)
+# work around an issue in outdated protobuf from CCF
+# https://github.com/protocolbuffers/protobuf/issues/10108
+add_compile_definitions(GOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0)
 
 add_ccf_app(
   lskv
