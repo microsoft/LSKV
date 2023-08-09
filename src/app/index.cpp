@@ -209,7 +209,9 @@ namespace app::index
         if (values_it->mod_revision < at)
         {
           CCF_APP_DEBUG(
-            "Removing compacted value for key {} at {}", key, values_it->mod_revision);
+            "Removing compacted value for key {} at {}",
+            key,
+            values_it->mod_revision);
           values_it = values.erase(values_it);
         }
         else
