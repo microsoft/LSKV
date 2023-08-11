@@ -6,12 +6,10 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+*"
 
 env:
-  ACR_REGISTRY: ccfmsrc.azurecr.io
-  ACR_TOKEN_NAME: lskv-push-token
   DOCKER_BUILDKIT: 1 # https://docs.docker.com/develop/develop-images/build_enhancements/
 
 jobs:
-  publish-docker-virtual:
+  publish:
     runs-on: ubuntu-20.04
 
     steps:
@@ -20,57 +18,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Build container
-        run: docker build -t $ACR_REGISTRY/public/lskv:${{ github.ref }}-virtual -f Dockerfile.virtual .
-
-      - name: Log in to registry
-        run: docker login -u $ACR_TOKEN_NAME -p ${{ secrets.ACR_LSKV_PUSH_TOKEN_PASSWORD }} $ACR_REGISTRY
-
-      - name: Push virtual image
-        run: docker push $ACR_REGISTRY/public/lskv:${{ github.ref }}-virtual
-
-  publish-docker-sgx:
-    runs-on: ubuntu-20.04
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Build container
-        run: docker build -t $ACR_REGISTRY/public/lskv:${{ github.ref }}-sgx -f Dockerfile.sgx .
-
-      - name: Log in to registry
-        run: docker login -u $ACR_TOKEN_NAME -p ${{ secrets.ACR_LSKV_PUSH_TOKEN_PASSWORD }} $ACR_REGISTRY
-
-      - name: Push sgx image
-        run: docker push $ACR_REGISTRY/public/lskv:${{ github.ref }}-sgx
-
-  publish-binaries:
-    runs-on: ubuntu-20.04
-    needs:
-      - publish-docker-virtual
-      - publish-docker-sgx
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Download images
-        run: |
-          docker pull $ACR_REGISTRY/public/lskv:${{ github.ref }}-virtual
-          docker pull $ACR_REGISTRY/public/lskv:${{ github.ref }}-sgx
-
+      - name: Build containers
+        run: | 
+          docker build -t lskv:${{ github.ref }}-virtual -f Dockerfile.virtual .
+          docker build -t lskv:${{ github.ref }}-sgx -f Dockerfile.sgx .
+      
       - name: Copy files out of images
         run: |
-          docker create --name lskv-virtual $ACR_REGISTRY/public/lskv:${{ github.ref }}-virtual
+          docker create --name lskv-virtual lskv:${{ github.ref }}-virtual
           docker cp lskv-virtual:/app/liblskv.virtual.so liblskv.virtual.so
           docker rm lskv-virtual
 
-          docker create --name lskv-sgx $ACR_REGISTRY/public/lskv:${{ github.ref }}-sgx
+          docker create --name lskv-sgx lskv:${{ github.ref }}-sgx
           docker cp lskv-sgx:/app/liblskv.enclave.so.signed liblskv.enclave.so.signed
           docker rm lskv-sgx
-
+      
       - name: Publish ${{ github.ref }} release
         uses: softprops/action-gh-release@v1
         with:
@@ -78,4 +40,4 @@ jobs:
           tag_name: ${{ github.ref }}
           files: |
             liblskv.virtual.so
-            liblskv.enclave.so.signed
+            liblskv.enclave.so.signed      
