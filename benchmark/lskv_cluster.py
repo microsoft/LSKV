@@ -665,7 +665,7 @@ if __name__ == "__main__":
     parser.add_argument("--nodes", type=int, default=1)
     parser.add_argument("--enclave", type=str, default="virtual")
     parser.add_argument(
-        "--image", type=str, default="ccfmsrc.azurecr.io/public/lskv:latest"
+        "--image", type=str, default="lskv:latest"
     )
     parser.add_argument("--http-version", type=int, default="2")
     parser.add_argument("--worker-threads", type=int, default="0")
