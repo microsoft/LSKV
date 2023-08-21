@@ -36,3 +36,5 @@
 /scripts/env/
 /workspace/
 requirements.txt
+*.zip
+*.bak

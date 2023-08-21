@@ -32,7 +32,7 @@ fi
 file_name_regex="^[[:lower:]0-9_]+$"
 unformatted_files=""
 badly_named_files=""
-clang_fmt=clang-format-10
+clang_fmt=clang-format-11
 if [[ ! $(command -v ${clang_fmt}) ]]; then
   clang_fmt=clang-format
 fi
