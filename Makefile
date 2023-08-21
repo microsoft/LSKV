@@ -4,11 +4,11 @@ BUILD=build
 CCF_PREFIX_VIRTUAL=/opt/ccf_virtual
 CCF_PREFIX_SGX=/opt/ccf_sgx
 
-CC!=which clang-10
-CXX!=which clang++-10
+CC!=which clang-15
+CXX!=which clang++-15
 
-OE_CC=/opt/oe_lvi/clang-10
-OE_CXX=/opt/oe_lvi/clang++-10
+OE_CC!=which clang-11
+OE_CXX!=which clang++-11
 
 ETCD_VER=v3.5.4
 ETCD_DOWNLOAD_URL=https://github.com/etcd-io/etcd/releases/download
@@ -18,10 +18,10 @@ H_FILES=$(wildcard src/**/*.h)
 
 BIN_DIR=bin
 
-CCF_VER=ccf-4.0.0-dev3
-CCF_VER_LOWER=ccf_virtual_4.0.0_dev3
-CCF_SGX_VER_LOWER=ccf_sgx_4.0.0_dev3
-CCF_SGX_UNSAFE_VER_LOWER=ccf_sgx_unsafe_4.0.0_dev3
+CCF_VER=ccf-4.0.7
+CCF_VER_LOWER=ccf_virtual_4.0.7
+CCF_SGX_VER_LOWER=ccf_sgx_4.0.7
+CCF_SGX_UNSAFE_VER_LOWER=ccf_sgx_unsafe_4.0.7
 
 .PHONY: install-ccf-virtual
 install-ccf-virtual:

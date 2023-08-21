@@ -2,10 +2,10 @@ diff --git a/src/apps/external_executor/protobuf/CMakeLists.txt b/src/apps/exter
 index d35fe3537..3418d7be5 100644
 --- a/src/apps/external_executor/protobuf/CMakeLists.txt
 +++ b/src/apps/external_executor/protobuf/CMakeLists.txt
-@@ -35,24 +35,6 @@ foreach(proto_file ${PROTO_FILES})
+@@ -38,24 +38,6 @@ foreach(proto_file ${PROTO_FILES})
              ${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME_WE}.pb.cc
    )
- 
+
 -  add_custom_command(
 -    OUTPUT
 -      ${CMAKE_SOURCE_DIR}/tests/external_executor/${PROTO_NAME_WE}_pb2.py
@@ -24,6 +24,6 @@ index d35fe3537..3418d7be5 100644
 -    JOB_POOL one_job
 -  )
 -
-   if(COMPILE_TARGET STREQUAL "sgx")
-     add_enclave_library(
-       ${PROTO_NAME_WE}.proto.enclave
+   # For now, copy .proto files across to external executor test
+   configure_file(
+     ${proto_file}
