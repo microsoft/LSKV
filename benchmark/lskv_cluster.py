@@ -569,7 +569,10 @@ class Member:
             "ballot": "export function vote (proposal, proposerId) { return true }"
         }
         self.curl.sign_and_send(
-            f"/gov/proposals/{proposal_id}/ballots", "ballot", vote_accept, proposal_id=proposal_id,
+            f"/gov/proposals/{proposal_id}/ballots",
+            "ballot",
+            vote_accept,
+            proposal_id=proposal_id,
         )
 
     def open_network(self):
@@ -605,7 +608,10 @@ class Member:
             "ballot": "export function vote (proposal, proposerId) { return true }"
         }
         self.curl.sign_and_send(
-            f"/gov/proposals/{proposal_id}/ballots", "ballot", vote_accept, proposal_id=proposal_id,
+            f"/gov/proposals/{proposal_id}/ballots",
+            "ballot",
+            vote_accept,
+            proposal_id=proposal_id,
         )
 
         logger.info("Network is now open to users!")
