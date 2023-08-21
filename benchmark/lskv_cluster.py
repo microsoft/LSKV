@@ -11,12 +11,12 @@ import json
 import os
 import signal
 import subprocess
+import tempfile
 import time
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
 from loguru import logger
-from matplotlib import tempfile
 
 
 def run(cmd: List[str], **kwargs) -> subprocess.CompletedProcess:
