@@ -124,6 +124,8 @@ class Client:
             "ccf_cose_sign1",
             "--ccf-gov-msg-type",
             gov_msg_type,
+            "--ccf-gov-msg-created_at",
+            "$(date -Is)",
             "--signing-key",
             self.signing_key,
             "--signing-cert",

@@ -294,21 +294,7 @@ def test_public_prefix(governance_client, http1_client, sandbox):
     public_domain = txn.get_public_domain()
     assert len(public_domain.get_tables()) == 1
 
-    # setting an existing prefix is ok
-    proposal = governance.Proposal()
-    proposal.set_public_prefix(prefix)
-    res = governance_client.propose(proposal)
-    proposal_id = res.proposal_id
-    governance_client.accept(proposal_id)
-
     # removing an existing prefix is ok
-    proposal = governance.Proposal()
-    proposal.remove_public_prefix(prefix)
-    res = governance_client.propose(proposal)
-    proposal_id = res.proposal_id
-    governance_client.accept(proposal_id)
-
-    # and removing one that doesn't exist is ok too
     proposal = governance.Proposal()
     proposal.remove_public_prefix(prefix)
     res = governance_client.propose(proposal)

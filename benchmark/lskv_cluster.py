@@ -11,6 +11,7 @@ import json
 import os
 import signal
 import subprocess
+import tempfile
 import time
 from dataclasses import dataclass
 from typing import Any, Dict, List
@@ -48,7 +49,7 @@ class Curl:
         self.cert = cert
         self.key = key
 
-    def run(self, method: str, path: str) -> Any:
+    def run(self, method: str, path: str, data=None, content_type=None) -> Any:
         """
         Run a curl invocation.
         """
@@ -65,49 +66,57 @@ class Curl:
             "--cert",
             self.cert,
         ]
+        if data:
+            cmd += ["--data-binary", data]
+        if content_type:
+            cmd += ["--header", f"content-type: {content_type}"]
         proc = run(cmd)
         out = proc.stdout.decode("utf-8")
         if out:
             return json.loads(out)
         return ""
 
-
-# pylint: disable=too-few-public-methods
-class SCurl:
-    """
-    Run SCurl commands.
-    """
-
-    def __init__(self, address: str, cacert: str, cert: str, key: str):
-        self.address = address
-        self.cacert = cacert
-        self.cert = cert
-        self.key = key
-
-    def run(self, path: str, json_data: Dict[str, Any]) -> Any:
+    def sign_and_send(
+        self, path: str, message_type: str, data: Any, proposal_id=None
+    ) -> Any:
         """
-        Run an scurl invocation.
+        Sign some data and post it.
         """
-        json_str = json.dumps(json_data)
-        cmd = [
-            "scurl.sh",
-            f"{self.address}{path}",
-            "--cacert",
-            self.cacert,
-            "--signing-key",
-            self.key,
-            "--signing-cert",
-            self.cert,
-            "--header",
-            "content-type: application/json",
-            "--data-binary",
-            json_str,
-        ]
-        proc = run(cmd)
-        out = proc.stdout.decode("utf-8")
-        if out:
-            return json.loads(out)
-        return ""
+        date_proc = run(["date", "-Is"])
+        date = date_proc.stdout.decode("utf-8").strip()
+
+        with tempfile.NamedTemporaryFile(mode="w+") as data_file:
+            json.dump(data, data_file)
+            data_file.flush()
+
+            cmd = [
+                "ccf_cose_sign1",
+                "--ccf-gov-msg-type",
+                message_type,
+                "--ccf-gov-msg-created_at",
+                date,
+                "--signing-cert",
+                self.cert,
+                "--signing-key",
+                self.key,
+                "--content",
+                data_file.name,
+            ]
+            if proposal_id:
+                cmd += ["--ccf-gov-msg-proposal_id", proposal_id]
+            signed_proc = run(cmd)
+
+        with tempfile.NamedTemporaryFile(mode="wb+") as signed_data_file:
+            signed_data_file.write(signed_proc.stdout)
+            signed_data_file.flush()
+
+            logger.info("Returning the signed data")
+            return self.run(
+                "POST",
+                path,
+                data=f"@{signed_data_file.name}",
+                content_type="application/cose",
+            )
 
 
 # pylint: disable=too-many-instance-attributes
@@ -509,17 +518,13 @@ class Member:
     def __init__(self, workspace: str, name: str):
         self.workspace = workspace
         self.name = name
+        self.public_key = f"{self.workspace}/sandbox_common/{name}_cert.pem"
+        self.private_key = f"{self.workspace}/sandbox_common/{name}_privk.pem"
         self.curl = Curl(
             "https://127.0.0.1:8000",
             f"{self.workspace}/sandbox_common/service_cert.pem",
-            f"{self.workspace}/sandbox_common/{name}_cert.pem",
-            f"{self.workspace}/sandbox_common/{name}_privk.pem",
-        )
-        self.scurl = SCurl(
-            "https://127.0.0.1:8000",
-            f"{self.workspace}/sandbox_common/service_cert.pem",
-            f"{self.workspace}/sandbox_common/{name}_cert.pem",
-            f"{self.workspace}/sandbox_common/{name}_privk.pem",
+            self.public_key,
+            self.private_key,
         )
 
     def activate_member(self):
@@ -534,8 +539,9 @@ class Member:
         logger.info("Getting latest state digest")
         state_digest = self.curl.run("POST", "/gov/ack/update_state_digest")
 
-        logger.info("Signing and returning the state digest")
-        self.scurl.run("/gov/ack", state_digest)
+        logger.info("Signing the state digest")
+        logger.info(state_digest)
+        self.curl.sign_and_send("/gov/ack", "ack", state_digest)
 
         logger.info("Listing members")
         self.curl.run("GET", "/gov/members")
@@ -555,14 +561,19 @@ class Member:
             ]
         }
         logger.info("Creating set_user proposal")
-        proposal = self.scurl.run("/gov/proposals", set_user)
+        proposal = self.curl.sign_and_send("/gov/proposals", "proposal", set_user)
         proposal_id = proposal["proposal_id"]
 
         logger.info("Accepting the proposal")
         vote_accept = {
             "ballot": "export function vote (proposal, proposerId) { return true }"
         }
-        self.scurl.run(f"/gov/proposals/{proposal_id}/ballots", vote_accept)
+        self.curl.sign_and_send(
+            f"/gov/proposals/{proposal_id}/ballots",
+            "ballot",
+            vote_accept,
+            proposal_id=proposal_id,
+        )
 
     def open_network(self):
         """
@@ -587,14 +598,21 @@ class Member:
                 }
             ]
         }
-        proposal = self.scurl.run("/gov/proposals", transition_service_to_open)
+        proposal = self.curl.sign_and_send(
+            "/gov/proposals", "proposal", transition_service_to_open
+        )
         proposal_id = proposal["proposal_id"]
 
         logger.info("Accepting the proposal")
         vote_accept = {
             "ballot": "export function vote (proposal, proposerId) { return true }"
         }
-        self.scurl.run(f"/gov/proposals/{proposal_id}/ballots", vote_accept)
+        self.curl.sign_and_send(
+            f"/gov/proposals/{proposal_id}/ballots",
+            "ballot",
+            vote_accept,
+            proposal_id=proposal_id,
+        )
 
         logger.info("Network is now open to users!")
 
