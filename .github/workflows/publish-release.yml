@@ -19,10 +19,10 @@ jobs:
           fetch-depth: 0
 
       - name: Build containers
-        run: | 
+        run: |
           docker build -t lskv:${{ github.ref }}-virtual -f Dockerfile.virtual .
           docker build -t lskv:${{ github.ref }}-sgx -f Dockerfile.sgx .
-      
+
       - name: Copy files out of images
         run: |
           docker create --name lskv-virtual lskv:${{ github.ref }}-virtual
@@ -32,7 +32,7 @@ jobs:
           docker create --name lskv-sgx lskv:${{ github.ref }}-sgx
           docker cp lskv-sgx:/app/liblskv.enclave.so.signed liblskv.enclave.so.signed
           docker rm lskv-sgx
-      
+
       - name: Publish ${{ github.ref }} release
         uses: softprops/action-gh-release@v1
         with:
@@ -40,4 +40,4 @@ jobs:
           tag_name: ${{ github.ref }}
           files: |
             liblskv.virtual.so
-            liblskv.enclave.so.signed      
+            liblskv.enclave.so.signed

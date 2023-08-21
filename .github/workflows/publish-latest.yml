@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
 
       - name: Build containers
-        run: | 
+        run: |
           docker build -t lskv:latest-virtual -f Dockerfile.virtual .
           docker build -t lskv:latest-sgx -f Dockerfile.sgx .
 
