@@ -10,7 +10,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  ACR_REGISTRY: ccfmsrc.azurecr.io
   DOCKER_BUILDKIT: 1 # https://docs.docker.com/develop/develop-images/build_enhancements/
 
 jobs:
@@ -56,7 +55,7 @@ jobs:
           fetch-depth: 0
 
       - name: Build container
-        run: docker build -t $ACR_REGISTRY/public/lskv:latest-virtual -f Dockerfile.virtual .
+        run: docker build -t lskv:latest-virtual -f Dockerfile.virtual .
 
   build-docker-sgx:
     runs-on: ubuntu-20.04
@@ -68,7 +67,7 @@ jobs:
           fetch-depth: 0
 
       - name: Build container
-        run: docker build -t $ACR_REGISTRY/public/lskv:latest-sgx -f Dockerfile.sgx .
+        run: docker build -t lskv:latest-sgx -f Dockerfile.sgx .
 
   checks:
     runs-on: ubuntu-latest
