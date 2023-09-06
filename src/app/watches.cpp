@@ -10,26 +10,47 @@
 
 namespace app::watches
 {
+  bool Watch::contains(std::string const& key)
+  {
+    if (key == start)
+    {
+      // watch for a single key
+      return true;
+    }
+    else if (end.has_value() && start <= key && key <= end.value())
+    {
+      // watch for a range
+      return true;
+    }
+    else
+    {
+      // not matched this key
+      return false;
+    }
+  }
+
   WatchIndexer::WatchIndexer(const std::string& map_name) : Strategy(map_name)
   {
     CCF_APP_DEBUG("created watchindexer for {}", map_name);
   }
 
-    void WatchIndexer::set_cluster_id(int64_t new_cluster_id) {
+  void WatchIndexer::set_cluster_id(int64_t new_cluster_id)
+  {
     std::lock_guard<ccf::pal::Mutex> guard(mutex);
-      cluster_id = new_cluster_id;
-    }
-    void WatchIndexer::set_member_id(int64_t new_member_id) {
+    cluster_id = new_cluster_id;
+  }
+  void WatchIndexer::set_member_id(int64_t new_member_id)
+  {
     std::lock_guard<ccf::pal::Mutex> guard(mutex);
-      member_id = new_member_id;
-    }
+    member_id = new_member_id;
+  }
 
   void WatchIndexer::handle_committed_transaction(
     const ccf::TxID& tx_id, const kv::ReadOnlyStorePtr& store_ptr)
   {
     std::lock_guard<ccf::pal::Mutex> guard(mutex);
 
-    CCF_APP_DEBUG("index: handling committed transaction {}", tx_id.seqno);
+    CCF_APP_DEBUG("watches: handling committed transaction {}", tx_id.seqno);
     current_txid = tx_id;
     auto revision = tx_id.seqno;
 
@@ -40,59 +61,69 @@ namespace app::watches
     private_kv_map->foreach(
       [this, &revision, &private_kv_map](const auto& k, const auto& v) {
         auto key = app::kvstore::KVStore::KSerialiser::from_serialised(k);
-        if (v.has_value())
+        CCF_APP_DEBUG("watches: handling diff for key {}", key);
+
+        // get the watches for this key
+        auto start = watches.begin();
+        auto end = watches.upper_bound(key);
+
+        for (auto watch_it = start; watch_it != end; ++watch_it)
         {
-          CCF_APP_DEBUG(
-            "watchindex: handling key {} from diff at revision {}", k, revision);
-
-          auto value =
-            app::kvstore::KVStore::VSerialiser::from_serialised(v.value());
-
-          value.hydrate(revision);
-
-          // TODO: try sending any watches out for this value
-          auto w = watches.find(key);
-          if (w != watches.end())
+          auto& watch = watch_it->second;
+          CCF_APP_DEBUG("watches: found watch with start {} and end {}", watch.start, watch.end);
+          if (watch.contains(key))
           {
-            auto& watch = w->second;
-            etcdserverpb::WatchResponse response;
-            response.set_watch_id(watch.id);
-            CCF_APP_DEBUG("Sending watch event to {} for PUT event for key {}", watch.id, k);
-            auto* event = response.add_events();
-            event->set_type(etcdserverpb::Event::PUT);
-            auto* kv = event->mutable_kv();
-            kv->set_key(key);
-            kv->set_value(value.get_data());
+            if (v.has_value())
+            {
+              CCF_APP_DEBUG(
+                "watches: handling key {} from diff at revision {}",
+                k,
+                revision);
 
-            fill_header(*response.mutable_header());
-            watch.stream->stream_msg(response);
-          }
-        }
-        else
-        {
-          CCF_APP_DEBUG(
-            "index: deleting key {} from diff at revision {}", k, revision);
+              auto value =
+                app::kvstore::KVStore::VSerialiser::from_serialised(v.value());
 
-          // make a deleted value
-          app::kvstore::Value value;
-          value.mod_revision = revision;
+              value.hydrate(revision);
 
-          // TODO: try sending any watches out for this value
-          auto w = watches.find(key);
-          if (w != watches.end())
-          {
-            auto& watch = w->second;
-            etcdserverpb::WatchResponse response;
-            response.set_watch_id(watch.id);
-            CCF_APP_DEBUG("Sending watch event to {} for DELETE event for key {}", watch.id, k);
-            auto* event = response.add_events();
-            event->set_type(etcdserverpb::Event::DELETE);
-            auto* kv = event->mutable_kv();
-            kv->set_key(key);
-            kv->set_value(value.get_data());
+              etcdserverpb::WatchResponse response;
+              response.set_watch_id(watch.id);
+              CCF_APP_DEBUG(
+                  "Sending watch event to {} for PUT event for key {}",
+                  watch.id,
+                  k);
+              auto* event = response.add_events();
+              event->set_type(etcdserverpb::Event::PUT);
+              auto* kv = event->mutable_kv();
+              kv->set_key(key);
+              kv->set_value(value.get_data());
 
-            fill_header(*response.mutable_header());
-            watch.stream->stream_msg(response);
+              fill_header(*response.mutable_header());
+              watch.stream->stream_msg(response);
+            }
+            else
+            {
+              CCF_APP_DEBUG(
+                "watches: deleting key {} from diff at revision {}", k, revision);
+
+              // make a deleted value
+              app::kvstore::Value value;
+              value.mod_revision = revision;
+
+              etcdserverpb::WatchResponse response;
+              response.set_watch_id(watch.id);
+              CCF_APP_DEBUG(
+                  "Sending watch event to {} for DELETE event for key {}",
+                  watch.id,
+                  k);
+              auto* event = response.add_events();
+              event->set_type(etcdserverpb::Event::DELETE);
+              auto* kv = event->mutable_kv();
+              kv->set_key(key);
+              kv->set_value(value.get_data());
+
+              fill_header(*response.mutable_header());
+              watch.stream->stream_msg(response);
+            }
           }
         }
 
@@ -107,46 +138,48 @@ namespace app::watches
     return current_txid.seqno + 1;
   };
 
-    int64_t WatchIndexer::add_watch(
-      etcdserverpb::WatchCreateRequest const& create_payload,
-      ccf::grpc::DetachedStreamPtr<etcdserverpb::WatchResponse> strm) {
-      std::lock_guard<ccf::pal::Mutex> guard(mutex);
+  int64_t WatchIndexer::add_watch(
+    etcdserverpb::WatchCreateRequest const& create_payload,
+    ccf::grpc::DetachedStreamPtr<etcdserverpb::WatchResponse> strm)
+  {
+    std::lock_guard<ccf::pal::Mutex> guard(mutex);
 
-      // get the new watch id
-      auto watch_id = next_watch_id++;
+    // get the new watch id
+    auto watch_id = next_watch_id++;
 
-        Watch watch = {
-          watch_id, std::move(strm)};
-        // store the watch stream
-        watches.emplace(std::make_pair(create_payload.key(), std::move(watch)));
+    Watch watch = {watch_id, std::move(strm), create_payload.key(), create_payload.range_end()};
+    // store the watch stream
+    watches.emplace(std::make_pair(create_payload.key(), std::move(watch)));
 
-        // notify the client of creation
-        {
-          etcdserverpb::WatchResponse response;
-          response.set_watch_id(watch_id);
-          response.set_created(true);
-
-          CCF_APP_DEBUG("Notifying client of created watch for key {} with id {}", create_payload.key(), watch_id);
-
-          fill_header(*response.mutable_header());
-          watches[create_payload.key()].stream->stream_msg(response);
-        }
-
-        return watch_id;
-    }
-
-    void WatchIndexer::fill_header( etcdserverpb::ResponseHeader& header)
+    // notify the client of creation
     {
-      header.set_cluster_id(cluster_id);
-      header.set_member_id(member_id);
-      const auto tx_id = current_txid;
-      header.set_revision(tx_id.seqno);
-      header.set_raft_term(tx_id.view);
+      etcdserverpb::WatchResponse response;
+      response.set_watch_id(watch_id);
+      response.set_created(true);
 
-      const auto committed = current_txid;
-      header.set_committed_revision(committed.seqno);
-      header.set_committed_raft_term(committed.view);
+      CCF_APP_DEBUG(
+        "Notifying client of created watch for key {} with id {}",
+        create_payload.key(),
+        watch_id);
+
+      fill_header(*response.mutable_header());
+      watches[create_payload.key()].stream->stream_msg(response);
     }
+
+    return watch_id;
+  }
+
+  void WatchIndexer::fill_header(etcdserverpb::ResponseHeader& header)
+  {
+    header.set_cluster_id(cluster_id);
+    header.set_member_id(member_id);
+    const auto tx_id = current_txid;
+    header.set_revision(tx_id.seqno);
+    header.set_raft_term(tx_id.view);
+
+    const auto committed = current_txid;
+    header.set_committed_revision(committed.seqno);
+    header.set_committed_raft_term(committed.view);
+  }
 
 }; // nam
-

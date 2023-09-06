@@ -16,6 +16,19 @@
 
 namespace app::watches
 {
+  struct Watch
+  {
+    int64_t id;
+    ccf::grpc::DetachedStreamPtr<etcdserverpb::WatchResponse> stream;
+
+    // start of the watched range
+    std::string start;
+    // end of the watched range
+    std::optional<std::string> end;
+
+    bool contains(std::string const& key);
+  };
+
   class WatchIndexer : public ccf::indexing::Strategy
   {
   public:
@@ -26,24 +39,17 @@ namespace app::watches
     ccf::TxID current_txid = {};
 
   private:
-    struct Watch
-    {
-      int64_t id;
-      ccf::grpc::DetachedStreamPtr<etcdserverpb::WatchResponse> stream;
-    };
-
     // TODO: should be able to have multiple watches for the same key
-    // TODO: watches should be able to be ranges
+    // Mapping of start of the range for a watch to the end of the range.
     std::map<std::string, Watch> watches;
     int64_t next_watch_id = 0;
-
 
     int64_t cluster_id;
     int64_t member_id;
 
     ccf::pal::Mutex mutex;
 
-    void fill_header( etcdserverpb::ResponseHeader& header);
+    void fill_header(etcdserverpb::ResponseHeader& header);
 
   public:
     explicit WatchIndexer(const std::string& map_name);
