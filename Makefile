@@ -85,11 +85,11 @@ push-docker: push-docker-virtual push-docker-sgx
 
 .PHONY: run-docker-virtual
 run-docker-virtual: .venv
-	. .venv/bin/activate && python3 benchmark/lskv_cluster.py --enclave virtual
+	. .venv/bin/activate && python3 benchmark/lskv_cluster.py --enclave virtual --node local://127.0.0.1:8000
 
 .PHONY: run-docker-sgx
 run-docker-sgx: .venv
-	. .venv/bin/activate && python3 benchmark/lskv_cluster.py --enclave sgx
+	. .venv/bin/activate && python3 benchmark/lskv_cluster.py --enclave sgx --node local://127.0.0.1:8000
 
 .PHONY: debug-dockerignore
 debug-dockerignore:
