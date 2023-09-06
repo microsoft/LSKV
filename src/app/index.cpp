@@ -187,7 +187,9 @@ namespace app::index
       for (const auto& key : keys)
       {
         CCF_APP_DEBUG(
-          "Adding compacted key from revision {}: {}", revisions_to_key_it->first, key);
+          "Adding compacted key from revision {}: {}",
+          revisions_to_key_it->first,
+          key);
         keys_compacted.insert(key);
       }
       revisions_to_key_it = revisions_to_key.erase(revisions_to_key_it);
@@ -209,13 +211,9 @@ namespace app::index
         if (values_it->mod_revision < at)
         {
           CCF_APP_DEBUG(
-<<<<<<< HEAD
             "Removing compacted value for key {} at {}",
             key,
             values_it->mod_revision);
-=======
-            "Removing compacted value for key {} at {}", key, values_it->mod_revision);
->>>>>>> 568dffa (Fix shadowing variables)
           values_it = values.erase(values_it);
         }
         else

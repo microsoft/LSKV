@@ -23,6 +23,7 @@
 #include "lskvserver.pb.h"
 #include "node_data.h"
 #include "tls/msg_types.h" // TODO(#22): private header
+#include "watches.h"
 
 #include <fmt/ranges.h>
 
@@ -51,6 +52,9 @@ namespace app
     using IndexStrategy = app::index::KVIndexer;
     std::shared_ptr<IndexStrategy> kvindex = nullptr;
 
+    using WatchIndexStrategy = app::watches::WatchIndexer;
+    std::shared_ptr<WatchIndexStrategy> watchindex = nullptr;
+
     int64_t cluster_id;
 
   public:
@@ -67,6 +71,9 @@ namespace app
 
       kvindex = std::make_shared<IndexStrategy>(app::kvstore::RECORDS);
       context.get_indexing_strategies().install_strategy(kvindex);
+
+      watchindex = std::make_shared<WatchIndexStrategy>(app::kvstore::RECORDS);
+      context.get_indexing_strategies().install_strategy(watchindex);
 
       const auto etcdserverpb = "etcdserverpb";
       const auto lskvserverpb = "lskvserverpb";
@@ -288,16 +295,6 @@ namespace app
         .install();
     }
 
-    struct Watch
-    {
-      int64_t id;
-      ccf::grpc::DetachedStreamPtr<etcdserverpb::WatchResponse> stream;
-    };
-    int64_t next_watch_id = 0;
-
-    ccf::pal::Mutex watches_lock;
-    std::map<std::string, Watch> watches;
-
     void watch_impl(
       ccf::endpoints::CommandEndpointContext& ctx,
       etcdserverpb::WatchRequest&& payload,
@@ -305,32 +302,19 @@ namespace app
     {
       CCF_APP_DEBUG("Watch request received {}", payload.DebugString());
 
+      watchindex->set_cluster_id(cluster_id);
+      watchindex->set_member_id(member_id());
+
       // TODO: Only support watch creation for now
       if (payload.has_create_request())
       {
-        std::lock_guard<ccf::pal::Mutex> guard(watches_lock);
-
         auto const& create_payload = payload.create_request();
-        auto watch_id = next_watch_id++;
-        auto detached_stream = ccf::grpc::detach_stream(ctx.rpc_ctx, std::move(out_stream), [watch_id]() mutable {
-              CCF_APP_DEBUG("Closing watch response stream for watch id {}", watch_id);
-              });
-        Watch watch = {
-          watch_id, std::move(detached_stream)};
-        watches.emplace(std::make_pair(create_payload.key(), std::move(watch)));
-
-        // notify the client of creation
-        {
-          etcdserverpb::WatchResponse response;
-          response.set_watch_id(watch.id);
-          response.set_created(true);
-
-          CCF_APP_DEBUG("Notifying client of created watch for key {} with id {}", create_payload.key(), watch_id);
-
-          auto committed = last_committed_txid();
-          fill_header(*response.mutable_header(), committed);
-          watches[create_payload.key()].stream->stream_msg(response);
-        }
+        auto detached_stream = ccf::grpc::detach_stream(
+          ctx.rpc_ctx, std::move(out_stream), []() mutable {
+            CCF_APP_DEBUG("Closing watch response stream");
+          });
+        const auto watch_id =
+          watchindex->add_watch(create_payload, std::move(detached_stream));
 
         CCF_APP_DEBUG(
           "Created watch {} for key {}", watch_id, create_payload.key());
@@ -741,25 +725,6 @@ namespace app
       }
 
       SET_CUSTOM_CLAIMS(put)
-
-      std::lock_guard<ccf::pal::Mutex> guard(watches_lock);
-      auto w = watches.find(payload.key());
-      if (w != watches.end())
-      {
-        auto& watch = w->second;
-        etcdserverpb::WatchResponse response;
-        response.set_watch_id(watch.id);
-        CCF_APP_DEBUG("Sending watch event to {} for PUT event for key {}", watch.id, payload.key());
-        auto* event = response.add_events();
-        event->set_type(etcdserverpb::Event::PUT);
-        auto* kv = event->mutable_kv();
-        kv->set_key(payload.key());
-        kv->set_value(payload.value());
-
-        auto committed = last_committed_txid();
-        fill_header(*response.mutable_header(), committed);
-        watch.stream->stream_msg(response);
-      }
 
       return ccf::grpc::make_success(put_response);
     }
