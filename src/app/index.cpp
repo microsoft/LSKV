@@ -174,23 +174,23 @@ namespace app::index
 
     // for each revision to be removed, remove it and collect the keys that it
     // touches
-    auto it = revisions_to_key.begin();
-    while (it != revisions_to_key.end())
+    auto revisions_to_key_it = revisions_to_key.begin();
+    while (revisions_to_key_it != revisions_to_key.end())
     {
-      if (it->first >= at)
+      if (revisions_to_key_it->first >= at)
       {
         // don't compact past the requested revision
         break;
       }
 
-      auto keys = it->second;
+      auto keys = revisions_to_key_it->second;
       for (const auto& key : keys)
       {
         CCF_APP_DEBUG(
-          "Adding compacted key from revision {}: {}", it->first, key);
+          "Adding compacted key from revision {}: {}", revisions_to_key_it->first, key);
         keys_compacted.insert(key);
       }
-      it = revisions_to_key.erase(it);
+      revisions_to_key_it = revisions_to_key.erase(revisions_to_key_it);
     }
 
     CCF_APP_DEBUG("Collected {} keys to remove", keys_compacted.size());
@@ -209,9 +209,13 @@ namespace app::index
         if (values_it->mod_revision < at)
         {
           CCF_APP_DEBUG(
+<<<<<<< HEAD
             "Removing compacted value for key {} at {}",
             key,
             values_it->mod_revision);
+=======
+            "Removing compacted value for key {} at {}", key, values_it->mod_revision);
+>>>>>>> 568dffa (Fix shadowing variables)
           values_it = values.erase(values_it);
         }
         else

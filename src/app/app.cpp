@@ -1237,8 +1237,8 @@ namespace app
       lstore.foreach([&response, &now_s](auto id, auto lease) {
         if (!lease.has_expired(now_s))
         {
-          auto* added_lease = response.add_leases();
-          added_lease->set_id(id);
+          auto* res_lease = response.add_leases();
+          res_lease->set_id(id);
         }
         return true;
       });
