@@ -39,9 +39,8 @@ namespace app::watches
     ccf::TxID current_txid = {};
 
   private:
-    // TODO: should be able to have multiple watches for the same key
-    // Mapping of start of the range for a watch to the end of the range.
-    std::map<std::string, Watch> watches;
+    // Mapping of start of the range for a watch to a list of the watch structs.
+    std::map<std::string, std::vector<Watch>> watches;
     int64_t next_watch_id = 0;
 
     int64_t cluster_id;

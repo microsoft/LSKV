@@ -69,60 +69,61 @@ namespace app::watches
 
         for (auto watch_it = start; watch_it != end; ++watch_it)
         {
-          auto& watch = watch_it->second;
-          CCF_APP_DEBUG("watches: found watch with start {} and end {}", watch.start, watch.end);
-          if (watch.contains(key))
-          {
-            if (v.has_value())
+          for (auto watch = watch_it->second.begin(); watch != watch_it->second.end(); ++watch) {
+            CCF_APP_DEBUG("watches: found watch with start {} and end {}", watch->start, watch->end);
+            if (watch->contains(key))
             {
-              CCF_APP_DEBUG(
-                "watches: handling key {} from diff at revision {}",
-                k,
-                revision);
+              if (v.has_value())
+              {
+                CCF_APP_DEBUG(
+                  "watches: handling key {} from diff at revision {}",
+                  key,
+                  revision);
 
-              auto value =
-                app::kvstore::KVStore::VSerialiser::from_serialised(v.value());
+                auto value =
+                  app::kvstore::KVStore::VSerialiser::from_serialised(v.value());
 
-              value.hydrate(revision);
+                value.hydrate(revision);
 
-              etcdserverpb::WatchResponse response;
-              response.set_watch_id(watch.id);
-              CCF_APP_DEBUG(
-                  "Sending watch event to {} for PUT event for key {}",
-                  watch.id,
-                  k);
-              auto* event = response.add_events();
-              event->set_type(etcdserverpb::Event::PUT);
-              auto* kv = event->mutable_kv();
-              kv->set_key(key);
-              kv->set_value(value.get_data());
+                etcdserverpb::WatchResponse response;
+                response.set_watch_id(watch->id);
+                CCF_APP_DEBUG(
+                    "Sending watch event to {} for PUT event for key {}",
+                    watch->id,
+                    key);
+                auto* event = response.add_events();
+                event->set_type(etcdserverpb::Event::PUT);
+                auto* kv = event->mutable_kv();
+                kv->set_key(key);
+                kv->set_value(value.get_data());
 
-              fill_header(*response.mutable_header());
-              watch.stream->stream_msg(response);
-            }
-            else
-            {
-              CCF_APP_DEBUG(
-                "watches: deleting key {} from diff at revision {}", k, revision);
+                fill_header(*response.mutable_header());
+                watch->stream->stream_msg(response);
+              }
+              else
+              {
+                CCF_APP_DEBUG(
+                  "watches: deleting key {} from diff at revision {}", key, revision);
 
-              // make a deleted value
-              app::kvstore::Value value;
-              value.mod_revision = revision;
+                // make a deleted value
+                app::kvstore::Value value;
+                value.mod_revision = revision;
 
-              etcdserverpb::WatchResponse response;
-              response.set_watch_id(watch.id);
-              CCF_APP_DEBUG(
-                  "Sending watch event to {} for DELETE event for key {}",
-                  watch.id,
-                  k);
-              auto* event = response.add_events();
-              event->set_type(etcdserverpb::Event::DELETE);
-              auto* kv = event->mutable_kv();
-              kv->set_key(key);
-              kv->set_value(value.get_data());
+                etcdserverpb::WatchResponse response;
+                response.set_watch_id(watch->id);
+                CCF_APP_DEBUG(
+                    "Sending watch event to {} for DELETE event for key {}",
+                    watch->id,
+                    key);
+                auto* event = response.add_events();
+                event->set_type(etcdserverpb::Event::DELETE);
+                auto* kv = event->mutable_kv();
+                kv->set_key(key);
+                kv->set_value(value.get_data());
 
-              fill_header(*response.mutable_header());
-              watch.stream->stream_msg(response);
+                fill_header(*response.mutable_header());
+                watch->stream->stream_msg(response);
+              }
             }
           }
         }
@@ -147,6 +148,7 @@ namespace app::watches
 
     // get the new watch id
     auto watch_id = next_watch_id++;
+    CCF_APP_DEBUG("Adding watch", watch_id);
 
     auto detached_stream = ccf::grpc::detach_stream(
           rpc_ctx, std::move(out_stream), [this, watch_id]() mutable {
@@ -156,7 +158,14 @@ namespace app::watches
 
     Watch watch = {watch_id, std::move(detached_stream), create_payload.key(), create_payload.range_end()};
     // store the watch stream
-    watches.emplace(std::make_pair(create_payload.key(), std::move(watch)));
+    auto vec_it = watches.find(create_payload.key());
+    if (vec_it!=watches.end()) {
+      vec_it->second.push_back(std::move(watch));
+    }else {
+      std::vector<Watch> vec;
+      vec.push_back(std::move(watch));
+      watches.emplace(std::make_pair(create_payload.key(), std::move(vec)));
+    }
 
     // notify the client of creation
     {
@@ -170,7 +179,8 @@ namespace app::watches
         watch_id);
 
       fill_header(*response.mutable_header());
-      watches[create_payload.key()].stream->stream_msg(response);
+      // we just pushed it in so we can get it from the back of the vector
+      watches[create_payload.key()].back().stream->stream_msg(response);
     }
 
     return watch_id;
@@ -179,9 +189,11 @@ namespace app::watches
   void WatchIndexer::remove_watch(int64_t watch_id) {
     std::lock_guard<ccf::pal::Mutex> guard(mutex);
     for (auto it = watches.begin(); it != watches.end(); ++it) {
-      if (it->second.id == watch_id) {
-        watches.erase(it);
-        break;
+      for (auto watch = it->second.begin(); watch != it->second.end(); ++watch) {
+        if (watch->id == watch_id) {
+          it->second.erase(watch);
+          break;
+        }
       }
     }
   }
