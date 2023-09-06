@@ -457,6 +457,12 @@ namespace app
         payload.range_end().size(),
         payload.range_end());
 
+      if (!payload.serializable())
+      {
+        return ccf::grpc::make_error<etcdserverpb::RangeResponse>(
+          GRPC_STATUS_FAILED_PRECONDITION,
+          "linearizable reads are not yet supported");
+      }
       if (payload.sort_order() != etcdserverpb::RangeRequest_SortOrder_NONE)
       {
         return ccf::grpc::make_error<etcdserverpb::RangeResponse>(
