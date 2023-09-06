@@ -65,6 +65,9 @@ namespace app::watches
     // Register a new watch for a key.
     int64_t add_watch(
       etcdserverpb::WatchCreateRequest const& create_payload,
-      ccf::grpc::DetachedStreamPtr<etcdserverpb::WatchResponse> strm);
+      std::shared_ptr<ccf::RpcContext> rpc_ctx,
+      ccf::grpc::StreamPtr<etcdserverpb::WatchResponse>&& out_stream);
+
+    void remove_watch( int64_t watch_id);
   };
 }; // namespace app::index

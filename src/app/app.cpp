@@ -309,12 +309,8 @@ namespace app
       if (payload.has_create_request())
       {
         auto const& create_payload = payload.create_request();
-        auto detached_stream = ccf::grpc::detach_stream(
-          ctx.rpc_ctx, std::move(out_stream), []() mutable {
-            CCF_APP_DEBUG("Closing watch response stream");
-          });
         const auto watch_id =
-          watchindex->add_watch(create_payload, std::move(detached_stream));
+          watchindex->add_watch(create_payload, ctx.rpc_ctx, std::move(out_stream));
 
         CCF_APP_DEBUG(
           "Created watch {} for key {}", watch_id, create_payload.key());

@@ -140,14 +140,21 @@ namespace app::watches
 
   int64_t WatchIndexer::add_watch(
     etcdserverpb::WatchCreateRequest const& create_payload,
-    ccf::grpc::DetachedStreamPtr<etcdserverpb::WatchResponse> strm)
+      std::shared_ptr<ccf::RpcContext> rpc_ctx,
+    ccf::grpc::StreamPtr<etcdserverpb::WatchResponse>&& out_stream)
   {
     std::lock_guard<ccf::pal::Mutex> guard(mutex);
 
     // get the new watch id
     auto watch_id = next_watch_id++;
 
-    Watch watch = {watch_id, std::move(strm), create_payload.key(), create_payload.range_end()};
+    auto detached_stream = ccf::grpc::detach_stream(
+          rpc_ctx, std::move(out_stream), [this, watch_id]() mutable {
+            CCF_APP_DEBUG("Closing watch response stream {}", watch_id);
+            remove_watch(watch_id);
+          });
+
+    Watch watch = {watch_id, std::move(detached_stream), create_payload.key(), create_payload.range_end()};
     // store the watch stream
     watches.emplace(std::make_pair(create_payload.key(), std::move(watch)));
 
@@ -167,6 +174,16 @@ namespace app::watches
     }
 
     return watch_id;
+  }
+
+  void WatchIndexer::remove_watch(int64_t watch_id) {
+    std::lock_guard<ccf::pal::Mutex> guard(mutex);
+    for (auto it = watches.begin(); it != watches.end(); ++it) {
+      if (it->second.id == watch_id) {
+        watches.erase(it);
+        break;
+      }
+    }
   }
 
   void WatchIndexer::fill_header(etcdserverpb::ResponseHeader& header)
