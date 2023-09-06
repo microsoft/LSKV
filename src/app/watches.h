@@ -67,6 +67,6 @@ namespace app::watches
       std::shared_ptr<ccf::RpcContext> rpc_ctx,
       ccf::grpc::StreamPtr<etcdserverpb::WatchResponse>&& out_stream);
 
-    void remove_watch( int64_t watch_id);
+    void remove_watch(int64_t watch_id);
   };
 }; // namespace app::index

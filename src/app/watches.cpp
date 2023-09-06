@@ -58,78 +58,86 @@ namespace app::watches
     auto private_kv_map =
       tx_diff.diff<app::kvstore::KVStore::MT>(app::kvstore::RECORDS);
 
-    private_kv_map->foreach(
-      [this, &revision, &private_kv_map](const auto& k, const auto& v) {
-        auto key = app::kvstore::KVStore::KSerialiser::from_serialised(k);
-        CCF_APP_DEBUG("watches: handling diff for key {}", key);
+    private_kv_map->foreach([this, &revision, &private_kv_map](
+                              const auto& k, const auto& v) {
+      auto key = app::kvstore::KVStore::KSerialiser::from_serialised(k);
+      CCF_APP_DEBUG("watches: handling diff for key {}", key);
 
-        // get the watches for this key
-        auto start = watches.begin();
-        auto end = watches.upper_bound(key);
+      // get the watches for this key
+      auto start = watches.begin();
+      auto end = watches.upper_bound(key);
 
-        for (auto watch_it = start; watch_it != end; ++watch_it)
+      for (auto watch_it = start; watch_it != end; ++watch_it)
+      {
+        for (auto watch = watch_it->second.begin();
+             watch != watch_it->second.end();
+             ++watch)
         {
-          for (auto watch = watch_it->second.begin(); watch != watch_it->second.end(); ++watch) {
-            CCF_APP_DEBUG("watches: found watch with start {} and end {}", watch->start, watch->end);
-            if (watch->contains(key))
+          CCF_APP_DEBUG(
+            "watches: found watch with start {} and end {}",
+            watch->start,
+            watch->end);
+          if (watch->contains(key))
+          {
+            if (v.has_value())
             {
-              if (v.has_value())
-              {
-                CCF_APP_DEBUG(
-                  "watches: handling key {} from diff at revision {}",
-                  key,
-                  revision);
+              CCF_APP_DEBUG(
+                "watches: handling key {} from diff at revision {}",
+                key,
+                revision);
 
-                auto value =
-                  app::kvstore::KVStore::VSerialiser::from_serialised(v.value());
+              auto value =
+                app::kvstore::KVStore::VSerialiser::from_serialised(v.value());
 
-                value.hydrate(revision);
+              value.hydrate(revision);
 
-                etcdserverpb::WatchResponse response;
-                response.set_watch_id(watch->id);
-                CCF_APP_DEBUG(
-                    "Sending watch event to {} for PUT event for key {}",
-                    watch->id,
-                    key);
-                auto* event = response.add_events();
-                event->set_type(etcdserverpb::Event::PUT);
-                auto* kv = event->mutable_kv();
-                kv->set_key(key);
-                kv->set_value(value.get_data());
+              etcdserverpb::WatchResponse response;
+              response.set_watch_id(watch->id);
+              CCF_APP_DEBUG(
+                "Sending watch event to {} for PUT event for key {}",
+                watch->id,
+                key);
+              auto* event = response.add_events();
+              event->set_type(etcdserverpb::Event::PUT);
+              auto* kv = event->mutable_kv();
+              kv->set_key(key);
+              kv->set_value(value.get_data());
 
-                fill_header(*response.mutable_header());
-                watch->stream->stream_msg(response);
-              }
-              else
-              {
-                CCF_APP_DEBUG(
-                  "watches: deleting key {} from diff at revision {}", key, revision);
+              fill_header(*response.mutable_header());
+              watch->stream->stream_msg(response);
+            }
+            else
+            {
+              CCF_APP_DEBUG(
+                "watches: deleting key {} from diff at revision {}",
+                key,
+                revision);
 
-                // make a deleted value
-                app::kvstore::Value value;
-                value.mod_revision = revision;
+              // make a deleted value
+              app::kvstore::Value value;
+              value.mod_revision = revision;
 
-                etcdserverpb::WatchResponse response;
-                response.set_watch_id(watch->id);
-                CCF_APP_DEBUG(
-                    "Sending watch event to {} for DELETE event for key {}",
-                    watch->id,
-                    key);
-                auto* event = response.add_events();
-                event->set_type(etcdserverpb::Event::DELETE);
-                auto* kv = event->mutable_kv();
-                kv->set_key(key);
-                kv->set_value(value.get_data());
+              etcdserverpb::WatchResponse response;
+              response.set_watch_id(watch->id);
+              CCF_APP_DEBUG(
+                "Sending watch event to {} for DELETE event for key {}",
+                watch->id,
+                key);
+              auto* event = response.add_events();
+              event->set_type(etcdserverpb::Event::DELETE);
+              auto* kv = event->mutable_kv();
+              kv->set_key(key);
+              kv->set_value(value.get_data());
 
-                fill_header(*response.mutable_header());
-                watch->stream->stream_msg(response);
-              }
+              fill_header(*response.mutable_header());
+              watch->stream->stream_msg(response);
             }
           }
         }
+      }
 
-        return true;
-      });
+      return true;
+    });
     CCF_APP_DEBUG("finished handling committed transaction {}", tx_id.seqno);
   }
 
@@ -141,7 +149,7 @@ namespace app::watches
 
   int64_t WatchIndexer::add_watch(
     etcdserverpb::WatchCreateRequest const& create_payload,
-      std::shared_ptr<ccf::RpcContext> rpc_ctx,
+    std::shared_ptr<ccf::RpcContext> rpc_ctx,
     ccf::grpc::StreamPtr<etcdserverpb::WatchResponse>&& out_stream)
   {
     std::lock_guard<ccf::pal::Mutex> guard(mutex);
@@ -151,17 +159,24 @@ namespace app::watches
     CCF_APP_DEBUG("Adding watch", watch_id);
 
     auto detached_stream = ccf::grpc::detach_stream(
-          rpc_ctx, std::move(out_stream), [this, watch_id]() mutable {
-            CCF_APP_DEBUG("Closing watch response stream {}", watch_id);
-            remove_watch(watch_id);
-          });
+      rpc_ctx, std::move(out_stream), [this, watch_id]() mutable {
+        CCF_APP_DEBUG("Closing watch response stream {}", watch_id);
+        remove_watch(watch_id);
+      });
 
-    Watch watch = {watch_id, std::move(detached_stream), create_payload.key(), create_payload.range_end()};
+    Watch watch = {
+      watch_id,
+      std::move(detached_stream),
+      create_payload.key(),
+      create_payload.range_end()};
     // store the watch stream
     auto vec_it = watches.find(create_payload.key());
-    if (vec_it!=watches.end()) {
+    if (vec_it != watches.end())
+    {
       vec_it->second.push_back(std::move(watch));
-    }else {
+    }
+    else
+    {
       std::vector<Watch> vec;
       vec.push_back(std::move(watch));
       watches.emplace(std::make_pair(create_payload.key(), std::move(vec)));
@@ -186,11 +201,15 @@ namespace app::watches
     return watch_id;
   }
 
-  void WatchIndexer::remove_watch(int64_t watch_id) {
+  void WatchIndexer::remove_watch(int64_t watch_id)
+  {
     std::lock_guard<ccf::pal::Mutex> guard(mutex);
-    for (auto it = watches.begin(); it != watches.end(); ++it) {
-      for (auto watch = it->second.begin(); watch != it->second.end(); ++watch) {
-        if (watch->id == watch_id) {
+    for (auto it = watches.begin(); it != watches.end(); ++it)
+    {
+      for (auto watch = it->second.begin(); watch != it->second.end(); ++watch)
+      {
+        if (watch->id == watch_id)
+        {
           it->second.erase(watch);
           break;
         }

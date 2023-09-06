@@ -309,8 +309,8 @@ namespace app
       if (payload.has_create_request())
       {
         auto const& create_payload = payload.create_request();
-        const auto watch_id =
-          watchindex->add_watch(create_payload, ctx.rpc_ctx, std::move(out_stream));
+        const auto watch_id = watchindex->add_watch(
+          create_payload, ctx.rpc_ctx, std::move(out_stream));
 
         CCF_APP_DEBUG(
           "Created watch {} for key {}", watch_id, create_payload.key());
