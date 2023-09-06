@@ -87,7 +87,7 @@ class Sandbox:
                 "POST",
                 f"https://127.0.0.1:{self.port}/v3/kv/range",
                 "-d",
-                '{"key":"bWlzc2luZyBrZXkK"}',
+                '{"key":"bWlzc2luZyBrZXkK","serializable":true}',
                 "-H",
                 "Content-Type: application/json",
             ]
@@ -338,6 +338,7 @@ class HttpClient:
         logger.info("Get: {} {} {} {}", key, range_end, rev, limit)
         req = etcd_pb2.RangeRequest()
         req.key = key.encode("utf-8")
+        req.serializable = True
         if range_end:
             req.range_end = range_end.encode("utf-8")
         if rev:
