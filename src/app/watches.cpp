@@ -17,7 +17,7 @@ namespace app::watches
       // watch for a single key
       return true;
     }
-    else if (end.has_value() && start <= key && key <= end.value())
+    else if (end.has_value() && start <= key && key < end.value())
     {
       // watch for a range
       return true;
