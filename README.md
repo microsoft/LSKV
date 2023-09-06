@@ -1,6 +1,6 @@
 # LSKV
 
-**This branch is based off the CCF `lskv` branch which contains features like bidi streaming support as well as sorted maps**
+**This branch is based off the CCF `lskv` branch which contains features like bidi streaming support**
 
 [![Open in VSCode](https://img.shields.io/static/v1?label=Open+in&message=VSCode&logo=visualstudiocode&color=007ACC&logoColor=007ACC&labelColor=2C2C32)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/LSKV) [![LSKV CI](https://github.com/microsoft/LSKV/actions/workflows/ci.yml/badge.svg)](https://github.com/microsoft/LSKV/actions/workflows/ci.yml)
 
