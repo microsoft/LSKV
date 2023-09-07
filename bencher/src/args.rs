@@ -5,6 +5,12 @@ pub struct Args {
     #[clap(subcommand)]
     pub cmd: ArgVariants,
 
+    #[clap(flatten)]
+    pub common_args: CommonArgs,
+}
+
+#[derive(Debug, clap::Args)]
+pub struct CommonArgs {
     #[clap(long)]
     pub endpoint: String,
 
