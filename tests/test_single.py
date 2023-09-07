@@ -5,6 +5,7 @@
 Test a single node
 """
 
+import json
 import os
 import re
 from http import HTTPStatus
@@ -254,6 +255,30 @@ def test_tx_status(http1_client):
     res = http1_client.tx_status(int(term) + 1, int(rev) - 1)
     status = res.json()["status"]
     assert status == "Invalid"
+
+
+# pylint: disable=redefined-outer-name
+def test_openapi(http1_client):
+    """
+    Test that the openapi file is correct.
+    """
+    res = http1_client.raw().get("api")
+    assert res.status_code == HTTPStatus.OK
+    store_api = res.json()
+    print(store_api)
+
+    openapi_filename = "openapi.json"
+    logger.info("reading openapi.json")
+    with open(openapi_filename, "r", encoding="utf-8") as openapi_file:
+        file_openapi = json.load(openapi_file)
+    print(file_openapi)
+    with open(openapi_filename, "w", encoding="utf-8") as openapi_file:
+        logger.info("saving openapi.json file")
+        json.dump(store_api, openapi_file, indent=2, sort_keys=True)
+    assert store_api == file_openapi, (
+        "saved openapi file is different from the generated one, "
+        "the file has been updated for you to commit."
+    )
 
 
 def test_public_prefix(governance_client, http1_client, sandbox):
