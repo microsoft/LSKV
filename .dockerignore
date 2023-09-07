@@ -23,9 +23,11 @@
 /Makefile
 /analysis_files
 /bench/
+/bench-results/
 /benchmark/
 /bin/
 /build/
+/bencher/target/
 /certs-config/
 /certs/
 /docs
