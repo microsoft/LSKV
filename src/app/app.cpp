@@ -9,9 +9,11 @@
 #include "ccf/historical_queries_adapter.h"
 #include "ccf/http_query.h"
 #include "ccf/json_handler.h"
+#include "ccf/pal/locking.h"
 #include "ccf/service/tables/nodes.h"
 #include "ccf/service/tables/service.h"
 #include "endpoints/grpc/grpc.h" // TODO(#22): private header
+#include "endpoints/grpc/stream.h" // TODO(#22): private header
 #include "etcd.pb.h"
 #include "grpc.h"
 #include "index.h"
@@ -20,6 +22,7 @@
 #include "leases.h"
 #include "lskvserver.pb.h"
 #include "node_data.h"
+#include "tls/msg_types.h" // TODO(#22): private header
 
 #include <fmt/ranges.h>
 
@@ -259,6 +262,75 @@ namespace app
         etcdserverpb::StatusRequest,
         etcdserverpb::StatusResponse>(
         etcdserverpb, maintenance, "Status", "/v3/maintenance/status", status);
+
+      auto watch =
+        [this](
+          ccf::endpoints::CommandEndpointContext& ctx,
+          etcdserverpb::WatchRequest&& payload,
+          ccf::grpc::StreamPtr<etcdserverpb::WatchResponse>&& out_stream) {
+          // TODO: For now, CCF accepts incomplete client stream payloads so
+          // simply ignore those for now
+          if (!payload.has_create_request())
+          {
+            return ccf::grpc::make_pending();
+          }
+
+          this->watch_impl(ctx, std::move(payload), std::move(out_stream));
+          return ccf::grpc::make_pending();
+        };
+      make_command_endpoint(
+        "/etcdserverpb.Watch/Watch",
+        HTTP_POST,
+        ccf::grpc_command_unary_stream_adapter<
+          etcdserverpb::WatchRequest,
+          etcdserverpb::WatchResponse>(watch),
+        {ccf::no_auth_required})
+        .install();
+    }
+
+    struct Watch
+    {
+      int64_t id;
+      ccf::grpc::DetachedStreamPtr<etcdserverpb::WatchResponse> stream;
+    };
+    int64_t next_watch_id = 0;
+
+    ccf::pal::Mutex watches_lock;
+    std::map<std::string, Watch> watches;
+
+    void watch_impl(
+      ccf::endpoints::CommandEndpointContext& ctx,
+      etcdserverpb::WatchRequest&& payload,
+      ccf::grpc::StreamPtr<etcdserverpb::WatchResponse>&& out_stream)
+    {
+      CCF_APP_INFO("Watch request received {}", payload.DebugString());
+
+      // TODO: Only support watch creation for now
+      if (payload.has_create_request())
+      {
+        std::lock_guard<ccf::pal::Mutex> guard(watches_lock);
+
+        auto const& create_payload = payload.create_request();
+        auto watch_id = next_watch_id++;
+        // notify the client of creation
+        {
+          etcdserverpb::WatchResponse response;
+          response.set_watch_id(watch_id);
+          response.set_created(true);
+          auto committed = last_committed_txid();
+          fill_header(*response.mutable_header(), committed);
+
+          out_stream->stream_msg(response);
+        }
+
+        Watch watch = {
+          watch_id,
+          ccf::grpc::detach_stream(ctx.rpc_ctx, std::move(out_stream))};
+        watches.emplace(std::make_pair(create_payload.key(), std::move(watch)));
+
+        CCF_APP_INFO(
+          "Created watch {} for key {}", watch_id, create_payload.key());
+      }
     }
 
     template <typename Out>
@@ -663,6 +735,24 @@ namespace app
       }
 
       SET_CUSTOM_CLAIMS(put)
+
+      std::lock_guard<ccf::pal::Mutex> guard(watches_lock);
+      auto w = watches.find(payload.key());
+      if (w != watches.end())
+      {
+        auto& watch = w->second;
+        etcdserverpb::WatchResponse response;
+        response.set_watch_id(watch.id);
+        auto* event = response.add_events();
+        event->set_type(etcdserverpb::Event::PUT);
+        auto* kv = event->mutable_kv();
+        kv->set_key(payload.key());
+        kv->set_value(payload.value());
+
+        auto committed = last_committed_txid();
+        fill_header(*response.mutable_header(), committed);
+        watch.stream->stream_msg(response);
+      }
 
       return ccf::grpc::make_success(put_response);
     }
@@ -1446,7 +1536,6 @@ namespace app
       return out;
     }
   };
-
 } // namespace app
 
 namespace ccfapp

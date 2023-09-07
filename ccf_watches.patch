@@ -1,0 +1,101 @@
+diff --git a/src/endpoints/grpc/grpc.h b/src/endpoints/grpc/grpc.h
+index bf7829feb..c29fa47ad 100644
+--- a/src/endpoints/grpc/grpc.h
++++ b/src/endpoints/grpc/grpc.h
+@@ -68,22 +68,30 @@ namespace ccf::grpc
+     }
+     else
+     {
+-      const auto message_length = impl::read_message_frame(data, size);
+-      if (size != message_length)
++      In in;
++      try
+       {
+-        throw std::logic_error(fmt::format(
+-          "Error in gRPC frame: frame size is {} but messages is {} bytes",
+-          size,
+-          message_length));
+-      }
++        const auto message_length = impl::read_message_frame(data, size);
++        if (size != message_length)
++        {
++          throw std::logic_error(fmt::format(
++            "Error in gRPC frame: frame size is {} but messages is {} bytes",
++            size,
++            message_length));
++        }
+ 
+-      In in;
+-      if (!in.ParseFromArray(data, message_length))
++        if (!in.ParseFromArray(data, message_length))
++        {
++          throw std::logic_error(fmt::format(
++            "Error deserialising protobuf payload of type {}, size {}",
++            in.GetTypeName(),
++            size));
++        }
++      }
++      catch (const std::exception& e)
+       {
+-        throw std::logic_error(fmt::format(
+-          "Error deserialising protobuf payload of type {}, size {}",
+-          in.GetTypeName(),
+-          size));
++        // Note: Client streaming!
++        LOG_FAIL_FMT("Error deserialising payload: {}", e.what());
+       }
+       return in;
+     }
+diff --git a/src/http/http2_callbacks.h b/src/http/http2_callbacks.h
+index 45634231c..d7d46ca44 100644
+--- a/src/http/http2_callbacks.h
++++ b/src/http/http2_callbacks.h
+@@ -36,7 +36,7 @@ namespace http2
+       stream_data->outgoing.state == StreamResponseState::Streaming)
+     {
+       // Early out: when streaming, avoid calling this callback
+-      // repeatedly when there no data to read
++      // repeatedly when there is no data to read
+       return NGHTTP2_ERR_DEFERRED;
+     }
+ 
+@@ -122,8 +122,20 @@ namespace http2
+           return 0;
+         }
+ 
++        auto& headers = stream_data->incoming.headers;
++        std::string url = {};
++        {
++          const auto url_it = headers.find(http2::headers::PATH);
++          if (url_it != headers.end())
++          {
++            url = url_it->second;
++          }
++        }
++
+         // If the request is complete, process it
+-        if (frame->hd.flags & NGHTTP2_FLAG_END_STREAM)
++        if (
++          frame->hd.flags & NGHTTP2_FLAG_END_STREAM ||
++          url == "/etcdserverpb.Watch/Watch")
+         {
+           auto* p = get_parser(user_data);
+           p->handle_completed(stream_id, stream_data);
+diff --git a/src/http/http2_parser.h b/src/http/http2_parser.h
+index 4e5b91a33..a4b808b8a 100644
+--- a/src/http/http2_parser.h
++++ b/src/http/http2_parser.h
+@@ -387,8 +387,11 @@ namespace http2
+ 
+       if (stream_data->outgoing.state != StreamResponseState::Uninitialised)
+       {
+-        throw std::logic_error(fmt::format(
+-          "Stream {} should be uninitialised to start stream", stream_id));
++        // throw std::logic_error(fmt::format(
++        //   "Stream {} should be uninitialised to start stream", stream_id));
++
++        stream_data->outgoing.state = StreamResponseState::Streaming;
++        return;
+       }
+ 
+       stream_data->outgoing.state = StreamResponseState::Streaming;
