@@ -8,6 +8,7 @@ Run a cluster of lskv nodes.
 
 import argparse
 import json
+import tempfile
 import os
 import shutil
 import signal
@@ -289,7 +290,6 @@ class Curl:
                 data=f"@{signed_data_file.name}",
                 content_type="application/cose",
             )
-
 
 # pylint: disable=too-many-instance-attributes
 @dataclass
@@ -737,11 +737,11 @@ class Member:
     def __init__(self, workspace: str, name: str, ip_address: str, port: int):
         self.workspace = workspace
         self.name = name
-        self.public_key = f"{self.workspace}/sandbox_common/{name}_cert.pem"
-        self.private_key = f"{self.workspace}/sandbox_common/{name}_privk.pem"
+        self.public_key = f"{self.workspace}/common/{name}_cert.pem"
+        self.private_key = f"{self.workspace}/common/{name}_privk.pem"
         self.curl = Curl(
             f"https://{ip_address}:{port}",
-            f"{self.workspace}/sandbox_common/service_cert.pem",
+            f"{self.workspace}/common/service_cert.pem",
             self.public_key,
             self.private_key,
         )
