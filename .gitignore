@@ -37,6 +37,9 @@ bin/
 
 /result
 
+results/
+target/
+
 /*.parquet
 
 *.pub
