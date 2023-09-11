@@ -17,7 +17,13 @@ impl Experiment for YcsbExperiment {
         let mut configs = Vec::new();
         let nodes = 1;
         for rate in [100, 500, 1000, 2000, 5000] {
-            for workload in [YcsbWorkload::A] {
+            for workload in [
+                YcsbWorkload::A,
+                YcsbWorkload::B,
+                YcsbWorkload::C,
+                YcsbWorkload::D,
+                YcsbWorkload::E,
+            ] {
                 let config = Config {
                     rate,
                     total: rate * 10,
@@ -126,9 +132,9 @@ impl Experiment for YcsbExperiment {
 
     fn analyse(
         &mut self,
-        experiment_dir: &Path,
-        environment: Environment,
-        configurations: Vec<(Self::Configuration, PathBuf)>,
+        _experiment_dir: &Path,
+        _environment: Environment,
+        _configurations: Vec<(Self::Configuration, PathBuf)>,
     ) {
         todo!()
     }
@@ -175,13 +181,44 @@ pub enum YcsbWorkload {
 
 impl YcsbWorkload {
     fn to_command(&self) -> Vec<String> {
-        match self {
-            Self::A => vec![],
-            Self::B => vec![],
-            Self::C => vec![],
-            Self::D => vec![],
-            Self::E => vec![],
-            Self::F => vec![],
-        }
+        let args = match self {
+            Self::A => vec![
+                "--read-weight",
+                "1",
+                "--update-weight",
+                "1",
+                "--request-distribution",
+                "zipfian",
+            ],
+            Self::B => vec![
+                "--read-weight",
+                "95",
+                "--update-weight",
+                "5",
+                "--request-distribution",
+                "zipfian",
+            ],
+            Self::C => vec!["--read-weight", "1", "--request-distribution", "zipfian"],
+            Self::D => vec![
+                "--read-weight",
+                "95",
+                "--insert-weight",
+                "5",
+                "--request-distribution",
+                "zipfian",
+            ],
+            Self::E => vec![
+                "--scan-weight",
+                "95",
+                "--insert-weight",
+                "5",
+                "--max-scan-length",
+                "100",
+                "--request-distribution",
+                "zipfian",
+            ],
+            Self::F => todo!(),
+        };
+        args.into_iter().map(|i| i.to_owned()).collect()
     }
 }

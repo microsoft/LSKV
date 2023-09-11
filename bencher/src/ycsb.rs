@@ -16,11 +16,11 @@ pub struct YcsbInputGenerator {
     pub scan_weight: u32,
     pub insert_weight: u32,
     pub update_weight: u32,
-    pub read_all_fields: bool,
     pub fields_per_record: u32,
     pub field_value_length: usize,
     pub operation_rng: StdRng,
     pub max_record_index: u32,
+    pub max_scan_length: u32,
     pub request_distribution: RequestDistribution,
 }
 
@@ -113,8 +113,9 @@ impl InputGenerator for YcsbInputGenerator {
                 field_key: "field0".to_owned(),
             },
             // read all
-            1 => YcsbInput::ReadAll {
-                record_key: self.existing_record_key(),
+            1 => YcsbInput::Scan {
+                start_key: self.existing_record_key(),
+                scan_length: self.max_scan_length,
             },
             // insert
             2 => YcsbInput::Insert {
@@ -209,10 +210,7 @@ impl Dispatcher for YcsbDispatcher {
                         .put(PutRequest {
                             key: format!("{record_key}/{field_key}").into(),
                             value: field_value.into(),
-                            ignore_lease: false,
-                            ignore_value: false,
-                            lease: 0,
-                            prev_kv: false,
+                            ..Default::default()
                         })
                         .await
                         .unwrap();
@@ -227,10 +225,7 @@ impl Dispatcher for YcsbDispatcher {
                     .put(PutRequest {
                         key: format!("{record_key}/{field_key}").into(),
                         value: field_value.into(),
-                        ignore_lease: false,
-                        ignore_value: false,
-                        lease: 0,
-                        prev_kv: false,
+                        ..Default::default()
                     })
                     .await
                     .unwrap();
@@ -244,16 +239,7 @@ impl Dispatcher for YcsbDispatcher {
                         key: format!("{record_key}/{field_key}").into(),
                         range_end: vec![],
                         serializable: true,
-                        revision: 0,
-                        limit: 0,
-                        max_create_revision: 0,
-                        max_mod_revision: 0,
-                        min_create_revision: 0,
-                        min_mod_revision: 0,
-                        keys_only: false,
-                        count_only: false,
-                        sort_order: 0,
-                        sort_target: 0,
+                        ..Default::default()
                     })
                     .await
                     .unwrap();
@@ -264,16 +250,7 @@ impl Dispatcher for YcsbDispatcher {
                         key: format!("{record_key}/").into(),
                         range_end: format!("{record_key}0").into(),
                         serializable: true,
-                        revision: 0,
-                        limit: 0,
-                        max_create_revision: 0,
-                        max_mod_revision: 0,
-                        min_create_revision: 0,
-                        min_mod_revision: 0,
-                        keys_only: false,
-                        count_only: false,
-                        sort_order: 0,
-                        sort_target: 0,
+                        ..Default::default()
                     })
                     .await
                     .unwrap();
@@ -282,7 +259,17 @@ impl Dispatcher for YcsbDispatcher {
                 start_key,
                 scan_length,
             } => {
-                // TODO
+                let range_end = format!("{start_key}/field{scan_length}");
+                let key = start_key;
+                self.etcd_client
+                    .range(RangeRequest {
+                        key: key.as_bytes().to_vec(),
+                        range_end: range_end.as_bytes().to_vec(),
+                        serializable: true,
+                        ..Default::default()
+                    })
+                    .await
+                    .unwrap();
             }
         }
         Ok(())
@@ -300,22 +287,22 @@ pub struct Args {
     pub initial_clients: u64,
     #[clap(long)]
     pub max_clients: Option<u32>,
-    #[clap(long, default_value = "1")]
+    #[clap(long, default_value = "0")]
     pub read_weight: u32,
-    #[clap(long, default_value = "1")]
+    #[clap(long, default_value = "0")]
     pub scan_weight: u32,
-    #[clap(long, default_value = "1")]
+    #[clap(long, default_value = "0")]
     pub insert_weight: u32,
-    #[clap(long, default_value = "1")]
+    #[clap(long, default_value = "0")]
     pub update_weight: u32,
-    #[clap(long)]
-    pub read_all_fields: bool,
     #[clap(long, default_value = "1")]
     pub fields_per_record: u32,
     #[clap(long, default_value = "1")]
     pub field_value_length: usize,
     #[clap(long, default_value = "1")]
     pub max_record_index: u32,
+    #[clap(long, default_value = "100")]
+    pub max_scan_length: u32,
     #[clap(long, default_value = "uniform")]
     pub request_distribution: RequestDistribution,
 }
