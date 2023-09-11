@@ -6,6 +6,9 @@ use std::process::Child;
 use std::process::Command;
 use std::time::Duration;
 
+use tracing::debug;
+use tracing::info;
+
 pub struct LskvStore {
     pub nodes: Vec<String>,
     pub enclave: String,
@@ -14,6 +17,7 @@ pub struct LskvStore {
     pub sig_ms_interval: u32,
     pub ledger_chunk_bytes: u32,
     pub snapshot_tx_interval: u32,
+    pub configuration_dir: PathBuf,
     pub workspace: PathBuf,
     pub http_version: u8,
     pub tmpfs: bool,
@@ -47,15 +51,19 @@ impl LskvStore {
             args.push("--node".to_owned());
             args.push(node.to_owned());
         }
+        let out_file = File::create(self.configuration_dir.join("runner.out")).unwrap();
+        let err_file = File::create(self.configuration_dir.join("runner.err")).unwrap();
         Command::new("python3")
             .args(args)
+            .stdout(out_file)
+            .stderr(err_file)
             .current_dir(root_dir)
             .spawn()
             .unwrap()
     }
 
     pub async fn wait_for_ready(&self) {
-        println!("waiting for ready");
+        debug!("waiting for ready");
         for _ in 0..1000 {
             let mut all = true;
             for node in &self.nodes {
@@ -72,7 +80,7 @@ impl LskvStore {
     }
 
     async fn is_ready(&self, node: &str) -> bool {
-        println!("checking node {} is ready", node);
+        debug!("Checking node {node} is ready");
         #[derive(Debug, serde::Deserialize)]
         struct NetworkResponse {
             service_status: String,
@@ -81,7 +89,7 @@ impl LskvStore {
         let ca = self.workspace.join("common").join("service_cert.pem");
         let mut ca_contents = Vec::new();
         if !ca.is_file() {
-            println!("ca file does not exist {:?}", ca);
+            debug!("ca file does not exist {:?}", ca);
             return false;
         }
         File::open(ca)
@@ -106,13 +114,14 @@ impl LskvStore {
             .send()
             .await;
         if res.is_err() {
-            println!("Failed sending request {:?}", res);
+            debug!("Failed sending request {:?}", res);
             return false;
         }
         let res = res.unwrap();
         if res.status() == 200 {
             let res = res.json::<NetworkResponse>().await.unwrap();
             if res.service_status == "Open" {
+                info!("Node {node} is ready");
                 return true;
             }
         }

@@ -60,6 +60,7 @@ impl Experiment for YcsbExperiment {
             sig_ms_interval: 1,
             ledger_chunk_bytes: 1000,
             snapshot_tx_interval: 1000,
+            configuration_dir: configuration_dir.clone(),
             workspace: workspace.clone(),
             http_version: 2,
             tmpfs: false,
