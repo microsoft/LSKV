@@ -7,9 +7,13 @@ use std::process::Child;
 use std::process::Command;
 use std::time::Duration;
 
+use serde::Deserialize;
+use serde::Serialize;
 use tracing::debug;
 use tracing::info;
 
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Enclave {
     Virtual,
     SGX,

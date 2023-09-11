@@ -26,13 +26,16 @@ impl Experiment for YcsbExperiment {
                 YcsbWorkload::D,
                 YcsbWorkload::E,
             ] {
-                let config = Config {
-                    rate,
-                    total: rate * 10,
-                    workload,
-                    nodes,
-                };
-                configs.push(config);
+                for enclave in [Enclave::Virtual] {
+                    let config = Config {
+                        rate,
+                        total: rate * 10,
+                        workload,
+                        nodes,
+                        enclave,
+                    };
+                    configs.push(config);
+                }
             }
         }
         configs
@@ -56,7 +59,7 @@ impl Experiment for YcsbExperiment {
             .collect();
         let store_config = LskvStore {
             nodes,
-            enclave: Enclave::Virtual,
+            enclave: configuration.enclave,
             worker_threads: 1,
             sig_tx_interval: 100,
             sig_ms_interval: 1,
@@ -159,6 +162,7 @@ pub struct Config {
     total: u32,
     workload: YcsbWorkload,
     nodes: u32,
+    enclave: Enclave,
 }
 
 impl exp::ExperimentConfiguration for Config {}
@@ -184,7 +188,7 @@ impl Config {
     }
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Copy, Clone, serde::Serialize, serde::Deserialize)]
 pub enum YcsbWorkload {
     A,
     B,
