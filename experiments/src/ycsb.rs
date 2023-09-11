@@ -1,3 +1,4 @@
+use crate::stores::lskv::Enclave;
 use crate::stores::lskv::LskvStore;
 use exp::Environment;
 use exp::Experiment;
@@ -55,7 +56,7 @@ impl Experiment for YcsbExperiment {
             .collect();
         let store_config = LskvStore {
             nodes,
-            enclave: "virtual".to_owned(),
+            enclave: Enclave::Virtual,
             worker_threads: 1,
             sig_tx_interval: 100,
             sig_ms_interval: 1,

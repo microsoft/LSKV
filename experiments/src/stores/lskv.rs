@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -9,9 +10,27 @@ use std::time::Duration;
 use tracing::debug;
 use tracing::info;
 
+pub enum Enclave {
+    Virtual,
+    SGX,
+}
+
+impl Display for Enclave {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Virtual => "virtual",
+                Self::SGX => "sgx",
+            }
+        )
+    }
+}
+
 pub struct LskvStore {
     pub nodes: Vec<String>,
-    pub enclave: String,
+    pub enclave: Enclave,
     pub worker_threads: u32,
     pub sig_tx_interval: u32,
     pub sig_ms_interval: u32,
@@ -28,7 +47,7 @@ impl LskvStore {
         let mut args = vec![
             "benchmark/lskv_cluster.py".to_owned(),
             "--enclave".to_owned(),
-            self.enclave.clone(),
+            self.enclave.to_string(),
             "--worker-threads".to_owned(),
             self.worker_threads.to_string(),
             "--sig-tx-interval".to_owned(),
