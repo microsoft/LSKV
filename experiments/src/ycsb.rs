@@ -1,3 +1,4 @@
+use crate::stores::etcd::EtcdStore;
 use crate::stores::lskv::Enclave;
 use crate::stores::lskv::LskvStore;
 use crate::stores::StoreConfig;
@@ -21,6 +22,7 @@ impl Experiment for YcsbExperiment {
         let mut configs = Vec::new();
         let nodes = 1;
         let mut store_configs = Vec::new();
+        store_configs.push(StoreConfig::Etcd(crate::stores::etcd::Config {}));
         for enclave in [Enclave::Virtual] {
             store_configs.push(StoreConfig::Lskv(crate::stores::lskv::Config {
                 enclave,
@@ -78,6 +80,18 @@ impl Experiment for YcsbExperiment {
                     configuration_dir: configuration_dir.clone(),
                     workspace: workspace.clone(),
                     http_version: 2,
+                    tmpfs: false,
+                };
+                let store = store_config.run(&self.root_dir);
+                store_config.wait_for_ready().await;
+                store
+            }
+            StoreConfig::Etcd(config) => {
+                let store_config = EtcdStore {
+                    config: config.clone(),
+                    nodes,
+                    configuration_dir: configuration_dir.clone(),
+                    workspace: workspace.clone(),
                     tmpfs: false,
                 };
                 let store = store_config.run(&self.root_dir);

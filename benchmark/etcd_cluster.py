@@ -127,7 +127,7 @@ class Runner:
             "--initial-advertise-peer-urls",
             f"{self.scheme}://{self.address}:{peer_port}",
             "--listen-metrics-urls",
-            f"{self.scheme}://{self.address}:{metrics_port}",
+            f"http://{self.address}:{metrics_port}",
             "--initial-cluster",
             self.initial_cluster,
             "--initial-cluster-state",
