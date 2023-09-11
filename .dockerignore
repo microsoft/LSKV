@@ -40,3 +40,4 @@
 requirements.txt
 *.zip
 *.bak
+/experiments
