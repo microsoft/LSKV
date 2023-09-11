@@ -44,3 +44,5 @@ target/
 
 *.pub
 hosts
+
+.direnv/

@@ -34,3 +34,11 @@ After running, copy the results back to the host: `rsync -rv <user>@$(head -n 1 
 
 The receipt verification benchmark (`benchmark/receipt_verify.py`) uses a hard-coded receipt so can be run standalone without a running datastore.
 It can be run with `python benchmark/receipt_verify.py`.
+
+## Plotting
+
+```sh
+julia -e 'import Pkg; Pkg.add("Pluto"); import Pluto; Pluto.run()'
+```
+
+Then edit and run the notebook in your browser.
