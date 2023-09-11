@@ -1,5 +1,9 @@
+use std::fs::File;
+
 use crate::ycsb::YcsbDispatcherGenerator;
 use crate::ycsb::YcsbInputGenerator;
+use loadbench::output_sink::CsvOutputSink;
+use loadbench::output_sink::OutputSink;
 use loadbench::output_sink::StatsOutputSink;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
@@ -30,7 +34,33 @@ pub async fn run_ycsb(args: args::CommonArgs, ycsb_args: crate::ycsb::Args) {
 
     let dispatcher_generator = YcsbDispatcherGenerator::new(args.endpoint, &args.common_dir).await;
 
-    let mut output_sink = StatsOutputSink::default();
+    struct DoubleOutputSink {
+        stats: StatsOutputSink,
+        csv: CsvOutputSink<File>,
+    }
+
+    let stats_output_sink = StatsOutputSink::default();
+
+    let writer = csv::Writer::from_path(args.out_file).unwrap();
+    let csv_output_sink = CsvOutputSink { writer };
+
+    let mut output_sink = DoubleOutputSink {
+        stats: stats_output_sink,
+        csv: csv_output_sink,
+    };
+
+    #[async_trait::async_trait]
+    impl<O> OutputSink<O> for DoubleOutputSink
+    where
+        O: Clone + Send + serde::Serialize + 'static,
+    {
+        async fn send(&mut self, output: loadbench::Output<O>) {
+            let o = output.clone();
+            self.stats.send(o).await;
+            let o = output.clone();
+            self.csv.send(o).await;
+        }
+    }
 
     loadbench::generate_load(
         ycsb_args.rate,
@@ -43,5 +73,5 @@ pub async fn run_ycsb(args: args::CommonArgs, ycsb_args: crate::ycsb::Args) {
     )
     .await;
 
-    output_sink.summary();
+    output_sink.stats.summary();
 }

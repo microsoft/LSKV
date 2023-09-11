@@ -16,6 +16,9 @@ pub struct CommonArgs {
 
     #[clap(long)]
     pub common_dir: PathBuf,
+
+    #[clap(long)]
+    pub out_file: PathBuf,
 }
 
 #[derive(Debug, clap::Subcommand)]

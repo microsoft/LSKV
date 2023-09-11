@@ -241,6 +241,7 @@ dependencies = [
  "prost-types",
  "rand",
  "rand_distr",
+ "serde",
  "tokio",
  "tonic",
  "tonic-build",
