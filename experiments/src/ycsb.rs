@@ -1,5 +1,6 @@
 use crate::stores::lskv::Enclave;
 use crate::stores::lskv::LskvStore;
+use crate::stores::StoreConfig;
 use exp::Environment;
 use exp::Experiment;
 use futures_util::StreamExt;
@@ -18,6 +19,14 @@ impl Experiment for YcsbExperiment {
     fn configurations(&mut self) -> Vec<Self::Configuration> {
         let mut configs = Vec::new();
         let nodes = 1;
+        let store_config = StoreConfig::Lskv(crate::stores::lskv::Config {
+            enclave: Enclave::Virtual,
+            worker_threads: 0,
+            sig_tx_interval: 100,
+            sig_ms_interval: 100,
+            ledger_chunk_bytes: 10000,
+            snapshot_tx_interval: 10000,
+        });
         for rate in [100, 500, 1000, 2000, 5000] {
             for workload in [
                 YcsbWorkload::A,
@@ -28,6 +37,7 @@ impl Experiment for YcsbExperiment {
             ] {
                 for enclave in [Enclave::Virtual] {
                     let config = Config {
+                        store_config: store_config.clone(),
                         rate,
                         total: rate * 10,
                         workload,
@@ -57,21 +67,21 @@ impl Experiment for YcsbExperiment {
         let nodes = (0..configuration.nodes)
             .map(|i| format!("local://127.0.0.1:{}", 8000 + (i * 3)))
             .collect();
-        let store_config = LskvStore {
-            nodes,
-            enclave: configuration.enclave,
-            worker_threads: 1,
-            sig_tx_interval: 100,
-            sig_ms_interval: 1,
-            ledger_chunk_bytes: 1000,
-            snapshot_tx_interval: 1000,
-            configuration_dir: configuration_dir.clone(),
-            workspace: workspace.clone(),
-            http_version: 2,
-            tmpfs: false,
+        let mut store = match &configuration.store_config {
+            StoreConfig::Lskv(config) => {
+                let store_config = LskvStore {
+                    config: config.clone(),
+                    nodes,
+                    configuration_dir: configuration_dir.clone(),
+                    workspace: workspace.clone(),
+                    http_version: 2,
+                    tmpfs: false,
+                };
+                let store = store_config.run(&self.root_dir);
+                store_config.wait_for_ready().await;
+                store
+            }
         };
-        let mut store = store_config.run(&self.root_dir);
-        store_config.wait_for_ready().await;
 
         let results_path = configuration_dir
             .join("results.csv")
@@ -163,6 +173,7 @@ pub struct Config {
     workload: YcsbWorkload,
     nodes: u32,
     enclave: Enclave,
+    store_config: StoreConfig,
 }
 
 impl exp::ExperimentConfiguration for Config {}

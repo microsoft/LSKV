@@ -32,14 +32,19 @@ impl Display for Enclave {
     }
 }
 
-pub struct LskvStore {
-    pub nodes: Vec<String>,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Config {
     pub enclave: Enclave,
     pub worker_threads: u32,
     pub sig_tx_interval: u32,
     pub sig_ms_interval: u32,
     pub ledger_chunk_bytes: u32,
     pub snapshot_tx_interval: u32,
+}
+
+pub struct LskvStore {
+    pub config: Config,
+    pub nodes: Vec<String>,
     pub configuration_dir: PathBuf,
     pub workspace: PathBuf,
     pub http_version: u8,
@@ -51,17 +56,17 @@ impl LskvStore {
         let mut args = vec![
             "benchmark/lskv_cluster.py".to_owned(),
             "--enclave".to_owned(),
-            self.enclave.to_string(),
+            self.config.enclave.to_string(),
             "--worker-threads".to_owned(),
-            self.worker_threads.to_string(),
+            self.config.worker_threads.to_string(),
             "--sig-tx-interval".to_owned(),
-            self.sig_tx_interval.to_string(),
+            self.config.sig_tx_interval.to_string(),
             "--sig-ms-interval".to_owned(),
-            self.sig_ms_interval.to_string(),
+            self.config.sig_ms_interval.to_string(),
             "--ledger-chunk-bytes".to_owned(),
-            self.ledger_chunk_bytes.to_string(),
+            self.config.ledger_chunk_bytes.to_string(),
             "--snapshot-tx-interval".to_owned(),
-            self.snapshot_tx_interval.to_string(),
+            self.config.snapshot_tx_interval.to_string(),
             "--workspace".to_owned(),
             self.workspace.to_string_lossy().into_owned(),
             "--http-version".to_owned(),
