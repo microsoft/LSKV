@@ -4,6 +4,7 @@ use crate::stores::StoreConfig;
 use exp::Environment;
 use exp::Experiment;
 use futures_util::StreamExt;
+use polars::prelude::*;
 use std::fs::File;
 use std::path::Path;
 use std::path::PathBuf;
@@ -19,14 +20,17 @@ impl Experiment for YcsbExperiment {
     fn configurations(&mut self) -> Vec<Self::Configuration> {
         let mut configs = Vec::new();
         let nodes = 1;
-        let store_config = StoreConfig::Lskv(crate::stores::lskv::Config {
-            enclave: Enclave::Virtual,
-            worker_threads: 0,
-            sig_tx_interval: 100,
-            sig_ms_interval: 100,
-            ledger_chunk_bytes: 10000,
-            snapshot_tx_interval: 10000,
-        });
+        let mut store_configs = Vec::new();
+        for enclave in [Enclave::Virtual] {
+            store_configs.push(StoreConfig::Lskv(crate::stores::lskv::Config {
+                enclave,
+                worker_threads: 0,
+                sig_tx_interval: 100,
+                sig_ms_interval: 100,
+                ledger_chunk_bytes: 10000,
+                snapshot_tx_interval: 10000,
+            }));
+        }
         for rate in [100, 500, 1000, 2000, 5000] {
             for workload in [
                 YcsbWorkload::A,
@@ -35,14 +39,13 @@ impl Experiment for YcsbExperiment {
                 YcsbWorkload::D,
                 YcsbWorkload::E,
             ] {
-                for enclave in [Enclave::Virtual] {
+                for store_config in &store_configs {
                     let config = Config {
                         store_config: store_config.clone(),
                         rate,
                         total: rate * 10,
                         workload,
                         nodes,
-                        enclave,
                     };
                     configs.push(config);
                 }
@@ -158,11 +161,55 @@ impl Experiment for YcsbExperiment {
 
     fn analyse(
         &mut self,
-        _experiment_dir: &Path,
+        experiment_dir: &Path,
         _environment: Environment,
-        _configurations: Vec<(Self::Configuration, PathBuf)>,
+        configurations: Vec<(Self::Configuration, PathBuf)>,
     ) {
-        todo!()
+        let all_results_file = experiment_dir.join("results.csv");
+        println!("Merging results to {:?}", all_results_file);
+        let mut all_data_opt = None;
+        for (config, config_dir) in &configurations {
+            let mut dummy_writer = Vec::new();
+            {
+                let mut config_header = csv::Writer::from_writer(&mut dummy_writer);
+                config_header.serialize(config).unwrap();
+            }
+            let config_data = CsvReader::new(std::io::Cursor::new(dummy_writer))
+                .has_header(true)
+                .finish()
+                .unwrap();
+
+            let results_file = config_dir.join("results.csv");
+
+            if results_file.is_file() {
+                let mut schema = Schema::new();
+                schema.with_column("member_id".into(), DataType::UInt64);
+                let results_data = CsvReader::from_path(results_file)
+                    .unwrap()
+                    .has_header(true)
+                    .with_dtypes(Some(Arc::new(schema)))
+                    .finish()
+                    .unwrap();
+
+                let config_and_results_data =
+                    config_data.cross_join(&results_data, None, None).unwrap();
+
+                if let Some(all_data) = all_data_opt {
+                    all_data_opt = Some(
+                        diag_concat_lf([all_data, config_and_results_data.lazy()], true, true)
+                            .unwrap(),
+                    );
+                } else {
+                    all_data_opt = Some(config_and_results_data.lazy());
+                }
+            }
+        }
+        let mut csv_file = File::create(all_results_file).unwrap();
+        if let Some(all_data) = all_data_opt {
+            CsvWriter::new(&mut csv_file)
+                .finish(&mut all_data.collect().unwrap())
+                .unwrap();
+        }
     }
 }
 
@@ -172,7 +219,7 @@ pub struct Config {
     total: u32,
     workload: YcsbWorkload,
     nodes: u32,
-    enclave: Enclave,
+    #[serde(flatten)]
     store_config: StoreConfig,
 }
 

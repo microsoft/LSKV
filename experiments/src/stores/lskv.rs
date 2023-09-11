@@ -92,7 +92,7 @@ impl LskvStore {
 
     pub async fn wait_for_ready(&self) {
         debug!("waiting for ready");
-        for _ in 0..1000 {
+        for _ in 0..100 {
             let mut all = true;
             for node in &self.nodes {
                 if !self.is_ready(node).await {
