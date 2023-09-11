@@ -159,7 +159,7 @@ dependencies = [
  "http",
  "http-body",
  "hyper",
- "itoa",
+ "itoa 1.0.9",
  "matchit",
  "memchr",
  "mime",
@@ -242,6 +242,18 @@ name = "bitflags"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4682ae6287fcf752ecaabbfcc7b6f9b72aa33933dc23a554d853aea8eea8635"
+
+[[package]]
+name = "bstr"
+version = "0.2.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba3569f383e8f1598449f1a423e72e99569137b47740b1da11ef19af3d5c3223"
+dependencies = [
+ "lazy_static",
+ "memchr",
+ "regex-automata 0.1.10",
+ "serde",
+]
 
 [[package]]
 name = "bumpalo"
@@ -358,12 +370,12 @@ dependencies = [
 
 [[package]]
 name = "csv"
-version = "1.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "626ae34994d3d8d668f4269922248239db4ae42d538b14c398b74a52208e8086"
+version = "1.1.5"
+source = "git+https://github.com/gootorov/rust-csv?branch=serde-flatten#31d1105f9ee50bf02dff178f20be4a1ec9fdff2d"
 dependencies = [
+ "bstr",
  "csv-core",
- "itoa",
+ "itoa 0.4.8",
  "ryu",
  "serde",
 ]
@@ -371,8 +383,7 @@ dependencies = [
 [[package]]
 name = "csv-core"
 version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b2466559f260f48ad25fe6317b3c8dac77b5bdb5763ac7d9d6103530663bc90"
+source = "git+https://github.com/gootorov/rust-csv?branch=serde-flatten#31d1105f9ee50bf02dff178f20be4a1ec9fdff2d"
 dependencies = [
  "memchr",
 ]
@@ -550,7 +561,7 @@ checksum = "bd6effc99afb63425aff9b05836f029929e345a6148a14b7ecd5ab67af944482"
 dependencies = [
  "bytes",
  "fnv",
- "itoa",
+ "itoa 1.0.9",
 ]
 
 [[package]]
@@ -591,7 +602,7 @@ dependencies = [
  "http-body",
  "httparse",
  "httpdate",
- "itoa",
+ "itoa 1.0.9",
  "pin-project-lite",
  "socket2 0.4.9",
  "tokio",
@@ -666,6 +677,12 @@ dependencies = [
 
 [[package]]
 name = "itoa"
+version = "0.4.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b71991ff56294aa922b450139ee08b3bfc70982c6b2c7562771375cf73542dd4"
+
+[[package]]
+name = "itoa"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af150ab688ff2122fcef229be89cb50dd66af9e01a4ff320cc137eecc9bacc38"
@@ -706,7 +723,7 @@ checksum = "57bcfdad1b858c2db7c38303a6d2ad4dfaf5eb53dfeb0910128b2c26d6158503"
 [[package]]
 name = "loadbench"
 version = "0.1.0"
-source = "git+https://github.com/jeffa5/loadbench?branch=main#a178cdf628df6949a8836c8b8a864ee96d3b19b4"
+source = "git+https://github.com/jeffa5/loadbench?branch=main#dcb27a54a8f18f2670e5e0ca3513ab377308f5f8"
 dependencies = [
  "async-channel",
  "async-trait",

@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 async-trait = "0.1.73"
 clap = { version = "4.4.2", features = ["derive"] }
-csv = "1.2.2"
+csv = { git = "https://github.com/gootorov/rust-csv", branch = "serde-flatten" }
 loadbench = { git = "https://github.com/jeffa5/loadbench", branch = "main" }
 prost = "0.12.0"
 prost-types = "0.12.0"

@@ -8,6 +8,8 @@ use loadbench::client::{Dispatcher, DispatcherGenerator};
 use loadbench::input::InputGenerator;
 use rand::{distributions::Alphanumeric, rngs::StdRng, Rng};
 use rand_distr::{Distribution, WeightedAliasIndex, Zipf};
+use serde::Deserialize;
+use serde::Serialize;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig, Identity};
 
 /// Generate inputs for the YCSB workloads.
@@ -90,6 +92,18 @@ pub enum YcsbInput {
     ReadAll { record_key: String },
     /// Scan records in order, starting at a randomly chosen key
     Scan { start_key: String, scan_length: u32 },
+}
+
+impl YcsbInput {
+    fn name(&self) -> &str {
+        match self {
+            YcsbInput::Insert { .. } => "insert",
+            YcsbInput::Update { .. } => "update",
+            YcsbInput::ReadSingle { .. } => "read",
+            YcsbInput::ReadAll { .. } => "read",
+            YcsbInput::Scan { .. } => "scan",
+        }
+    }
 }
 
 impl InputGenerator for YcsbInputGenerator {
@@ -196,13 +210,19 @@ pub struct YcsbDispatcher {
     etcd_client: KvClient<Channel>,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct YcsbOutput {
+    operation: String,
+}
+
 #[async_trait]
 impl Dispatcher for YcsbDispatcher {
     type Input = YcsbInput;
 
-    type Output = ();
+    type Output = YcsbOutput;
 
     async fn execute(&mut self, request: Self::Input) -> Result<Self::Output, String> {
+        let operation = request.name().to_owned();
         match request {
             YcsbInput::Insert { record_key, fields } => {
                 for (field_key, field_value) in fields {
@@ -272,7 +292,7 @@ impl Dispatcher for YcsbDispatcher {
                     .unwrap();
             }
         }
-        Ok(())
+        Ok(YcsbOutput { operation })
     }
 }
 

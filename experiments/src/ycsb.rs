@@ -2,6 +2,7 @@ use crate::stores::lskv::LskvStore;
 use exp::Environment;
 use exp::Experiment;
 use futures_util::StreamExt;
+use std::fs::File;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -68,6 +69,13 @@ impl Experiment for YcsbExperiment {
         let mut store = store_config.run(&self.root_dir);
         store_config.wait_for_ready().await;
 
+        let results_path = configuration_dir
+            .join("results.csv")
+            .to_string_lossy()
+            .into_owned();
+        // create the file so it can be used to mount in docker
+        File::create(&results_path).unwrap();
+
         let mut docker_runner =
             exp::docker_runner::Runner::new(configuration_dir.clone().into()).await;
         let command = configuration.to_command();
@@ -87,13 +95,16 @@ impl Experiment for YcsbExperiment {
                 ports: None,
                 pull: false,
                 tmpfs: vec![],
-                volumes: vec![(
-                    configuration_dir
-                        .join("workspace")
-                        .to_string_lossy()
-                        .into_owned(),
-                    "/workspace".to_owned(),
-                )],
+                volumes: vec![
+                    (
+                        configuration_dir
+                            .join("workspace")
+                            .to_string_lossy()
+                            .into_owned(),
+                        "/workspace".to_owned(),
+                    ),
+                    (results_path, "/results.csv".to_owned()),
+                ],
             })
             .await;
 
@@ -159,6 +170,8 @@ impl Config {
             "https://127.0.0.1:8000".to_owned(),
             "--common-dir".to_owned(),
             "/workspace/common".to_owned(),
+            "--out-file".to_owned(),
+            "/results.csv".to_owned(),
             "ycsb".to_owned(),
             "--rate".to_owned(),
             self.rate.to_string(),
