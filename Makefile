@@ -69,8 +69,12 @@ build-docker-virtual:
 build-docker-sgx:
 	docker build -t $(IMAGE_NAME):latest-sgx -f Dockerfile.sgx .
 
+.PHONY: build-docker-bencher
+build-docker-bencher:
+	docker build -t $(IMAGE_NAME):bencher-latest -f Dockerfile.bench .
+
 .PHONY: build-docker
-build-docker: build-docker-virtual build-docker-sgx
+build-docker: build-docker-virtual build-docker-sgx build-docker-bencher
 
 .PHONY: push-docker-virtual
 push-docker-virtual:
@@ -80,8 +84,12 @@ push-docker-virtual:
 push-docker-sgx:
 	docker push $(IMAGE_NAME):latest-sgx
 
+.PHONY: push-docker-bencher
+push-docker-bencher:
+	docker push $(IMAGE_NAME):bencher-latest
+
 .PHONY: push-docker
-push-docker: push-docker-virtual push-docker-sgx
+push-docker: push-docker-virtual push-docker-sgx push-docker-bencher
 
 .PHONY: run-docker-virtual
 run-docker-virtual: .venv
