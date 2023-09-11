@@ -70,7 +70,6 @@ class Runner:
         """
         raise NotImplementedError("fetch_file not implemented.")
 
-
     def run(self, cmd: str):
         """
         Run a command.
@@ -99,7 +98,7 @@ class Runner:
 
         # copy data files to node dir
         for file in [
-            os.path.join("certs", n)
+            os.path.join("common", n)
             for n in [ca_cert, server_cert, server_key, peer_cert, peer_key]
         ]:
             src = os.path.join(self.workspace, file)
@@ -186,7 +185,6 @@ class LocalRunner(Runner):
         Fetch a remote file.
         """
         logger.info("[{}] Fetching file from {} to {}", self.address, src, dst)
-
 
     def run(self, cmd: str):
         logger.info("[{}] Running command '{}'", self.address, cmd)
@@ -287,19 +285,23 @@ def generate_certs(workspace: str, nodes: List[Tuple[str, int]]):
     """
     Generate certs to be used for the cluster.
     """
-    certs_dir = os.path.join(workspace, "certs")
-    os.makedirs(certs_dir)
+    common_dir = os.path.join(workspace, "common")
+    os.makedirs(common_dir)
     # cacert
     cfssl = os.path.abspath("bin/cfssl")
     cfssljson = os.path.abspath("bin/cfssljson")
     logger.info("Using cfssl {}", cfssl)
     logger.info("Using cfssljson {}", cfssljson)
-    certs.make_ca(certs_dir, cfssl, cfssljson)
+    certs.make_ca(common_dir, cfssl, cfssljson)
+    # for similarity to CCF
+    shutil.copyfile(
+        os.path.join(common_dir, "ca.pem"), os.path.join(common_dir, "service_cert.pem")
+    )
 
     ip_addresses = {a for (a, _) in nodes}.union({"127.0.0.1"})
     server_csr = certs.SERVER_CSR
     server_csr["hosts"] = list(ip_addresses)
-    certs.make_certs(certs_dir, cfssl, cfssljson, "server", "server", server_csr)
+    certs.make_certs(common_dir, cfssl, cfssljson, "server", "server", server_csr)
 
     for i, (ip_addr, _port) in enumerate(nodes):
         peer_csr = certs.PEER_CSR
@@ -310,9 +312,18 @@ def generate_certs(workspace: str, nodes: List[Tuple[str, int]]):
             assert isinstance(hosts, list)
             hosts.append(ip_addr)
 
-        certs.make_certs(certs_dir, cfssl, cfssljson, "peer", name, peer_csr)
+        certs.make_certs(common_dir, cfssl, cfssljson, "peer", name, peer_csr)
 
-    certs.make_certs(certs_dir, cfssl, cfssljson, "client", "client", certs.CLIENT_CSR)
+    certs.make_certs(common_dir, cfssl, cfssljson, "client", "client", certs.CLIENT_CSR)
+    # for similarity to CCF
+    shutil.copyfile(
+        os.path.join(common_dir, "client.pem"),
+        os.path.join(common_dir, "user0_cert.pem"),
+    )
+    shutil.copyfile(
+        os.path.join(common_dir, "client-key.pem"),
+        os.path.join(common_dir, "user0_privk.pem"),
+    )
 
 
 # pylint: disable=too-many-branches
