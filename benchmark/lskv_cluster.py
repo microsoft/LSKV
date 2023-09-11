@@ -8,7 +8,6 @@ Run a cluster of lskv nodes.
 
 import argparse
 import json
-import tempfile
 import os
 import shutil
 import signal
@@ -290,6 +289,7 @@ class Curl:
                 data=f"@{signed_data_file.name}",
                 content_type="application/cose",
             )
+
 
 # pylint: disable=too-many-instance-attributes
 @dataclass
