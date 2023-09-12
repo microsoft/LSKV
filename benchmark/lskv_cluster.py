@@ -355,6 +355,17 @@ class Node:
                         "bind_address": f"0.0.0.0:{self.client_port}",
                         "published_address": f"{self.ip_address}:{self.client_port}",
                         "app_protocol": app_protocol,
+                        "forwarding_timeout_ms": 3000,
+                        "http_configuration": {
+                            "initial_window_size": "65536",
+                            "max_body_size": "1048576",
+                            "max_concurrent_streams_count": 100,
+                            "max_frame_size": "16384",
+                            "max_header_size": "16384",
+                            "max_headers_count": 256,
+                        },
+                        "max_open_sessions_hard": 1010,
+                        "max_open_sessions_soft": 1000,
                     }
                 },
             },
@@ -376,6 +387,15 @@ class Node:
                         }
                     ],
                 },
+            },
+            "consensus": {"message_timeout": "100ms", "election_timeout": "4000ms"},
+            "tick_interval": "1ms",
+            "slow_io_logging_threshold": "10ms",
+            "client_connection_timeout": "2s",
+            "memory": {
+                "circuit_size": "4MB",
+                "max_msg_size": "16MB",
+                "max_fragment_size": "64KB",
             },
             "worker_threads": self.worker_threads,
             "snapshots": {
@@ -420,6 +440,17 @@ class Node:
                         "bind_address": f"0.0.0.0:{self.client_port}",
                         "published_address": f"{self.ip_address}:{self.client_port}",
                         "app_protocol": app_protocol,
+                        "forwarding_timeout_ms": 3000,
+                        "http_configuration": {
+                            "initial_window_size": "65536",
+                            "max_body_size": "1048576",
+                            "max_concurrent_streams_count": 100,
+                            "max_frame_size": "16384",
+                            "max_header_size": "16384",
+                            "max_headers_count": 256,
+                        },
+                        "max_open_sessions_hard": 1010,
+                        "max_open_sessions_soft": 1000,
                     }
                 },
             },
@@ -430,6 +461,15 @@ class Node:
                 "join": {
                     "target_rpc_address": f"{self.first_ip}:{base_client_port}",
                 },
+            },
+            "consensus": {"message_timeout": "100ms", "election_timeout": "4000ms"},
+            "tick_interval": "1ms",
+            "slow_io_logging_threshold": "10ms",
+            "client_connection_timeout": "2s",
+            "memory": {
+                "circuit_size": "4MB",
+                "max_msg_size": "16MB",
+                "max_fragment_size": "64KB",
             },
             "worker_threads": self.worker_threads,
             "snapshots": {
