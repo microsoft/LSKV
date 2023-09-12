@@ -53,7 +53,7 @@ add_compile_definitions(CCF_LOGGER_NO_DEPRECATE)
 add_compile_definitions(GOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE=0)
 
 # Use sorted maps in CCF
-add_compile_definitions(KV_STATE_RB)
+add_compile_definitions(KV_STATE_RB=ON)
 
 message(STATUS "CCF_DIR: ${CCF_DIR}")
 
