@@ -117,13 +117,13 @@ impl Experiment for YcsbExperiment {
         let mut docker_runner =
             exp::docker_runner::Runner::new(configuration_dir.clone().into()).await;
         let load_command = configuration.to_load_command();
-        let bench_name = "apj39-bencher-exp-bencher".to_owned();
+        let loader_name = "apj39-bencher-exp-loader".to_owned();
         debug!("Launching ycsb load container");
         docker_runner
             .add_container(&exp::docker_runner::ContainerConfig {
                 image_name: "ghcr.io/jeffa5/lskv".to_owned(),
                 image_tag: "bencher-latest".to_owned(),
-                name: bench_name.clone(),
+                name: loader_name.clone(),
                 command: Some(load_command),
                 cpus: None,
                 memory: None,
@@ -149,14 +149,14 @@ impl Experiment for YcsbExperiment {
 
         docker_runner
             .docker_client()
-            .wait_container::<String>(&bench_name, None)
+            .wait_container::<String>(&loader_name, None)
             .next()
             .await;
 
         let _ = docker_runner
             .docker_client()
             .remove_container(
-                &bench_name,
+                &loader_name,
                 Some(bollard::container::RemoveContainerOptions {
                     force: true,
                     ..Default::default()
@@ -165,13 +165,18 @@ impl Experiment for YcsbExperiment {
             .await;
 
         debug!("Launching ycsb run container");
-        let command = configuration.to_command();
+        let mut bench_command = configuration.to_command();
+        bench_command.append(&mut vec![
+            "--max-record-index".to_owned(),
+            configuration.total.to_string(),
+        ]);
+        let bench_name = "apj39-bencher-exp-bencher".to_owned();
         docker_runner
             .add_container(&exp::docker_runner::ContainerConfig {
                 image_name: "ghcr.io/jeffa5/lskv".to_owned(),
                 image_tag: "bencher-latest".to_owned(),
                 name: bench_name.clone(),
-                command: Some(command),
+                command: Some(bench_command),
                 cpus: None,
                 memory: None,
                 capabilities: None,
