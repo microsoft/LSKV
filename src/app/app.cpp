@@ -531,12 +531,6 @@ namespace app
           GRPC_STATUS_FAILED_PRECONDITION,
           fmt::format("keys only not yet supported"));
       }
-      if (payload.count_only())
-      {
-        return ccf::grpc::make_error<etcdserverpb::RangeResponse>(
-          GRPC_STATUS_FAILED_PRECONDITION,
-          fmt::format("count only not yet supported"));
-      }
       if (payload.min_mod_revision() != 0)
       {
         return ccf::grpc::make_error<etcdserverpb::RangeResponse>(
@@ -599,14 +593,17 @@ namespace app
 
         count++;
 
-        // add the kv to the response
-        auto* kv = range_response.add_kvs();
-        kv->set_key(key);
-        kv->set_value(value.get_data());
-        kv->set_create_revision(value.create_revision);
-        kv->set_mod_revision(value.mod_revision);
-        kv->set_version(value.version);
-        kv->set_lease(value.lease);
+        if (!payload.count_only())
+        {
+          // add the kv to the response
+          auto* kv = range_response.add_kvs();
+          kv->set_key(key);
+          kv->set_value(value.get_data());
+          kv->set_create_revision(value.create_revision);
+          kv->set_mod_revision(value.mod_revision);
+          kv->set_version(value.version);
+          kv->set_lease(value.lease);
+        }
 
         return limit == 0 || count < limit;
       };
