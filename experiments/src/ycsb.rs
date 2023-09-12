@@ -9,6 +9,7 @@ use polars::prelude::*;
 use std::fs::File;
 use std::path::Path;
 use std::path::PathBuf;
+use tracing::debug;
 
 pub struct YcsbExperiment {
     pub root_dir: PathBuf,
@@ -33,13 +34,14 @@ impl Experiment for YcsbExperiment {
                 snapshot_tx_interval: 10000,
             }));
         }
-        for rate in [100, 500, 1000, 2000, 5000] {
+        for rate in [1000, 2000, 5000, 10_000] {
             for workload in [
                 YcsbWorkload::A,
                 YcsbWorkload::B,
                 YcsbWorkload::C,
                 YcsbWorkload::D,
                 YcsbWorkload::E,
+                YcsbWorkload::F,
             ] {
                 for store_config in &store_configs {
                     let config = Config {
@@ -100,17 +102,70 @@ impl Experiment for YcsbExperiment {
             }
         };
 
+        let load_path = configuration_dir
+            .join("load.csv")
+            .to_string_lossy()
+            .into_owned();
         let results_path = configuration_dir
             .join("results.csv")
             .to_string_lossy()
             .into_owned();
         // create the file so it can be used to mount in docker
+        File::create(&load_path).unwrap();
         File::create(&results_path).unwrap();
 
         let mut docker_runner =
             exp::docker_runner::Runner::new(configuration_dir.clone().into()).await;
-        let command = configuration.to_command();
+        let load_command = configuration.to_load_command();
         let bench_name = "apj39-bencher-exp-bencher".to_owned();
+        debug!("Launching ycsb load container");
+        docker_runner
+            .add_container(&exp::docker_runner::ContainerConfig {
+                image_name: "ghcr.io/jeffa5/lskv".to_owned(),
+                image_tag: "bencher-latest".to_owned(),
+                name: bench_name.clone(),
+                command: Some(load_command),
+                cpus: None,
+                memory: None,
+                capabilities: None,
+                env: None,
+                network: Some("host".to_owned()),
+                network_subnet: None,
+                ports: None,
+                pull: false,
+                tmpfs: vec![],
+                volumes: vec![
+                    (
+                        configuration_dir
+                            .join("workspace")
+                            .to_string_lossy()
+                            .into_owned(),
+                        "/workspace".to_owned(),
+                    ),
+                    (load_path, "/results.csv".to_owned()),
+                ],
+            })
+            .await;
+
+        docker_runner
+            .docker_client()
+            .wait_container::<String>(&bench_name, None)
+            .next()
+            .await;
+
+        let _ = docker_runner
+            .docker_client()
+            .remove_container(
+                &bench_name,
+                Some(bollard::container::RemoveContainerOptions {
+                    force: true,
+                    ..Default::default()
+                }),
+            )
+            .await;
+
+        debug!("Launching ycsb run container");
+        let command = configuration.to_command();
         docker_runner
             .add_container(&exp::docker_runner::ContainerConfig {
                 image_name: "ghcr.io/jeffa5/lskv".to_owned(),
@@ -258,6 +313,25 @@ impl Config {
         cmd.append(&mut self.workload.to_command());
         cmd
     }
+
+    fn to_load_command(&self) -> Vec<String> {
+        vec![
+            "bencher".to_owned(),
+            "--endpoint".to_owned(),
+            "https://127.0.0.1:8000".to_owned(),
+            "--common-dir".to_owned(),
+            "/workspace/common".to_owned(),
+            "--out-file".to_owned(),
+            "/results.csv".to_owned(),
+            "ycsb".to_owned(),
+            "--rate".to_owned(),
+            self.rate.to_string(),
+            "--total".to_owned(),
+            self.total.to_string(),
+            "--insert-weight".to_owned(),
+            "1".to_owned(),
+        ]
+    }
 }
 
 #[derive(Debug, Copy, Clone, serde::Serialize, serde::Deserialize)]
@@ -308,7 +382,14 @@ impl YcsbWorkload {
                 "--request-distribution",
                 "zipfian",
             ],
-            Self::F => todo!(),
+            Self::F => vec![
+                "--read-weight",
+                "1",
+                "--rmw-weight",
+                "1",
+                "--request-distribution",
+                "zipfian",
+            ],
         };
         args.into_iter().map(|i| i.to_owned()).collect()
     }
