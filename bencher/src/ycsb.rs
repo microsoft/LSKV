@@ -45,21 +45,25 @@ impl YcsbInputGenerator {
     }
 
     pub fn existing_record_key(&mut self) -> String {
+        if self.max_record_index == 0 {
+            // a missing user
+            return "user00000000".to_owned();
+        }
         let index = match self.request_distribution {
             RequestDistribution::Zipfian => {
                 let s: f64 = self
                     .operation_rng
                     .sample(Zipf::new(self.max_record_index as u64, 1.5).unwrap());
-                s.floor() as u32
+                1 + s.floor() as u32
             }
-            RequestDistribution::Uniform => self.operation_rng.gen_range(0..=self.max_record_index),
+            RequestDistribution::Uniform => self.operation_rng.gen_range(1..=self.max_record_index),
             RequestDistribution::Latest => self.max_record_index,
         };
         format!("user{:08}", index)
     }
 
     pub fn field_key(i: u32) -> String {
-        format!("field{i}")
+        format!("field{i:04}")
     }
 
     pub fn field_value(&mut self) -> String {
@@ -98,7 +102,7 @@ pub enum YcsbInput {
     /// Read all fields from a record.
     ReadAll { record_key: String },
     /// Scan records in order, starting at a randomly chosen key
-    Scan { start_key: String, scan_length: u32 },
+    Scan { start_key: String, end_key: String },
 }
 
 impl YcsbInput {
@@ -133,13 +137,14 @@ impl InputGenerator for YcsbInputGenerator {
             // read single
             0 => YcsbInput::ReadSingle {
                 record_key: self.existing_record_key(),
-                field_key: "field0".to_owned(),
+                field_key: Self::field_key(0),
             },
             // read all
-            1 => YcsbInput::Scan {
-                start_key: self.existing_record_key(),
-                scan_length: self.max_scan_length,
-            },
+            1 => {
+                let start_key = self.existing_record_key();
+                let end_key = format!("{start_key}/{}", Self::field_key(self.max_scan_length));
+                YcsbInput::Scan { start_key, end_key }
+            }
             // insert
             2 => YcsbInput::Insert {
                 record_key: self.new_record_key(),
@@ -151,13 +156,13 @@ impl InputGenerator for YcsbInputGenerator {
             // update
             3 => YcsbInput::Update {
                 record_key: self.existing_record_key(),
-                field_key: "field0".to_owned(),
+                field_key: Self::field_key(0),
                 field_value: random_string(self.field_value_length),
             },
             // rmw
             4 => YcsbInput::ReadModifyWrite {
                 record_key: self.existing_record_key(),
-                field_key: "field0".to_owned(),
+                field_key: Self::field_key(0),
                 field_value: random_string(self.field_value_length),
             },
             i => {
@@ -313,12 +318,9 @@ impl Dispatcher for YcsbDispatcher {
                     .await
                     .unwrap();
             }
-            YcsbInput::Scan {
-                start_key,
-                scan_length,
-            } => {
-                let range_end = format!("{start_key}/field{scan_length}");
+            YcsbInput::Scan { start_key, end_key } => {
                 let key = start_key;
+                let range_end = end_key;
                 self.etcd_client
                     .range(RangeRequest {
                         key: key.as_bytes().to_vec(),
@@ -359,7 +361,7 @@ pub struct Args {
     pub fields_per_record: u32,
     #[clap(long, default_value = "1")]
     pub field_value_length: usize,
-    #[clap(long, default_value = "1")]
+    #[clap(long, default_value = "0")]
     pub max_record_index: u32,
     #[clap(long, default_value = "100")]
     pub max_scan_length: u32,
