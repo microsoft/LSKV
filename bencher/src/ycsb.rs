@@ -18,6 +18,7 @@ pub struct YcsbInputGenerator {
     pub scan_weight: u32,
     pub insert_weight: u32,
     pub update_weight: u32,
+    pub rmw_weight: u32,
     pub fields_per_record: u32,
     pub field_value_length: usize,
     pub operation_rng: StdRng,
@@ -83,6 +84,12 @@ pub enum YcsbInput {
         field_key: String,
         field_value: String,
     },
+    /// Read a value then write a new one back.
+    ReadModifyWrite {
+        record_key: String,
+        field_key: String,
+        field_value: String,
+    },
     /// Read a single, randomly chosen field from the record.
     ReadSingle {
         record_key: String,
@@ -99,6 +106,7 @@ impl YcsbInput {
         match self {
             YcsbInput::Insert { .. } => "insert",
             YcsbInput::Update { .. } => "update",
+            YcsbInput::ReadModifyWrite { .. } => "rmw",
             YcsbInput::ReadSingle { .. } => "read",
             YcsbInput::ReadAll { .. } => "read",
             YcsbInput::Scan { .. } => "scan",
@@ -117,6 +125,7 @@ impl InputGenerator for YcsbInputGenerator {
             self.scan_weight,
             self.insert_weight,
             self.update_weight,
+            self.rmw_weight,
         ];
         let dist = WeightedAliasIndex::new(weights.to_vec()).unwrap();
         let weight_index = dist.sample(&mut self.operation_rng);
@@ -141,6 +150,12 @@ impl InputGenerator for YcsbInputGenerator {
             },
             // update
             3 => YcsbInput::Update {
+                record_key: self.existing_record_key(),
+                field_key: "field0".to_owned(),
+                field_value: random_string(self.field_value_length),
+            },
+            // rmw
+            4 => YcsbInput::ReadModifyWrite {
                 record_key: self.existing_record_key(),
                 field_key: "field0".to_owned(),
                 field_value: random_string(self.field_value_length),
@@ -250,6 +265,29 @@ impl Dispatcher for YcsbDispatcher {
                     .await
                     .unwrap();
             }
+            YcsbInput::ReadModifyWrite {
+                record_key,
+                field_key,
+                field_value,
+            } => {
+                self.etcd_client
+                    .range(RangeRequest {
+                        key: format!("{record_key}/{field_key}").into(),
+                        range_end: vec![],
+                        serializable: true,
+                        ..Default::default()
+                    })
+                    .await
+                    .unwrap();
+                self.etcd_client
+                    .put(PutRequest {
+                        key: format!("{record_key}/{field_key}").into(),
+                        value: field_value.into(),
+                        ..Default::default()
+                    })
+                    .await
+                    .unwrap();
+            }
             YcsbInput::ReadSingle {
                 record_key,
                 field_key,
@@ -315,6 +353,8 @@ pub struct Args {
     pub insert_weight: u32,
     #[clap(long, default_value = "0")]
     pub update_weight: u32,
+    #[clap(long, default_value = "0")]
+    pub rmw_weight: u32,
     #[clap(long, default_value = "1")]
     pub fields_per_record: u32,
     #[clap(long, default_value = "1")]

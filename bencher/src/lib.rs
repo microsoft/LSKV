@@ -24,6 +24,7 @@ pub async fn run_ycsb(args: args::CommonArgs, ycsb_args: crate::ycsb::Args) {
         scan_weight: ycsb_args.scan_weight,
         insert_weight: ycsb_args.insert_weight,
         update_weight: ycsb_args.update_weight,
+        rmw_weight: ycsb_args.rmw_weight,
         fields_per_record: ycsb_args.fields_per_record,
         field_value_length: ycsb_args.field_value_length,
         operation_rng: StdRng::from_entropy(),
