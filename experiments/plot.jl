@@ -10,20 +10,11 @@ using AlgebraOfGraphics, CairoMakie, DataFrames, CSV
 # ╔═╡ 87f8e96e-142a-4cd4-a9c7-1067455e9bf0
 results_path = "results/results.csv"
 
-# ╔═╡ 308987a5-e640-4b6b-ba41-1ea0b6ef3471
+# ╔═╡ 0e01ca36-9e35-46f4-94a9-7a6f783f9aaa
 df = CSV.read(results_path, DataFrame)
 
 # ╔═╡ 44be5380-5893-4491-9adc-0b9602b6c2a0
-begin
-	config_cols = []
-	for col in names(df)
-		if col == "start_ns" 
-			break
-		end
-		push!(config_cols, col)
-	end
-	config_cols
-end
+config_cols = ["rate", "total", "workload", "nodes", "store", "enclave", "worker_threads", "sig_tx_interval", "sig_ms_interval", "ledger_chunk_bytes", "snapshot_tx_interval"]
 
 # ╔═╡ 94d5f343-ccb0-4fb5-a65a-3787b5f43f4f
 begin
@@ -38,14 +29,15 @@ begin
 	    return df
 	end
 	df_normalized = combine(grouped, subtract_min)
-end
-
-# ╔═╡ 6db49ab0-8b31-4b53-b4c9-404029b4a851
-begin
 	# add latency
 	latency_ns = df_normalized.end_ns .- df_normalized.start_ns
 	df_normalized[!, "latency_ns"] = latency_ns
+	df_normalized[!, "start_s"] = df_normalized.start_ns ./ 1_000_000_000
+	df_normalized[!, "latency_ms"] = df_normalized.latency_ns ./ 1_000_000
 end
+
+# ╔═╡ e450b2de-8bce-4d62-8309-84a19ae41380
+filter(:latency_ns => >=(100000000), filter(:operation => ==("rmw"), filter(:operation => !ismissing, df_normalized)))
 
 # ╔═╡ 4a675a56-e13b-4f91-9e55-b3d6dd86eb32
 md"""
@@ -57,36 +49,86 @@ md"""
 ## Scatter plot of workloads
 """
 
-# ╔═╡ b84e83a3-6730-42f2-8010-2726d9d45335
-let
-	data_layer = data(filter(:rate => ==(100), df_normalized))
-	mapping_layer = mapping(:start_ns, :latency_ns, color=:workload)
-	visual_layer = visual(Scatter)
-	draw(data_layer * mapping_layer * visual_layer)
-end
-
 # ╔═╡ a08e5c82-6db2-4e24-902c-6280b4a28fa6
 md"""
 ## Latency CDF per workload
 """
 
+# ╔═╡ 5615e577-45ac-450f-8aa5-ca53cf852152
+begin
+	function count_configs(df, ignore_cols)
+		cols = filter(c -> !(c in ignore_cols), config_cols)
+		return combine(groupby(df, cols), first)[:, cols]
+	end
+	count_configs(df_normalized, ["workload"])
+end
+
+# ╔═╡ d764173e-1f2d-415e-97a8-00d38625291e
+begin
+	scatter_data = df_normalized
+	scatter_data = filter(:error => ismissing, scatter_data)
+	scatter_data = filter(:latency_ns => <=(500000000), scatter_data)
+	count_configs(scatter_data, ["rate", "workload", "store"])
+end
+
+# ╔═╡ b84e83a3-6730-42f2-8010-2726d9d45335
+let
+	data_layer = data(scatter_data)
+	mapping_layer = mapping(:start_s, :latency_ms, col=:store, row=:workload, color=:operation)
+	visual_layer = visual(Scatter)
+	draw(data_layer * mapping_layer * visual_layer)
+end
+
 # ╔═╡ 77e5c97d-bebe-4ba7-a994-7714df9285f5
 begin
-	cdf_df_grouped = groupby(d, config_cols)
+	cdf_data = df_normalized
+	cdf_data = filter(:error => ismissing, cdf_data)
+	cdf_data = filter(:latency_ns => <=(500000000), cdf_data)
+	cdf_df_grouped = groupby(cdf_data, config_cols)
 	function div_max(df)
-		n = length(df.latency_ns)
-		sort!(df, [:latency_ns])
+		n = length(df.latency_ms)
+		sort!(df, [:latency_ms])
 		df[!, :cdf] = (1:n)./n
 		return df
 	end
 	df_cdf = combine(cdf_df_grouped, div_max)
+	count_configs(df_cdf, ["rate", "store"])
 end
 
 # ╔═╡ ae4d74b5-c84d-4ff2-886a-ab9d65ad61cf
 let 
 	data_layer = data(df_cdf)
-	mapping_layer = mapping(:latency_ns, :cdf, layout=:workload)
+	mapping_layer = mapping(:latency_ms, :cdf, col=:store, row=:workload, color=:operation)
 	visual_layer = visual(Lines)
+	draw(data_layer * mapping_layer * visual_layer)
+end
+
+# ╔═╡ bfea43ed-5f1e-4fb4-9282-3c579cebcf5c
+md"""
+## Max throughput per run
+"""
+
+# ╔═╡ 20e39c65-9bd4-41ef-8c0e-2147ae0c86de
+begin
+	throughput_data = df_normalized
+	# group by main variables
+	# calculate throughput on each group in a combine
+	local grouped = groupby(throughput_data, config_cols)
+	local function tp(df)
+		s = minimum(df.start_ns) / 1_000_000_000
+		e = maximum(df.end_ns) / 1_000_000_000
+		len = size(df, 1)
+	
+	    return len/(e-s)
+	end
+	throughput_data = combine(grouped, tp)
+end
+
+# ╔═╡ 895e5b61-421b-4ca1-84a4-587862994a92
+let
+	data_layer = data(throughput_data)
+	mapping_layer = mapping(:workload, :x1 => "Throughput", color=:store, dodge=:store)
+	visual_layer = visual(BarPlot)
 	draw(data_layer * mapping_layer * visual_layer)
 end
 
@@ -1791,15 +1833,20 @@ version = "3.5.0+0"
 # ╔═╡ Cell order:
 # ╠═cb59c6e2-50ad-11ee-3d3b-15d7fe42c267
 # ╠═87f8e96e-142a-4cd4-a9c7-1067455e9bf0
-# ╠═308987a5-e640-4b6b-ba41-1ea0b6ef3471
+# ╠═0e01ca36-9e35-46f4-94a9-7a6f783f9aaa
 # ╠═44be5380-5893-4491-9adc-0b9602b6c2a0
 # ╠═94d5f343-ccb0-4fb5-a65a-3787b5f43f4f
-# ╠═6db49ab0-8b31-4b53-b4c9-404029b4a851
+# ╠═e450b2de-8bce-4d62-8309-84a19ae41380
 # ╟─4a675a56-e13b-4f91-9e55-b3d6dd86eb32
 # ╟─e924affa-5b2b-46f1-96be-08c813f41c71
+# ╠═d764173e-1f2d-415e-97a8-00d38625291e
 # ╠═b84e83a3-6730-42f2-8010-2726d9d45335
 # ╟─a08e5c82-6db2-4e24-902c-6280b4a28fa6
 # ╠═77e5c97d-bebe-4ba7-a994-7714df9285f5
 # ╠═ae4d74b5-c84d-4ff2-886a-ab9d65ad61cf
+# ╠═5615e577-45ac-450f-8aa5-ca53cf852152
+# ╟─bfea43ed-5f1e-4fb4-9282-3c579cebcf5c
+# ╠═20e39c65-9bd4-41ef-8c0e-2147ae0c86de
+# ╠═895e5b61-421b-4ca1-84a4-587862994a92
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
