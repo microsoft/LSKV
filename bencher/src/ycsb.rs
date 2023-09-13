@@ -248,14 +248,18 @@ impl Dispatcher for YcsbDispatcher {
         match request {
             YcsbInput::Insert { record_key, fields } => {
                 for (field_key, field_value) in fields {
-                    self.etcd_client
+                    match self
+                        .etcd_client
                         .put(PutRequest {
                             key: format!("{record_key}/{field_key}").into(),
                             value: field_value.into(),
                             ..Default::default()
                         })
                         .await
-                        .unwrap();
+                    {
+                        Ok(_) => {}
+                        Err(err) => return Err(err.to_string()),
+                    }
                 }
             }
             YcsbInput::Update {
@@ -263,21 +267,26 @@ impl Dispatcher for YcsbDispatcher {
                 field_key,
                 field_value,
             } => {
-                self.etcd_client
+                match self
+                    .etcd_client
                     .put(PutRequest {
                         key: format!("{record_key}/{field_key}").into(),
                         value: field_value.into(),
                         ..Default::default()
                     })
                     .await
-                    .unwrap();
+                {
+                    Ok(_) => {}
+                    Err(err) => return Err(err.to_string()),
+                }
             }
             YcsbInput::ReadModifyWrite {
                 record_key,
                 field_key,
                 field_value,
             } => {
-                self.etcd_client
+                match self
+                    .etcd_client
                     .range(RangeRequest {
                         key: format!("{record_key}/{field_key}").into(),
                         range_end: vec![],
@@ -285,21 +294,30 @@ impl Dispatcher for YcsbDispatcher {
                         ..Default::default()
                     })
                     .await
-                    .unwrap();
-                self.etcd_client
+                {
+                    Ok(_) => {}
+                    Err(err) => return Err(err.to_string()),
+                }
+
+                match self
+                    .etcd_client
                     .put(PutRequest {
                         key: format!("{record_key}/{field_key}").into(),
                         value: field_value.into(),
                         ..Default::default()
                     })
                     .await
-                    .unwrap();
+                {
+                    Ok(_) => {}
+                    Err(err) => return Err(err.to_string()),
+                }
             }
             YcsbInput::ReadSingle {
                 record_key,
                 field_key,
             } => {
-                self.etcd_client
+                match self
+                    .etcd_client
                     .range(RangeRequest {
                         key: format!("{record_key}/{field_key}").into(),
                         range_end: vec![],
@@ -307,10 +325,14 @@ impl Dispatcher for YcsbDispatcher {
                         ..Default::default()
                     })
                     .await
-                    .unwrap();
+                {
+                    Ok(_) => {}
+                    Err(err) => return Err(err.to_string()),
+                }
             }
             YcsbInput::ReadAll { record_key } => {
-                self.etcd_client
+                match self
+                    .etcd_client
                     .range(RangeRequest {
                         key: format!("{record_key}/").into(),
                         range_end: format!("{record_key}0").into(),
@@ -318,12 +340,16 @@ impl Dispatcher for YcsbDispatcher {
                         ..Default::default()
                     })
                     .await
-                    .unwrap();
+                {
+                    Ok(_) => {}
+                    Err(err) => return Err(err.to_string()),
+                }
             }
             YcsbInput::Scan { start_key, end_key } => {
                 let key = start_key;
                 let range_end = end_key;
-                self.etcd_client
+                match self
+                    .etcd_client
                     .range(RangeRequest {
                         key: key.as_bytes().to_vec(),
                         range_end: range_end.as_bytes().to_vec(),
@@ -331,7 +357,10 @@ impl Dispatcher for YcsbDispatcher {
                         ..Default::default()
                     })
                     .await
-                    .unwrap();
+                {
+                    Ok(_) => {}
+                    Err(err) => return Err(err.to_string()),
+                };
             }
         }
         Ok(YcsbOutput { operation })
