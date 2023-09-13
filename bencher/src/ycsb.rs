@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::time::Duration;
 
 use crate::protos::etcdserverpb::kv_client::KvClient;
 use crate::protos::etcdserverpb::PutRequest;
@@ -205,6 +206,7 @@ impl YcsbDispatcherGenerator {
             .unwrap()
             .tls_config(tls)
             .unwrap()
+            .timeout(Duration::from_secs(1))
             .connect()
             .await
             .unwrap();
