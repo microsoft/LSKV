@@ -20,27 +20,21 @@ Currently LSKV can run in the following targets:
 
 ## Install Dependencies
 
-These instructions expect an Ubuntu 20.04 machine, or follow the docker instructions.
-
-This repository and its dependencies can be checked out by clicking: [![Open in VSCode](https://img.shields.io/static/v1?label=Open+in&message=VSCode&logo=visualstudiocode&color=007ACC&logoColor=007ACC&labelColor=2C2C32)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/LSKV)
-
-Alternatively, CCF and its dependencies can be installed manually (for virtual mode):
-
 ```bash
-make install-ccf-virtual
+cd ccf/
+git checkout lskv # from github.com/jeffa5/CCF
+make install-virtual
+# or make install-sgx
 ```
 
-Or
+You might also want to build the appropriate docker container for that:
 
 ```bash
-wget https://github.com/microsoft/CCF/releases/download/ccf-4.0.7/ccf_virtual_4.0.7_amd64.deb
-sudo dpkg -i ccf_virtual_4.0.7_amd64.deb # Installs CCF under /opt/ccf_virtual
-cat /opt/ccf_virtual/share/VERSION_LONG
-# ccf-4.0.7
-/opt/ccf_virtual/getting_started/setup_vm/run.sh /opt/ccf_virtual/getting_started/setup_vm/app-dev.yml  # Install dependencies
+cd ccf/
+git checkout lskv
+make build-docker-virtual
+# or make build-docker-sgx
 ```
-
-If your organisation supports it, you can also checkout this repository in a Github codespace: [![Open in Github codespace](https://img.shields.io/static/v1?label=Open+in&message=GitHub+codespace&logo=github&color=2F363D&logoColor=white&labelColor=2C2C32)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=534240617&machine=basicLinux32gb&devcontainer_path=.devcontainer.json&location=WestEurope)
 
 ## Build
 
