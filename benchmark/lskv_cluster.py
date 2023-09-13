@@ -650,7 +650,7 @@ class Operator:
         runner.run(f"docker rm -f {node.name}")
 
         # make sure we have the image
-        runner.run(f"docker pull {self.image}")
+        # runner.run(f"docker pull {self.image}")
 
         cmd = [
             "docker",

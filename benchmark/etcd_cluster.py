@@ -88,7 +88,7 @@ class Runner:
         """
         Copy files needed to run to the working directory.
         """
-        self.run(f"docker pull {self.docker_image}")
+        # self.run(f"docker pull {self.docker_image}")
 
         ca_cert = "ca.pem"
         server_cert = "server.pem"
