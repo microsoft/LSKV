@@ -38,7 +38,7 @@ pub struct Config {
     pub worker_threads: u32,
     pub sig_tx_interval: u32,
     pub sig_ms_interval: u32,
-    pub ledger_chunk_bytes: u32,
+    pub ledger_chunk_bytes: String,
     pub snapshot_tx_interval: u32,
 }
 
@@ -64,7 +64,7 @@ impl LskvStore {
             "--sig-ms-interval".to_owned(),
             self.config.sig_ms_interval.to_string(),
             "--ledger-chunk-bytes".to_owned(),
-            self.config.ledger_chunk_bytes.to_string(),
+            self.config.ledger_chunk_bytes.clone(),
             "--snapshot-tx-interval".to_owned(),
             self.config.snapshot_tx_interval.to_string(),
             "--workspace".to_owned(),

@@ -25,16 +25,18 @@ impl Experiment for YcsbExperiment {
         let mut store_configs = Vec::new();
         store_configs.push(StoreConfig::Etcd(crate::stores::etcd::Config {}));
         for enclave in [Enclave::Virtual] {
-            store_configs.push(StoreConfig::Lskv(crate::stores::lskv::Config {
-                enclave,
-                worker_threads: 0,
-                sig_tx_interval: 100,
-                sig_ms_interval: 100,
-                ledger_chunk_bytes: 10000,
-                snapshot_tx_interval: 10000,
-            }));
+            for worker_threads in [0] {
+                store_configs.push(StoreConfig::Lskv(crate::stores::lskv::Config {
+                    enclave,
+                    worker_threads,
+                    sig_tx_interval: 5000,
+                    sig_ms_interval: 100,
+                    ledger_chunk_bytes: "5MB".to_owned(),
+                    snapshot_tx_interval: 10,
+                }));
+            }
         }
-        for rate in [1000, 2000, 5000, 10_000] {
+        for rate in [10_000] {
             for workload in [
                 YcsbWorkload::A,
                 YcsbWorkload::B,
