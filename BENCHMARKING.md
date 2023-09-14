@@ -27,8 +27,9 @@ ansible-playbook -i hosts benchmark/distributed/setup_nodes.yaml -e @benchmark/d
 ```
 
 Then, to run the benchmarks, ssh onto the first node (`ssh <user>@$(head -n 1 hosts)`), `cd /tmp/lskv` and run things from there (e.g. `. .venv/bin/activate && python3 benchmark/distributed.py`).
+Or, for Rust benchmarks run `cd /tmp/lskv`, `. .venv/bin/activate && cd experiments && cargo run --release -- --distributed --root-dir .. --results-dir results --run --analyse` after `ssh`ing.
 
-After running, copy the results back to the host: `rsync -rv <user>@$(head -n 1 hosts):/tmp/lskv/bench .` for plotting.
+After running, copy the results back to the host: `rsync -rv <user>@$(head -n 1 hosts):/tmp/lskv/bench .` (or for `/tmp/lskv/experiments/results` for rust benchmarks) for plotting.
 
 ## Receipt verification
 
