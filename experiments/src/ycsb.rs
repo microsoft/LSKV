@@ -26,7 +26,7 @@ impl Experiment for YcsbExperiment {
         let mut configs = Vec::new();
         let mut store_configs = Vec::new();
         store_configs.push(StoreConfig::Etcd(crate::stores::etcd::Config {}));
-        for enclave in [Enclave::Virtual] {
+        for enclave in [Enclave::Virtual, Enclave::SGX] {
             for worker_threads in [0] {
                 store_configs.push(StoreConfig::Lskv(crate::stores::lskv::Config {
                     enclave,
