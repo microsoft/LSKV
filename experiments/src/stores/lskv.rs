@@ -7,6 +7,7 @@ use std::process::Child;
 use std::process::Command;
 use std::time::Duration;
 
+use reqwest::Url;
 use serde::Deserialize;
 use serde::Serialize;
 use tracing::debug;
@@ -154,5 +155,88 @@ impl LskvStore {
             }
         }
         false
+    }
+
+    pub fn get_leader_address(&self) -> String {
+        let node = self.nodes.first().unwrap();
+        let address: Url = node.parse().unwrap();
+        let address = format!(
+            "https://{}:{}",
+            address.host().unwrap(),
+            address.port().unwrap()
+        );
+
+        let args = [
+            "--cacert".to_owned(),
+            self.cacert().to_string_lossy().into_owned(),
+            "--cert".to_owned(),
+            self.cert().to_string_lossy().into_owned(),
+            "--key".to_owned(),
+            self.key().to_string_lossy().into_owned(),
+            format!("{address}/node/network/nodes"),
+        ];
+
+        #[derive(Debug, serde::Deserialize)]
+        struct RpcInterface {
+            published_address: String,
+        }
+
+        #[derive(Debug, serde::Deserialize)]
+        struct RpcInterfaces {
+            primary_rpc_interface: RpcInterface,
+        }
+
+        #[derive(Debug, serde::Deserialize)]
+        struct Node {
+            primary: bool,
+            rpc_interfaces: RpcInterfaces,
+        }
+
+        #[derive(Debug, serde::Deserialize)]
+        struct EndpointStatusResponse {
+            nodes: Vec<Node>,
+        }
+
+        let res = Command::new("curl").args(args).output().unwrap();
+        let out = serde_json::from_slice::<EndpointStatusResponse>(&res.stdout).unwrap();
+
+        for element in out.nodes {
+            let primary = element.primary;
+            if primary {
+                let addr = element
+                    .rpc_interfaces
+                    .primary_rpc_interface
+                    .published_address;
+                let addr = format!("https://{addr}");
+                info!(?addr, "Found leader address");
+                return addr;
+            }
+        }
+
+        return node.to_owned();
+    }
+
+    pub fn cacert(&self) -> PathBuf {
+        self.workspace
+            .join("common")
+            .join("service_cert.pem")
+            .canonicalize()
+            .unwrap()
+    }
+
+    pub fn cert(&self) -> PathBuf {
+        self.workspace
+            .join("common")
+            .join("user0_cert.pem")
+            .canonicalize()
+            .unwrap()
+    }
+
+    pub fn key(&self) -> PathBuf {
+        self.workspace
+            .join("common")
+            .join("user0_privk.pem")
+            .canonicalize()
+            .unwrap()
     }
 }

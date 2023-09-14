@@ -6,6 +6,7 @@ use exp::Environment;
 use exp::Experiment;
 use futures_util::StreamExt;
 use polars::prelude::*;
+use tracing::info;
 use std::fs::File;
 use std::path::Path;
 use std::path::PathBuf;
@@ -76,7 +77,7 @@ impl Experiment for YcsbExperiment {
         let nodes = (0..configuration.nodes)
             .map(|i| format!("local://127.0.0.1:{}", 8000 + (i * 3)))
             .collect();
-        let mut store = match &configuration.store_config {
+        let (mut store, leader_address) = match &configuration.store_config {
             StoreConfig::Lskv(config) => {
                 let store_config = LskvStore {
                     config: config.clone(),
@@ -88,7 +89,8 @@ impl Experiment for YcsbExperiment {
                 };
                 let store = store_config.run(&self.root_dir);
                 store_config.wait_for_ready().await;
-                store
+                let leader_address = store_config.get_leader_address();
+                (store, leader_address)
             }
             StoreConfig::Etcd(config) => {
                 let store_config = EtcdStore {
@@ -100,7 +102,8 @@ impl Experiment for YcsbExperiment {
                 };
                 let store = store_config.run(&self.root_dir);
                 store_config.wait_for_ready().await;
-                store
+                let leader_address = store_config.get_leader_address(&self.root_dir);
+                (store, leader_address)
             }
         };
 
@@ -118,7 +121,7 @@ impl Experiment for YcsbExperiment {
 
         let mut docker_runner =
             exp::docker_runner::Runner::new(configuration_dir.clone().into()).await;
-        let load_command = configuration.to_load_command();
+        let load_command = configuration.to_load_command(&leader_address);
         let loader_name = "apj39-bencher-exp-loader".to_owned();
         debug!("Launching ycsb load container");
         docker_runner
@@ -167,7 +170,7 @@ impl Experiment for YcsbExperiment {
             .await;
 
         debug!("Launching ycsb run container");
-        let mut bench_command = configuration.to_command();
+        let mut bench_command = configuration.to_command(&leader_address);
         bench_command.append(&mut vec![
             "--max-record-index".to_owned(),
             configuration.total.to_string(),
@@ -258,6 +261,7 @@ impl Experiment for YcsbExperiment {
             let results_file = config_dir.join("results.csv");
 
             if results_file.is_file() {
+                info!(?results_file, "Loading results");
                 let mut schema = Schema::new();
                 schema.with_column("member_id".into(), DataType::UInt64);
                 let results_data = CsvReader::from_path(results_file)
@@ -302,11 +306,12 @@ pub struct Config {
 impl exp::ExperimentConfiguration for Config {}
 
 impl Config {
-    fn to_command(&self) -> Vec<String> {
+    fn to_command(&self, leader_address: &str) -> Vec<String> {
         let mut cmd = vec![
             "bencher".to_owned(),
             "--endpoint".to_owned(),
-            "https://127.0.0.1:8000".to_owned(),
+            leader_address.to_owned(),
+            // "https://127.0.0.1:8000".to_owned(),
             "--common-dir".to_owned(),
             "/workspace/common".to_owned(),
             "--out-file".to_owned(),
@@ -321,11 +326,12 @@ impl Config {
         cmd
     }
 
-    fn to_load_command(&self) -> Vec<String> {
+    fn to_load_command(&self, leader_address: &str) -> Vec<String> {
         vec![
             "bencher".to_owned(),
             "--endpoint".to_owned(),
-            "https://127.0.0.1:8000".to_owned(),
+            leader_address.to_owned(),
+            // "https://127.0.0.1:8000".to_owned(),
             "--common-dir".to_owned(),
             "/workspace/common".to_owned(),
             "--out-file".to_owned(),

@@ -99,4 +99,92 @@ impl EtcdStore {
         }
         false
     }
+
+    pub fn get_leader_address(&self, root_dir: &Path) -> String {
+        let node = self.nodes.first().unwrap();
+        let address: Url = node.parse().unwrap();
+        let address = format!(
+            "https://{}:{}",
+            address.host().unwrap(),
+            address.port().unwrap()
+        );
+
+        let args = [
+            "--endpoints".to_owned(),
+            address,
+            "--cacert".to_owned(),
+            self.cacert().to_string_lossy().into_owned(),
+            "--cert".to_owned(),
+            self.cert().to_string_lossy().into_owned(),
+            "--key".to_owned(),
+            self.key().to_string_lossy().into_owned(),
+            "endpoint".to_owned(),
+            "status".to_owned(),
+            "-w".to_owned(),
+            "json".to_owned(),
+            "--cluster".to_owned(),
+        ];
+
+        #[derive(Debug, serde::Deserialize)]
+        struct Header {
+            member_id: u64,
+        }
+
+        #[derive(Debug, serde::Deserialize)]
+        struct Status {
+            header: Header,
+            leader: u64,
+        }
+
+        #[derive(Debug, serde::Deserialize)]
+        struct EndpointStatusResponse {
+            #[serde(rename = "Status")]
+            status: Status,
+            #[serde(rename = "Endpoint")]
+            endpoint: String,
+        }
+
+        let res = Command::new("bin/etcdctl")
+            .args(args)
+            .current_dir(root_dir)
+            .output()
+            .unwrap();
+        let out = serde_json::from_slice::<Vec<EndpointStatusResponse>>(&res.stdout).unwrap();
+
+        for element in out {
+            let member_id = element.status.header.member_id;
+            let leader = element.status.leader;
+            if member_id == leader {
+                let addr = element.endpoint;
+                info!(?addr, "Found leader address");
+                return addr;
+            }
+        }
+
+        return node.to_owned();
+    }
+
+    pub fn cacert(&self) -> PathBuf {
+        self.workspace
+            .join("common")
+            .join("service_cert.pem")
+            .canonicalize()
+            .unwrap()
+    }
+
+    pub fn cert(&self) -> PathBuf {
+        self.workspace
+            .join("common")
+            .join("user0_cert.pem")
+            .canonicalize()
+            .unwrap()
+    }
+
+    pub fn key(&self) -> PathBuf {
+        self.workspace
+            .join("common")
+            .join("user0_privk.pem")
+            .canonicalize()
+            .unwrap()
+    }
 }
