@@ -6,14 +6,16 @@ use exp::Environment;
 use exp::Experiment;
 use futures_util::StreamExt;
 use polars::prelude::*;
-use tracing::info;
 use std::fs::File;
+use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 use tracing::debug;
+use tracing::info;
 
 pub struct YcsbExperiment {
     pub root_dir: PathBuf,
+    pub distributed: bool,
 }
 
 #[async_trait::async_trait]
@@ -22,7 +24,6 @@ impl Experiment for YcsbExperiment {
 
     fn configurations(&mut self) -> Vec<Self::Configuration> {
         let mut configs = Vec::new();
-        let nodes = 1;
         let mut store_configs = Vec::new();
         store_configs.push(StoreConfig::Etcd(crate::stores::etcd::Config {}));
         for enclave in [Enclave::Virtual] {
@@ -37,24 +38,26 @@ impl Experiment for YcsbExperiment {
                 }));
             }
         }
-        for rate in [10_000] {
-            for workload in [
-                YcsbWorkload::A,
-                YcsbWorkload::B,
-                YcsbWorkload::C,
-                YcsbWorkload::D,
-                YcsbWorkload::E,
-                YcsbWorkload::F,
-            ] {
-                for store_config in &store_configs {
-                    let config = Config {
-                        store_config: store_config.clone(),
-                        rate,
-                        total: rate * 10,
-                        workload,
-                        nodes,
-                    };
-                    configs.push(config);
+        for nodes in [1, 3] {
+            for rate in [10_000] {
+                for workload in [
+                    YcsbWorkload::A,
+                    YcsbWorkload::B,
+                    YcsbWorkload::C,
+                    YcsbWorkload::D,
+                    YcsbWorkload::E,
+                    YcsbWorkload::F,
+                ] {
+                    for store_config in &store_configs {
+                        let config = Config {
+                            store_config: store_config.clone(),
+                            rate,
+                            total: rate * 10,
+                            workload,
+                            nodes,
+                        };
+                        configs.push(config);
+                    }
                 }
             }
         }
@@ -74,9 +77,21 @@ impl Experiment for YcsbExperiment {
     ) -> exp::ExpResult<()> {
         let configuration_dir = configuration_dir.canonicalize().unwrap();
         let workspace = configuration_dir.join("workspace");
-        let nodes = (0..configuration.nodes)
-            .map(|i| format!("local://127.0.0.1:{}", 8000 + (i * 3)))
-            .collect();
+        let nodes = if self.distributed {
+            let hosts = self.root_dir.join("hosts");
+            let mut buf = String::new();
+            File::open(hosts).unwrap().read_to_string(&mut buf).unwrap();
+            // skip first as that is the node running the bencher
+            buf.lines()
+                .skip(1)
+                .take(configuration.nodes)
+                .map(|l| format!("ssh://{l}:8000"))
+                .collect()
+        } else {
+            (0..configuration.nodes)
+                .map(|i| format!("local://127.0.0.1:{}", 8000 + (i * 3)))
+                .collect()
+        };
         let (mut store, leader_address) = match &configuration.store_config {
             StoreConfig::Lskv(config) => {
                 let store_config = LskvStore {
@@ -137,7 +152,7 @@ impl Experiment for YcsbExperiment {
                 network: Some("host".to_owned()),
                 network_subnet: None,
                 ports: None,
-                pull: false,
+                pull: true,
                 tmpfs: vec![],
                 volumes: vec![
                     (
@@ -298,7 +313,7 @@ pub struct Config {
     rate: u32,
     total: u32,
     workload: YcsbWorkload,
-    nodes: u32,
+    nodes: usize,
     #[serde(flatten)]
     store_config: StoreConfig,
 }

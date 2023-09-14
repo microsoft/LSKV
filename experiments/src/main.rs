@@ -14,6 +14,9 @@ struct Args {
     root_dir: PathBuf,
 
     #[clap(long)]
+    distributed: bool,
+
+    #[clap(long)]
     results_dir: PathBuf,
 
     #[clap(long)]
@@ -39,6 +42,7 @@ async fn main() {
 
     let mut experiment = ycsb::YcsbExperiment {
         root_dir: args.root_dir.clone(),
+        distributed: args.distributed,
     };
     if args.run {
         exp::run(
