@@ -36,6 +36,7 @@ class EtcdStore(Store):
                     self.config.scheme(),
                     "--workspace",
                     self.workspace(),
+                    "--pull",
                 ]
                 if self.config.tmpfs:
                     etcd_cmd.append("--tmpfs")
@@ -142,6 +143,7 @@ class LSKVStore(Store):
                     self.workspace(),
                     "--http-version",
                     str(self.config.http_version),
+                    "--pull",
                 ]
                 if self.config.tmpfs:
                     lskv_cmd.append("--tmpfs")
