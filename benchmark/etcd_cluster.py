@@ -36,6 +36,7 @@ class Runner:
         initial_cluster: str,
         docker_image: str,
         tmpfs: bool,
+        pull: bool,
     ):
         self.address = address
         self.port = port
@@ -45,6 +46,7 @@ class Runner:
         self.initial_cluster = initial_cluster
         self.docker_image = docker_image
         self.tmpfs = tmpfs
+        self.pull = pull
 
     def name(self) -> str:
         """
@@ -88,7 +90,8 @@ class Runner:
         """
         Copy files needed to run to the working directory.
         """
-        # self.run(f"docker pull {self.docker_image}")
+        if self.pull:
+            self.run(f"docker pull {self.docker_image}")
 
         ca_cert = "ca.pem"
         server_cert = "server.pem"
@@ -351,6 +354,7 @@ def main():
     parser.add_argument(
         "--tmpfs", action="store_true", help="Whether to store data on tmpfs"
     )
+    parser.add_argument("--pull", action="store_true", help="Whether to pull the image")
     parser.add_argument(
         "--docker-image",
         type=str,
@@ -408,6 +412,7 @@ def main():
                     initial_cluster=initial_cluster,
                     docker_image=args.docker_image,
                     tmpfs=args.tmpfs,
+                    pull=args.pull,
                 )
             )
     elif prefixes[0] == "ssh":
@@ -424,6 +429,7 @@ def main():
                     initial_cluster=initial_cluster,
                     docker_image=args.docker_image,
                     tmpfs=args.tmpfs,
+                    pull=args.pull,
                 )
             )
     else:

@@ -502,6 +502,7 @@ class Operator:
         ledger_chunk_bytes: str,
         snapshot_tx_interval: int,
         tmpfs: bool,
+        pull: bool,
     ):
         self.workspace = workspace
         self.name = "lskv"
@@ -519,6 +520,7 @@ class Operator:
         self.ledger_chunk_bytes = ledger_chunk_bytes
         self.snapshot_tx_interval = snapshot_tx_interval
         self.tmpfs = tmpfs
+        self.pull = pull
 
     def make_name(self, i: int) -> str:
         """
@@ -650,7 +652,8 @@ class Operator:
         runner.run(f"docker rm -f {node.name}")
 
         # make sure we have the image
-        # runner.run(f"docker pull {self.image}")
+        if self.pull:
+            runner.run(f"docker pull {self.image}")
 
         cmd = [
             "docker",
@@ -889,6 +892,7 @@ def main(
     ledger_chunk_bytes: str,
     snapshot_tx_interval: int,
     tmpfs: bool,
+    pull: bool,
     runners: List[Runner],
 ):
     """
@@ -908,6 +912,7 @@ def main(
         ledger_chunk_bytes,
         snapshot_tx_interval,
         tmpfs,
+        pull,
     )
     try:
         operator.setup_common()
@@ -960,6 +965,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tmpfs", action="store_true", help="Whether to store data on tmpfs"
     )
+    parser.add_argument("--pull", action="store_true", help="Whether to pull the image")
 
     parser.add_argument("--ssh-user", type=str, default="")
 
@@ -1000,5 +1006,6 @@ if __name__ == "__main__":
         args.ledger_chunk_bytes,
         args.snapshot_tx_interval,
         args.tmpfs,
+        args.pull,
         runners,
     )
