@@ -67,6 +67,32 @@
         group: docker
       become: true
 
+    - name: Install pip
+      ansible.builtin.apt:
+        name:
+          - python3-pip
+        update_cache: true
+      become: true
+
+    - name: Install pip and docker
+      ansible.builtin.pip:
+        name: docker
+
+    - name: Pull lskv virtual image
+      community.docker.docker_image:
+        name: ghcr.io/jeffa5/lskv:latest-virtual
+        source: pull
+
+    - name: Pull lskv sgx image
+      community.docker.docker_image:
+        name: ghcr.io/jeffa5/lskv:latest-sgx
+        source: pull
+
+    - name: Pull etcd image
+      community.docker.docker_image:
+        name: gcr.io/etcd-development/etcd:v3.5.4
+        source: pull
+
 - hosts: all[0]
   remote_user: "{{ vm_user }}"
   gather_facts: false
@@ -82,6 +108,8 @@
         name:
           - python3.8
           - python3.8-venv
+          - libssl-dev
+          - pkg-config
         update_cache: true
       become: true
 
@@ -98,3 +126,19 @@
         virtualenv_command: python3 -m venv
       args:
         chdir: /tmp/lskv
+
+    - name: Download Rust installer
+      get_url:
+        url: https://sh.rustup.rs
+        dest: /tmp/sh.rustup.rs
+        mode: '0755'
+        force: 'yes'
+
+    - name: Install rust/cargo
+      shell: /tmp/sh.rustup.rs -y
+
+    - name: Pull bencher image
+      community.docker.docker_image:
+        name: ghcr.io/jeffa5/lskv:bencher-latest
+        source: pull
+
