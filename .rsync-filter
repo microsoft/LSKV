@@ -13,3 +13,4 @@
 - /*.deb
 - /result/
 - /bench.*/
+- target/
