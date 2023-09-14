@@ -7,6 +7,7 @@ service KV
   rpc Put(PutRequest) returns (PutResponse) {}
   rpc Range(RangeRequest) returns (RangeResponse) {}
   rpc DeleteRange(DeleteRangeRequest) returns (DeleteRangeResponse) {}
+  rpc Txn(TxnRequest) returns (TxnResponse) {}
 }
 
 message KeyValue

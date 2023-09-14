@@ -2,8 +2,11 @@ use std::path::Path;
 use std::time::Duration;
 
 use crate::protos::etcdserverpb::kv_client::KvClient;
+use crate::protos::etcdserverpb::request_op::Request;
 use crate::protos::etcdserverpb::PutRequest;
 use crate::protos::etcdserverpb::RangeRequest;
+use crate::protos::etcdserverpb::RequestOp;
+use crate::protos::etcdserverpb::TxnRequest;
 use async_trait::async_trait;
 use loadbench::client::{Dispatcher, DispatcherGenerator};
 use loadbench::input::InputGenerator;
@@ -287,24 +290,26 @@ impl Dispatcher for YcsbDispatcher {
             } => {
                 match self
                     .etcd_client
-                    .range(RangeRequest {
-                        key: format!("{record_key}/{field_key}").into(),
-                        range_end: vec![],
-                        serializable: true,
-                        ..Default::default()
-                    })
-                    .await
-                {
-                    Ok(_) => {}
-                    Err(err) => return Err(err.to_string()),
-                }
-
-                match self
-                    .etcd_client
-                    .put(PutRequest {
-                        key: format!("{record_key}/{field_key}").into(),
-                        value: field_value.into(),
-                        ..Default::default()
+                    .txn(TxnRequest {
+                        compare: vec![],
+                        success: vec![
+                            RequestOp {
+                                request: Some(Request::RequestRange(RangeRequest {
+                                    key: format!("{record_key}/{field_key}").into(),
+                                    range_end: vec![],
+                                    serializable: true,
+                                    ..Default::default()
+                                })),
+                            },
+                            RequestOp {
+                                request: Some(Request::RequestPut(PutRequest {
+                                    key: format!("{record_key}/{field_key}").into(),
+                                    value: field_value.into(),
+                                    ..Default::default()
+                                })),
+                            },
+                        ],
+                        failure: vec![],
                     })
                     .await
                 {
