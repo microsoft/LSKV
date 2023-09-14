@@ -32,7 +32,7 @@ impl Experiment for YcsbExperiment {
                     enclave,
                     worker_threads,
                     sig_tx_interval: 5000,
-                    sig_ms_interval: 1,
+                    sig_ms_interval: 100,
                     ledger_chunk_bytes: "5MB".to_owned(),
                     snapshot_tx_interval: 10,
                 }));
