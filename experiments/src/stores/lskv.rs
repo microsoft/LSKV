@@ -121,10 +121,14 @@ impl LskvStore {
             debug!("ca file does not exist {:?}", ca);
             return false;
         }
-        File::open(ca)
-            .and_then(|mut f| f.read_to_end(&mut ca_contents))
-            .unwrap();
-        let certificate = reqwest::tls::Certificate::from_pem(&ca_contents).unwrap();
+        match File::open(ca).and_then(|mut f| f.read_to_end(&mut ca_contents)) {
+            Ok(_) => {}
+            Err(_) => return false,
+        };
+        let certificate = match reqwest::tls::Certificate::from_pem(&ca_contents) {
+            Ok(c) => c,
+            Err(_) => return false,
+        };
         let address = node
             .split("://")
             .skip(1)
