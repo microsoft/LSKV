@@ -29,14 +29,16 @@ impl Experiment for YcsbExperiment {
         store_configs.push(StoreConfig::Etcd(crate::stores::etcd::Config {}));
         for enclave in [Enclave::Virtual, Enclave::SGX] {
             for worker_threads in [0] {
-                store_configs.push(StoreConfig::Lskv(crate::stores::lskv::Config {
-                    enclave,
-                    worker_threads,
-                    sig_tx_interval: 5000,
-                    sig_ms_interval: 100,
-                    ledger_chunk_bytes: "5MB".to_owned(),
-                    snapshot_tx_interval: 10,
-                }));
+                for sig_ms_interval in [100] {
+                    store_configs.push(StoreConfig::Lskv(crate::stores::lskv::Config {
+                        enclave,
+                        worker_threads,
+                        sig_tx_interval: 5000,
+                        sig_ms_interval,
+                        ledger_chunk_bytes: "5MB".to_owned(),
+                        snapshot_tx_interval: 10,
+                    }));
+                }
             }
         }
         for nodes in [1, 3] {
@@ -50,14 +52,17 @@ impl Experiment for YcsbExperiment {
                     YcsbWorkload::F,
                 ] {
                     for store_config in &store_configs {
-                        let config = Config {
-                            store_config: store_config.clone(),
-                            rate,
-                            total: rate * 10,
-                            workload,
-                            nodes,
-                        };
-                        configs.push(config);
+                        for tmpfs in [false, true] {
+                            let config = Config {
+                                store_config: store_config.clone(),
+                                rate,
+                                total: rate * 10,
+                                workload,
+                                nodes,
+                                tmpfs,
+                            };
+                            configs.push(config);
+                        }
                     }
                 }
             }
@@ -101,7 +106,7 @@ impl Experiment for YcsbExperiment {
                     configuration_dir: configuration_dir.clone(),
                     workspace: workspace.clone(),
                     http_version: 2,
-                    tmpfs: false,
+                    tmpfs: configuration.tmpfs,
                 };
                 let store = store_config.run(&self.root_dir);
                 store_config.wait_for_ready().await;
@@ -114,7 +119,7 @@ impl Experiment for YcsbExperiment {
                     nodes,
                     configuration_dir: configuration_dir.clone(),
                     workspace: workspace.clone(),
-                    tmpfs: false,
+                    tmpfs: configuration.tmpfs,
                 };
                 let store = store_config.run(&self.root_dir);
                 store_config.wait_for_ready().await;
@@ -315,6 +320,7 @@ pub struct Config {
     total: u32,
     workload: YcsbWorkload,
     nodes: usize,
+    tmpfs: bool,
     #[serde(flatten)]
     store_config: StoreConfig,
 }
