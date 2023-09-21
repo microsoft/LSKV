@@ -6,6 +6,7 @@ use exp::Environment;
 use exp::Experiment;
 use futures_util::StreamExt;
 use polars::prelude::*;
+use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -136,7 +137,7 @@ impl Experiment for YcsbExperiment {
 
         let mut docker_runner =
             exp::docker_runner::Runner::new(configuration_dir.clone().into()).await;
-        let load_command = configuration.to_load_command(&leader_address);
+        let load_command = configuration.to_load_command(&self.root_dir, &leader_address);
         let loader_name = "apj39-bencher-exp-loader".to_owned();
         debug!("Launching ycsb load container");
         docker_runner
@@ -185,7 +186,7 @@ impl Experiment for YcsbExperiment {
             .await;
 
         debug!("Launching ycsb run container");
-        let mut bench_command = configuration.to_command(&leader_address);
+        let mut bench_command = configuration.to_command(&self.root_dir, &leader_address);
         bench_command.append(&mut vec![
             "--max-record-index".to_owned(),
             configuration.total.to_string(),
@@ -321,12 +322,13 @@ pub struct Config {
 impl exp::ExperimentConfiguration for Config {}
 
 impl Config {
-    fn to_command(&self, leader_address: &str) -> Vec<String> {
+    fn to_command(&self, root_dir: &Path, leader_address: &str) -> Vec<String> {
         let mut cmd = vec![
             "bencher".to_owned(),
-            "--endpoint".to_owned(),
+            "--write-endpoints".to_owned(),
             leader_address.to_owned(),
-            // "https://127.0.0.1:8000".to_owned(),
+            "--read-endpoints".to_owned(),
+            self.client_addresses(root_dir).join(","),
             "--common-dir".to_owned(),
             "/workspace/common".to_owned(),
             "--out-file".to_owned(),
@@ -341,12 +343,13 @@ impl Config {
         cmd
     }
 
-    fn to_load_command(&self, leader_address: &str) -> Vec<String> {
+    fn to_load_command(&self, root_dir: &Path, leader_address: &str) -> Vec<String> {
         vec![
             "bencher".to_owned(),
-            "--endpoint".to_owned(),
+            "--write-endpoints".to_owned(),
             leader_address.to_owned(),
-            // "https://127.0.0.1:8000".to_owned(),
+            "--read-endpoints".to_owned(),
+            self.client_addresses(root_dir).join(","),
             "--common-dir".to_owned(),
             "/workspace/common".to_owned(),
             "--out-file".to_owned(),
@@ -359,6 +362,17 @@ impl Config {
             "--insert-weight".to_owned(),
             "1".to_owned(),
         ]
+    }
+
+    fn client_addresses(&self, root_dir: &Path) -> Vec<String> {
+        let hosts = root_dir.join("hosts");
+        let buf = fs::read_to_string(hosts).unwrap();
+        // skip first as that is the node running the bencher
+        buf.lines()
+            .skip(1)
+            .take(self.nodes)
+            .map(|l| format!("https://{l}:8000"))
+            .collect()
     }
 }
 
