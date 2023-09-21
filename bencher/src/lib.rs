@@ -33,7 +33,9 @@ pub async fn run_ycsb(args: args::CommonArgs, ycsb_args: crate::ycsb::Args) {
         request_distribution: ycsb_args.request_distribution,
     };
 
-    let dispatcher_generator = YcsbDispatcherGenerator::new(args.endpoint, &args.common_dir).await;
+    let dispatcher_generator =
+        YcsbDispatcherGenerator::new(args.write_endpoints, args.read_endpoints, &args.common_dir)
+            .await;
 
     struct DoubleOutputSink {
         stats: StatsOutputSink,

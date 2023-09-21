@@ -11,8 +11,11 @@ pub struct Args {
 
 #[derive(Debug, clap::Args)]
 pub struct CommonArgs {
-    #[clap(long)]
-    pub endpoint: String,
+    #[clap(long, value_delimiter = ',')]
+    pub write_endpoints: Vec<String>,
+
+    #[clap(long, value_delimiter = ',')]
+    pub read_endpoints: Vec<String>,
 
     #[clap(long)]
     pub common_dir: PathBuf,

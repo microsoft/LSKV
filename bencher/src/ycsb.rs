@@ -14,6 +14,7 @@ use rand::{distributions::Alphanumeric, rngs::StdRng, Rng};
 use rand_distr::{Distribution, WeightedAliasIndex, Zipf};
 use serde::Deserialize;
 use serde::Serialize;
+use tonic::transport::Endpoint;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig, Identity};
 
 /// Generate inputs for the YCSB workloads.
@@ -189,11 +190,16 @@ fn random_string(len: usize) -> String {
 }
 
 pub struct YcsbDispatcherGenerator {
-    etcd_client: KvClient<Channel>,
+    write_client: KvClient<Channel>,
+    read_client: KvClient<Channel>,
 }
 
 impl YcsbDispatcherGenerator {
-    pub async fn new(endpoint: String, common_dir: &Path) -> Self {
+    pub async fn new(
+        write_endpoints: Vec<String>,
+        read_endpoints: Vec<String>,
+        common_dir: &Path,
+    ) -> Self {
         let server_root_ca_cert =
             std::fs::read_to_string(common_dir.join("service_cert.pem")).unwrap();
         let server_root_ca_cert = Certificate::from_pem(server_root_ca_cert);
@@ -205,18 +211,30 @@ impl YcsbDispatcherGenerator {
             .ca_certificate(server_root_ca_cert)
             .identity(client_identity);
 
-        let channel = Channel::from_shared(endpoint)
-            .unwrap()
-            .tls_config(tls)
-            .unwrap()
-            .timeout(Duration::from_secs(1))
-            .connect()
-            .await
-            .unwrap();
+        let write_endpoints = write_endpoints.iter().map(|s| {
+            Endpoint::from_shared(s.clone())
+                .unwrap()
+                .tls_config(tls.clone())
+                .unwrap()
+                .timeout(Duration::from_secs(1))
+        });
+        let write_channel = Channel::balance_list(write_endpoints);
 
-        let client = KvClient::new(channel);
+        let write_client = KvClient::new(write_channel);
+
+        let read_endpoints = read_endpoints.iter().map(|s| {
+            Endpoint::from_shared(s.clone())
+                .unwrap()
+                .tls_config(tls.clone())
+                .unwrap()
+                .timeout(Duration::from_secs(1))
+        });
+        let read_channel = Channel::balance_list(read_endpoints);
+
+        let read_client = KvClient::new(read_channel);
         Self {
-            etcd_client: client,
+            write_client,
+            read_client,
         }
     }
 }
@@ -226,13 +244,15 @@ impl DispatcherGenerator for YcsbDispatcherGenerator {
 
     fn generate(&mut self) -> Self::Dispatcher {
         YcsbDispatcher {
-            etcd_client: self.etcd_client.clone(),
+            write_client: self.write_client.clone(),
+            read_client: self.read_client.clone(),
         }
     }
 }
 
 pub struct YcsbDispatcher {
-    etcd_client: KvClient<Channel>,
+    write_client: KvClient<Channel>,
+    read_client: KvClient<Channel>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -252,7 +272,7 @@ impl Dispatcher for YcsbDispatcher {
             YcsbInput::Insert { record_key, fields } => {
                 for (field_key, field_value) in fields {
                     match self
-                        .etcd_client
+                        .write_client
                         .put(PutRequest {
                             key: format!("{record_key}/{field_key}").into(),
                             value: field_value.into(),
@@ -271,7 +291,7 @@ impl Dispatcher for YcsbDispatcher {
                 field_value,
             } => {
                 match self
-                    .etcd_client
+                    .write_client
                     .put(PutRequest {
                         key: format!("{record_key}/{field_key}").into(),
                         value: field_value.into(),
@@ -289,7 +309,7 @@ impl Dispatcher for YcsbDispatcher {
                 field_value,
             } => {
                 match self
-                    .etcd_client
+                    .write_client
                     .txn(TxnRequest {
                         compare: vec![],
                         success: vec![
@@ -322,7 +342,7 @@ impl Dispatcher for YcsbDispatcher {
                 field_key,
             } => {
                 match self
-                    .etcd_client
+                    .read_client
                     .range(RangeRequest {
                         key: format!("{record_key}/{field_key}").into(),
                         range_end: vec![],
@@ -337,7 +357,7 @@ impl Dispatcher for YcsbDispatcher {
             }
             YcsbInput::ReadAll { record_key } => {
                 match self
-                    .etcd_client
+                    .read_client
                     .range(RangeRequest {
                         key: format!("{record_key}/").into(),
                         range_end: format!("{record_key}0").into(),
@@ -354,7 +374,7 @@ impl Dispatcher for YcsbDispatcher {
                 let key = start_key;
                 let range_end = end_key;
                 match self
-                    .etcd_client
+                    .read_client
                     .range(RangeRequest {
                         key: key.as_bytes().to_vec(),
                         range_end: range_end.as_bytes().to_vec(),
