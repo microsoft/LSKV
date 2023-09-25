@@ -82,16 +82,19 @@
       community.docker.docker_image:
         name: ghcr.io/jeffa5/lskv:latest-virtual
         source: pull
+        force_source: true
 
     - name: Pull lskv sgx image
       community.docker.docker_image:
         name: ghcr.io/jeffa5/lskv:latest-sgx
         source: pull
+        force_source: true
 
     - name: Pull etcd image
       community.docker.docker_image:
         name: gcr.io/etcd-development/etcd:v3.5.4
         source: pull
+        force_source: true
 
 - hosts: all[0]
   remote_user: "{{ vm_user }}"
