@@ -24,6 +24,7 @@
 /analysis_files
 /bench/
 /bench-results/
+/experiments/results
 /benchmark/
 /bin/
 /build/
