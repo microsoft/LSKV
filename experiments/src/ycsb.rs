@@ -33,7 +33,7 @@ impl Experiment for YcsbExperiment {
                     store_configs.push(StoreConfig::Lskv(crate::stores::lskv::Config {
                         enclave,
                         worker_threads,
-                        sig_tx_interval: 5000,
+                        sig_tx_interval: 1_000_000, // basically never, just use the timing one
                         sig_ms_interval,
                         ledger_chunk_bytes: "5MB".to_owned(),
                         snapshot_tx_interval: 10,
