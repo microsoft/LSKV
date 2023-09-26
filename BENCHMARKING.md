@@ -42,4 +42,4 @@ It can be run with `python benchmark/receipt_verify.py`.
 julia -e 'import Pkg; Pkg.add("Pluto"); import Pluto; Pluto.run()'
 ```
 
-Then edit and run the notebook in your browser.
+Then edit and run the `experiments/plot.jl` notebook in your browser.
