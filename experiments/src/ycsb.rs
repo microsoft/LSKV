@@ -60,6 +60,7 @@ impl Experiment for YcsbExperiment {
                                 workload,
                                 nodes,
                                 tmpfs,
+                                max_clients: 100,
                             };
                             configs.push(config);
                         }
@@ -318,6 +319,7 @@ impl Experiment for YcsbExperiment {
 pub struct Config {
     rate: u32,
     total: u32,
+    max_clients: u32,
     workload: YcsbWorkload,
     nodes: usize,
     tmpfs: bool,
@@ -344,6 +346,8 @@ impl Config {
             self.rate.to_string(),
             "--total".to_owned(),
             self.total.to_string(),
+            "--max-clients".to_owned(),
+            self.max_clients.to_string(),
         ];
         cmd.append(&mut self.workload.to_command());
         cmd
