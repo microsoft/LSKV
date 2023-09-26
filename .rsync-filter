@@ -12,5 +12,6 @@
 - /.mypy_cache/
 - /*.deb
 - /result/
+- /experiments/results/
 - /bench.*/
 - target/
