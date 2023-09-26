@@ -144,4 +144,5 @@
       community.docker.docker_image:
         name: ghcr.io/jeffa5/lskv:bencher-latest
         source: pull
+        force_source: true
 
