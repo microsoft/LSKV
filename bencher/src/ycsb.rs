@@ -258,6 +258,8 @@ pub struct YcsbDispatcher {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct YcsbOutput {
     operation: String,
+    revision: i64,
+    committed_revision: i64,
 }
 
 #[async_trait]
@@ -268,8 +270,9 @@ impl Dispatcher for YcsbDispatcher {
 
     async fn execute(&mut self, request: Self::Input) -> Result<Self::Output, String> {
         let operation = request.name().to_owned();
-        match request {
+        let header = match request {
             YcsbInput::Insert { record_key, fields } => {
+                let mut header = None;
                 for (field_key, field_value) in fields {
                     match self
                         .write_client
@@ -280,10 +283,11 @@ impl Dispatcher for YcsbDispatcher {
                         })
                         .await
                     {
-                        Ok(_) => {}
+                        Ok(res) => header = res.into_inner().header,
                         Err(err) => return Err(err.to_string()),
                     }
                 }
+                header
             }
             YcsbInput::Update {
                 record_key,
@@ -299,7 +303,7 @@ impl Dispatcher for YcsbDispatcher {
                     })
                     .await
                 {
-                    Ok(_) => {}
+                    Ok(res) => res.into_inner().header,
                     Err(err) => return Err(err.to_string()),
                 }
             }
@@ -333,7 +337,7 @@ impl Dispatcher for YcsbDispatcher {
                     })
                     .await
                 {
-                    Ok(_) => {}
+                    Ok(res) => res.into_inner().header,
                     Err(err) => return Err(err.to_string()),
                 }
             }
@@ -351,7 +355,7 @@ impl Dispatcher for YcsbDispatcher {
                     })
                     .await
                 {
-                    Ok(_) => {}
+                    Ok(res) => res.into_inner().header,
                     Err(err) => return Err(err.to_string()),
                 }
             }
@@ -366,7 +370,7 @@ impl Dispatcher for YcsbDispatcher {
                     })
                     .await
                 {
-                    Ok(_) => {}
+                    Ok(res) => res.into_inner().header,
                     Err(err) => return Err(err.to_string()),
                 }
             }
@@ -383,12 +387,17 @@ impl Dispatcher for YcsbDispatcher {
                     })
                     .await
                 {
-                    Ok(_) => {}
+                    Ok(res) => res.into_inner().header,
                     Err(err) => return Err(err.to_string()),
-                };
+                }
             }
         }
-        Ok(YcsbOutput { operation })
+        .unwrap();
+        Ok(YcsbOutput {
+            operation,
+            revision: header.revision,
+            committed_revision: header.committed_revision,
+        })
     }
 }
 
