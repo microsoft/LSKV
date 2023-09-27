@@ -38,8 +38,10 @@ It can be run with `python benchmark/receipt_verify.py`.
 
 ## Plotting
 
+From the root of the repo.
+
 ```sh
-julia -e 'import Pkg; Pkg.add("Pluto"); import Pluto; Pluto.run()'
+julia --project=. -e 'import Pkg; Pkg.add("Pluto"); import Pluto; Pluto.run()'
 ```
 
 Then edit and run the `experiments/plot.jl` notebook in your browser.
