@@ -27,45 +27,109 @@ impl Experiment for YcsbExperiment {
         let mut configs = Vec::new();
         let mut store_configs = Vec::new();
         store_configs.push(StoreConfig::Etcd(crate::stores::etcd::Config {}));
-        for enclave in [Enclave::Virtual, Enclave::SGX] {
-            for worker_threads in [0] {
-                for sig_ms_interval in [100] {
-                    store_configs.push(StoreConfig::Lskv(crate::stores::lskv::Config {
-                        enclave,
-                        worker_threads,
-                        sig_tx_interval: 1_000_000, // basically never, just use the timing one
-                        sig_ms_interval,
-                        ledger_chunk_bytes: "5MB".to_owned(),
-                        snapshot_tx_interval: 10,
-                    }));
+        let worker_threads = 2;
+        let sig_ms_interval = 1_000;
+        let sig_tx_interval = 1_000_000; // basically never, just use the timing one
+        let ledger_chunk_bytes = "5MB";
+        let snapshot_tx_interval = 10;
+        let lskv_virtual_config = StoreConfig::Lskv(crate::stores::lskv::Config {
+            enclave: Enclave::Virtual,
+            worker_threads,
+            sig_tx_interval,
+            sig_ms_interval,
+            ledger_chunk_bytes: ledger_chunk_bytes.to_owned(),
+            snapshot_tx_interval,
+        });
+        let lskv_sgx_config = StoreConfig::Lskv(crate::stores::lskv::Config {
+            enclave: Enclave::SGX,
+            worker_threads,
+            sig_tx_interval,
+            sig_ms_interval,
+            ledger_chunk_bytes: ledger_chunk_bytes.to_owned(),
+            snapshot_tx_interval,
+        });
+        store_configs.push(lskv_virtual_config.clone());
+        store_configs.push(lskv_sgx_config.clone());
+        let rate = 10_000;
+        for nodes in [3] {
+            for workload in [
+                YcsbWorkload::A,
+                YcsbWorkload::B,
+                YcsbWorkload::C,
+                YcsbWorkload::D,
+                YcsbWorkload::E,
+                YcsbWorkload::F,
+            ] {
+                for store_config in &store_configs {
+                    for tmpfs in [false, true] {
+                        let config = Config {
+                            store_config: store_config.clone(),
+                            rate,
+                            total: rate * 10,
+                            workload,
+                            nodes,
+                            tmpfs,
+                            max_clients: 100,
+                        };
+                        configs.push(config);
+                    }
                 }
             }
         }
-        for nodes in [1, 3] {
-            for rate in [10_000] {
-                for workload in [
-                    YcsbWorkload::A,
-                    YcsbWorkload::B,
-                    YcsbWorkload::C,
-                    YcsbWorkload::D,
-                    YcsbWorkload::E,
-                    YcsbWorkload::F,
-                ] {
-                    for store_config in &store_configs {
-                        for tmpfs in [false, true] {
-                            let config = Config {
-                                store_config: store_config.clone(),
-                                rate,
-                                total: rate * 10,
-                                workload,
-                                nodes,
-                                tmpfs,
-                                max_clients: 100,
-                            };
-                            configs.push(config);
-                        }
+        for nodes in [1, 3, 5, 7] {
+            for store_config in [lskv_sgx_config.clone(), lskv_virtual_config.clone()] {
+                let config = Config {
+                    store_config: store_config.clone(),
+                    rate,
+                    total: rate * 10,
+                    workload: YcsbWorkload::A,
+                    nodes,
+                    tmpfs: false,
+                    max_clients: 100,
+                };
+                configs.push(config);
+            }
+        }
+        for sig_ms_interval in [100, 1000] {
+            for store_config in &[lskv_virtual_config.clone(), lskv_sgx_config.clone()] {
+                let store_config = match store_config.clone() {
+                    StoreConfig::Lskv(mut l) => {
+                        l.sig_ms_interval = sig_ms_interval;
+                        StoreConfig::Lskv(l)
                     }
-                }
+                    StoreConfig::Etcd(_) => todo!(),
+                };
+                let config = Config {
+                    store_config,
+                    rate,
+                    total: rate * 10,
+                    workload: YcsbWorkload::A,
+                    nodes: 3,
+                    tmpfs: false,
+                    max_clients: 100,
+                };
+                configs.push(config);
+            }
+        }
+        for worker_threads in [0, 1, 2, 4] {
+            for store_config in &[lskv_virtual_config.clone(), lskv_sgx_config.clone()] {
+                let store_config = match store_config.clone() {
+                    StoreConfig::Lskv(mut l) => {
+                        l.worker_threads = worker_threads;
+                        StoreConfig::Lskv(l)
+                    }
+                    StoreConfig::Etcd(_) => todo!(),
+                };
+                let config = Config {
+                    store_config,
+                    rate,
+                    total: rate * 10,
+                    workload: YcsbWorkload::A,
+                    nodes: 3,
+                    tmpfs: false,
+                    max_clients: 100,
+                };
+                configs.push(config);
             }
         }
         configs
