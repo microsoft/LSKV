@@ -3,10 +3,14 @@ use std::time::Duration;
 
 use crate::protos::etcdserverpb::kv_client::KvClient;
 use crate::protos::etcdserverpb::request_op::Request;
+use crate::protos::etcdserverpb::watch_client::WatchClient;
+use crate::protos::etcdserverpb::watch_request::RequestUnion;
 use crate::protos::etcdserverpb::PutRequest;
 use crate::protos::etcdserverpb::RangeRequest;
 use crate::protos::etcdserverpb::RequestOp;
 use crate::protos::etcdserverpb::TxnRequest;
+use crate::protos::etcdserverpb::WatchCreateRequest;
+use crate::protos::etcdserverpb::WatchRequest;
 use async_trait::async_trait;
 use loadbench::client::{Dispatcher, DispatcherGenerator};
 use loadbench::input::InputGenerator;
@@ -14,6 +18,7 @@ use rand::{distributions::Alphanumeric, rngs::StdRng, Rng};
 use rand_distr::{Distribution, WeightedAliasIndex, Zipf};
 use serde::Deserialize;
 use serde::Serialize;
+use tokio_stream::StreamExt;
 use tonic::transport::Endpoint;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig, Identity};
 
@@ -24,6 +29,7 @@ pub struct YcsbInputGenerator {
     pub insert_weight: u32,
     pub update_weight: u32,
     pub rmw_weight: u32,
+    pub watch_weight: u32,
     pub fields_per_record: u32,
     pub field_value_length: usize,
     pub operation_rng: StdRng,
@@ -105,9 +111,18 @@ pub enum YcsbInput {
         field_key: String,
     },
     /// Read all fields from a record.
-    ReadAll { record_key: String },
+    ReadAll {
+        record_key: String,
+    },
     /// Scan records in order, starting at a randomly chosen key
-    Scan { start_key: String, end_key: String },
+    Scan {
+        start_key: String,
+        end_key: String,
+    },
+    Watch {
+        start_key: String,
+        end_key: String,
+    },
 }
 
 impl YcsbInput {
@@ -119,6 +134,7 @@ impl YcsbInput {
             YcsbInput::ReadSingle { .. } => "read",
             YcsbInput::ReadAll { .. } => "read",
             YcsbInput::Scan { .. } => "scan",
+            YcsbInput::Watch { .. } => "watch",
         }
     }
 }
@@ -135,6 +151,7 @@ impl InputGenerator for YcsbInputGenerator {
             self.insert_weight,
             self.update_weight,
             self.rmw_weight,
+            self.watch_weight,
         ];
         let dist = WeightedAliasIndex::new(weights.to_vec()).unwrap();
         let weight_index = dist.sample(&mut self.operation_rng);
@@ -170,6 +187,12 @@ impl InputGenerator for YcsbInputGenerator {
                 field_key: Self::field_key(0),
                 field_value: random_string(self.field_value_length),
             },
+            // watch
+            5 => {
+                let start_key = self.existing_record_key();
+                let end_key = format!("{start_key}/{}", Self::field_key(self.max_scan_length));
+                YcsbInput::Watch { start_key, end_key }
+            }
             i => {
                 println!("got weight index {i}, but there was no input type to match");
                 return None;
@@ -192,6 +215,7 @@ fn random_string(len: usize) -> String {
 pub struct YcsbDispatcherGenerator {
     write_client: KvClient<Channel>,
     read_client: KvClient<Channel>,
+    watch_client: WatchClient<Channel>,
 }
 
 impl YcsbDispatcherGenerator {
@@ -231,10 +255,12 @@ impl YcsbDispatcherGenerator {
         });
         let read_channel = Channel::balance_list(read_endpoints);
 
-        let read_client = KvClient::new(read_channel);
+        let read_client = KvClient::new(read_channel.clone());
+        let watch_client = WatchClient::new(read_channel);
         Self {
             write_client,
             read_client,
+            watch_client,
         }
     }
 }
@@ -246,6 +272,7 @@ impl DispatcherGenerator for YcsbDispatcherGenerator {
         YcsbDispatcher {
             write_client: self.write_client.clone(),
             read_client: self.read_client.clone(),
+            watch_client: self.watch_client.clone(),
         }
     }
 }
@@ -253,6 +280,7 @@ impl DispatcherGenerator for YcsbDispatcherGenerator {
 pub struct YcsbDispatcher {
     write_client: KvClient<Channel>,
     read_client: KvClient<Channel>,
+    watch_client: WatchClient<Channel>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -391,12 +419,45 @@ impl Dispatcher for YcsbDispatcher {
                     Err(err) => return Err(err.to_string()),
                 }
             }
-        }
-        .unwrap();
+            YcsbInput::Watch { start_key, end_key } => {
+                let key = start_key;
+                let range_end = end_key;
+                let (request_sender, request_receiver) = tokio::sync::mpsc::channel(1);
+                request_sender
+                    .send(WatchRequest {
+                        request_union: Some(RequestUnion::CreateRequest(WatchCreateRequest {
+                            key: key.as_bytes().to_vec(),
+                            range_end: range_end.as_bytes().to_vec(),
+                            ..Default::default()
+                        })),
+                    })
+                    .await
+                    .unwrap();
+
+                match self
+                    .watch_client
+                    .watch(tokio_stream::wrappers::ReceiverStream::new(
+                        request_receiver,
+                    ))
+                    .await
+                {
+                    Ok(res) => {
+                        let mut response_stream = res.into_inner();
+                        tokio::spawn(async move {
+                            while let Some(Ok(received)) = response_stream.next().await {
+                                dbg!(received);
+                            }
+                        });
+                        None
+                    }
+                    Err(err) => return Err(err.to_string()),
+                }
+            }
+        };
         Ok(YcsbOutput {
             operation,
-            revision: header.revision,
-            committed_revision: header.committed_revision,
+            revision: header.as_ref().map_or(0, |h| h.revision),
+            committed_revision: header.as_ref().map_or(0, |h| h.committed_revision),
         })
     }
 }
@@ -422,6 +483,8 @@ pub struct Args {
     pub update_weight: u32,
     #[clap(long, default_value = "0")]
     pub rmw_weight: u32,
+    #[clap(long, default_value = "0")]
+    pub watch_weight: u32,
     #[clap(long, default_value = "1")]
     pub fields_per_record: u32,
     #[clap(long, default_value = "1")]
