@@ -444,8 +444,8 @@ impl Dispatcher for YcsbDispatcher {
                     Ok(res) => {
                         let mut response_stream = res.into_inner();
                         tokio::spawn(async move {
-                            while let Some(Ok(received)) = response_stream.next().await {
-                                dbg!(received);
+                            while let Some(Ok(_received)) = response_stream.next().await {
+                                // do nothing
                             }
                         });
                         None
