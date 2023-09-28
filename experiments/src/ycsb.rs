@@ -69,7 +69,7 @@ impl Experiment for YcsbExperiment {
                             workload,
                             nodes,
                             tmpfs,
-                            max_clients: 100,
+                            max_clients: Some(100),
                         };
                         configs.push(config);
                     }
@@ -85,7 +85,7 @@ impl Experiment for YcsbExperiment {
                     workload: YcsbWorkload::A,
                     nodes,
                     tmpfs: false,
-                    max_clients: 100,
+                    max_clients: Some(100),
                 };
                 configs.push(config);
             }
@@ -106,7 +106,7 @@ impl Experiment for YcsbExperiment {
                     workload: YcsbWorkload::A,
                     nodes: 3,
                     tmpfs: false,
-                    max_clients: 100,
+                    max_clients: Some(100),
                 };
                 configs.push(config);
             }
@@ -127,7 +127,7 @@ impl Experiment for YcsbExperiment {
                     workload: YcsbWorkload::A,
                     nodes: 3,
                     tmpfs: false,
-                    max_clients: 100,
+                    max_clients: Some(100),
                 };
                 configs.push(config);
             }
@@ -383,7 +383,7 @@ impl Experiment for YcsbExperiment {
 pub struct Config {
     rate: u32,
     total: u32,
-    max_clients: u32,
+    max_clients: Option<u32>,
     workload: YcsbWorkload,
     nodes: usize,
     tmpfs: bool,
@@ -410,9 +410,10 @@ impl Config {
             self.rate.to_string(),
             "--total".to_owned(),
             self.total.to_string(),
-            "--max-clients".to_owned(),
-            self.max_clients.to_string(),
         ];
+        if let Some(max_clients) = self.max_clients {
+            cmd.append(["--max-clients".to_owned(), max_clients.to_string()]);
+        }
         cmd.append(&mut self.workload.to_command());
         cmd
     }
