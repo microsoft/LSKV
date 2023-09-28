@@ -132,6 +132,18 @@ impl Experiment for YcsbExperiment {
                 configs.push(config);
             }
         }
+        for store_config in &store_configs {
+            let config = Config {
+                store_config: store_config.clone(),
+                rate,
+                total: rate * 10,
+                workload: YcsbWorkload::AWatch,
+                nodes: 3,
+                tmpfs: false,
+                max_clients: Some(100),
+            };
+            configs.push(config);
+        }
         configs
     }
 
@@ -454,6 +466,7 @@ impl Config {
 #[derive(Debug, Copy, Clone, serde::Serialize, serde::Deserialize)]
 pub enum YcsbWorkload {
     A,
+    AWatch,
     B,
     C,
     D,
@@ -468,6 +481,16 @@ impl YcsbWorkload {
                 "--read-weight",
                 "1",
                 "--update-weight",
+                "1",
+                "--request-distribution",
+                "zipfian",
+            ],
+            Self::AWatch => vec![
+                "--read-weight",
+                "1",
+                "--update-weight",
+                "1",
+                "--watch-weight",
                 "1",
                 "--request-distribution",
                 "zipfian",
