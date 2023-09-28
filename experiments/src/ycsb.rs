@@ -424,7 +424,7 @@ impl Config {
             self.total.to_string(),
         ];
         if let Some(max_clients) = self.max_clients {
-            cmd.append(["--max-clients".to_owned(), max_clients.to_string()]);
+            cmd.extend(["--max-clients".to_owned(), max_clients.to_string()]);
         }
         cmd.append(&mut self.workload.to_command());
         cmd
