@@ -51,6 +51,7 @@ impl Experiment for YcsbExperiment {
         store_configs.push(lskv_virtual_config.clone());
         store_configs.push(lskv_sgx_config.clone());
         let rate = 10_000;
+        let repeats = 10;
         for nodes in [3] {
             for workload in [
                 YcsbWorkload::A,
@@ -62,74 +63,86 @@ impl Experiment for YcsbExperiment {
             ] {
                 for store_config in &store_configs {
                     for tmpfs in [false, true] {
-                        let config = Config {
-                            store_config: store_config.clone(),
-                            rate,
-                            total: rate * 10,
-                            workload,
-                            nodes,
-                            tmpfs,
-                            max_clients: Some(100),
-                        };
-                        configs.push(config);
+                        for repeat in 1..=repeats {
+                            let config = Config {
+                                store_config: store_config.clone(),
+                                rate,
+                                total: rate * 10,
+                                workload,
+                                nodes,
+                                tmpfs,
+                                max_clients: Some(100),
+                                repeat,
+                            };
+                            configs.push(config);
+                        }
                     }
                 }
             }
         }
         for nodes in [1, 3, 5, 7] {
             for store_config in [lskv_sgx_config.clone(), lskv_virtual_config.clone()] {
-                let config = Config {
-                    store_config: store_config.clone(),
-                    rate,
-                    total: rate * 10,
-                    workload: YcsbWorkload::A,
-                    nodes,
-                    tmpfs: false,
-                    max_clients: Some(100),
-                };
-                configs.push(config);
+                for repeat in 1..=repeats {
+                    let config = Config {
+                        store_config: store_config.clone(),
+                        rate,
+                        total: rate * 10,
+                        workload: YcsbWorkload::A,
+                        nodes,
+                        tmpfs: false,
+                        max_clients: Some(100),
+                        repeat,
+                    };
+                    configs.push(config);
+                }
             }
         }
         for sig_ms_interval in [100, 1000] {
             for store_config in &[lskv_virtual_config.clone(), lskv_sgx_config.clone()] {
-                let store_config = match store_config.clone() {
-                    StoreConfig::Lskv(mut l) => {
-                        l.sig_ms_interval = sig_ms_interval;
-                        StoreConfig::Lskv(l)
-                    }
-                    StoreConfig::Etcd(_) => todo!(),
-                };
-                let config = Config {
-                    store_config,
-                    rate,
-                    total: rate * 10,
-                    workload: YcsbWorkload::A,
-                    nodes: 3,
-                    tmpfs: false,
-                    max_clients: Some(100),
-                };
-                configs.push(config);
+                for repeat in 1..=repeats {
+                    let store_config = match store_config.clone() {
+                        StoreConfig::Lskv(mut l) => {
+                            l.sig_ms_interval = sig_ms_interval;
+                            StoreConfig::Lskv(l)
+                        }
+                        StoreConfig::Etcd(_) => todo!(),
+                    };
+                    let config = Config {
+                        store_config,
+                        rate,
+                        total: rate * 10,
+                        workload: YcsbWorkload::A,
+                        nodes: 3,
+                        tmpfs: false,
+                        max_clients: Some(100),
+                        repeat,
+                    };
+                    configs.push(config);
+                }
             }
         }
         for worker_threads in [0, 1, 2, 4] {
             for store_config in &[lskv_virtual_config.clone(), lskv_sgx_config.clone()] {
-                let store_config = match store_config.clone() {
-                    StoreConfig::Lskv(mut l) => {
-                        l.worker_threads = worker_threads;
-                        StoreConfig::Lskv(l)
-                    }
-                    StoreConfig::Etcd(_) => todo!(),
-                };
-                let config = Config {
-                    store_config,
-                    rate,
-                    total: rate * 10,
-                    workload: YcsbWorkload::A,
-                    nodes: 3,
-                    tmpfs: false,
-                    max_clients: Some(100),
-                };
-                configs.push(config);
+                for repeat in 1..=repeats {
+                    let store_config = match store_config.clone() {
+                        StoreConfig::Lskv(mut l) => {
+                            l.worker_threads = worker_threads;
+                            StoreConfig::Lskv(l)
+                        }
+                        StoreConfig::Etcd(_) => todo!(),
+                    };
+                    let config = Config {
+                        store_config,
+                        rate,
+                        total: rate * 10,
+                        workload: YcsbWorkload::A,
+                        nodes: 3,
+                        tmpfs: false,
+                        max_clients: Some(100),
+                        repeat,
+                    };
+                    configs.push(config);
+                }
             }
         }
         // for store_config in &store_configs {
@@ -399,6 +412,7 @@ pub struct Config {
     workload: YcsbWorkload,
     nodes: usize,
     tmpfs: bool,
+    repeat: usize,
     #[serde(flatten)]
     store_config: StoreConfig,
 }
