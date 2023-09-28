@@ -31,6 +31,12 @@ legend_bottom=(position=:bottom, titleposition=:left, framevisible=false, paddin
 # ╔═╡ e0d5c0ab-fd4a-44ec-a7a0-3e553bd6a6f3
 ext = "pdf"
 
+# ╔═╡ cd3ffcf4-e73d-4b62-895b-3174bcb118a2
+begin
+	anon = true
+	lskv_name = if anon; "CKVS"; else; "LSKV"; end
+end
+
 # ╔═╡ 0e01ca36-9e35-46f4-94a9-7a6f783f9aaa
 df = CSV.read(results_path, DataFrame)
 
@@ -49,12 +55,20 @@ begin
 	
 	    return df
 	end
+	function anon_name(name)
+		if name == "lskv" 
+			lskv_name
+		else
+			"etcd"
+		end
+	end
 	df_normalized = combine(grouped, subtract_min)
 	# add latency
 	latency_ns = df_normalized.end_ns .- df_normalized.start_ns
 	df_normalized[!, "latency_ns"] = latency_ns
 	df_normalized[!, "start_s"] = df_normalized.start_ns ./ 1_000_000_000
 	df_normalized[!, "latency_ms"] = df_normalized.latency_ns ./ 1_000_000
+	df_normalized[!, "store"] = map(anon_name, df_normalized.store)
 	hyphenate(x) = if isempty(x); return ""; else; return "-$x"; end
 	df_normalized[!, "system"] = string.(df_normalized.store, map(hyphenate, coalesce.(df_normalized.enclave, "")))
 	df_normalized[!, "system_op"] = string.(df_normalized.system, "-", df_normalized.operation)
@@ -159,7 +173,7 @@ md"""
 begin
 	scdf_data = df_normalized
 	scdf_data = filter(:tmpfs => ==(false), scdf_data)
-	scdf_data = filter(:store => ==("lskv"), scdf_data)
+	scdf_data = filter(:store => ==(lskv_name), scdf_data)
 	scdf_data = filter(:workload => ==("A"), scdf_data)
 	scdf_data = filter(:sig_ms_interval => (t -> coalesce(t, 1000) == 1000), scdf_data)
 	scdf_data = filter(:worker_threads => (t -> coalesce(t, 2) == 2), scdf_data)
@@ -191,7 +205,7 @@ begin
 	function cdf_sig_ms_interval_data()
 		scdf_data = df_normalized
 		scdf_data = filter(:tmpfs => ==(false), scdf_data)
-		scdf_data = filter(:store => ==("lskv"), scdf_data)
+		scdf_data = filter(:store => ==(lskv_name), scdf_data)
 		scdf_data = filter(:workload => ==("A"), scdf_data)
 		scdf_data = filter(:worker_threads => ==(2), scdf_data)
 		scdf_data = filter(:nodes => ==(3), scdf_data)
@@ -224,7 +238,7 @@ begin
 	function cdf_worker_threads_data()
 		scdf_data = df_normalized
 		scdf_data = filter(:tmpfs => ==(false), scdf_data)
-		scdf_data = filter(:store => ==("lskv"), scdf_data)
+		scdf_data = filter(:store => ==(lskv_name), scdf_data)
 		scdf_data = filter(:workload => ==("A"), scdf_data)
 		scdf_data = filter(:sig_ms_interval => ==(1000), scdf_data)
 		scdf_data = filter(:nodes => ==(3), scdf_data)
@@ -288,7 +302,7 @@ md"""
 begin
 	commit_df = df_normalized
 	commit_df = filter(:tmpfs => ==(false), commit_df)
-	commit_df = filter(:store => ==("lskv"), commit_df)
+	commit_df = filter(:store => ==(lskv_name), commit_df)
 	commit_df = filter(:enclave => ==("virtual"), commit_df)
 	commit_df = filter(:workload => ==("A"), commit_df)
 	commit_df = filter(:worker_threads => ==(2), commit_df)
@@ -2024,6 +2038,7 @@ version = "3.5.0+0"
 # ╠═4f625b73-22ff-45ea-ad93-a16996efb0ba
 # ╠═bb727ebb-3e9d-4a2a-8a0a-1b64242dcea7
 # ╠═e0d5c0ab-fd4a-44ec-a7a0-3e553bd6a6f3
+# ╠═cd3ffcf4-e73d-4b62-895b-3174bcb118a2
 # ╠═0e01ca36-9e35-46f4-94a9-7a6f783f9aaa
 # ╠═44be5380-5893-4491-9adc-0b9602b6c2a0
 # ╠═94d5f343-ccb0-4fb5-a65a-3787b5f43f4f
