@@ -91,6 +91,23 @@ md"""
 ## Latency CDF per workload
 """
 
+# ╔═╡ 75613a19-5be4-4f48-910c-34b842793988
+function tmpfs_name(t)
+	if t
+		"tmpfs"
+	else
+		"disk"
+	end
+end
+
+# ╔═╡ 7901288a-ff5b-4f7c-8145-3b8151b304b8
+function div_max(df)
+	n = length(df.latency_ms)
+	sort!(df, [:latency_ms])
+	df[!, :cdf] = (1:n)./n
+	return df
+end
+
 # ╔═╡ 5615e577-45ac-450f-8aa5-ca53cf852152
 begin
 	function count_configs(df, ignore_cols)
@@ -110,30 +127,23 @@ begin
 	count_configs(scatter_data, ["workload", "system"])
 end
 
-# ╔═╡ 77e5c97d-bebe-4ba7-a994-7714df9285f5
+# ╔═╡ 4606970e-ae8a-4842-9827-2c4bac177298
 begin
 	cdf_data = df_normalized
-	cdf_data = filter(:tmpfs => ==(false), cdf_data)
 	cdf_data = filter(:nodes => ==(3), cdf_data)
 	cdf_data = filter(:sig_ms_interval => (t -> coalesce(t, 1000) == 1000), cdf_data)
 	cdf_data = filter(:worker_threads => (t -> coalesce(t, 2) == 2), cdf_data)
 	cdf_data = filter(:max_clients => ==(100), cdf_data)
 	cdf_data = filter(:error => ismissing, cdf_data)
 	cdf_df_grouped = groupby(cdf_data, config_cols)
-	function div_max(df)
-		n = length(df.latency_ms)
-		sort!(df, [:latency_ms])
-		df[!, :cdf] = (1:n)./n
-		return df
-	end
 	df_cdf = combine(cdf_df_grouped, div_max)
-	count_configs(df_cdf, ["workload", "system"])
+	count_configs(df_cdf, ["workload", "system", "tmpfs"])
 end
 
-# ╔═╡ ae4d74b5-c84d-4ff2-886a-ab9d65ad61cf
+# ╔═╡ 033586be-312d-4807-b2b7-9fee0f9db683
 let 
 	data_layer = data(df_cdf)
-	mapping_layer = mapping(:latency_ms => "Latency (ms)", :cdf => "Proportion", col=:workload => nonnumeric, color=:system => "Datastore")
+	mapping_layer = mapping(:latency_ms => "Latency (ms)", :cdf => "Proportion", col=:workload => nonnumeric, row=:tmpfs => tmpfs_name, color=:system => "Datastore")
 	visual_layer = visual(Lines)
 	f = draw(data_layer * mapping_layer * visual_layer, axis=(xscale=log10,), figure=(figure_padding=0, resolution=(1.2*800, 1.2*300),), legend=legend_bottom)
 	save("plots/ycsb-workloads-latency-cdf.$ext", f)
@@ -245,7 +255,6 @@ md"""
 # ╔═╡ 20e39c65-9bd4-41ef-8c0e-2147ae0c86de
 begin
 	throughput_data = df_normalized
-	throughput_data = filter(:tmpfs => ==(false), throughput_data)
 	# group by main variables
 	# calculate throughput on each group in a combine
 	local grouped = groupby(throughput_data, vcat(config_cols, "system"))
@@ -263,9 +272,9 @@ end
 # ╔═╡ 895e5b61-421b-4ca1-84a4-587862994a92
 let
 	data_layer = data(throughput_data)
-	mapping_layer = mapping(:workload => "Workload", :x1 => (x -> x / 1000) => "Throughput (kreq/s)", color=:system => "Datastore", dodge=:system)
+	mapping_layer = mapping(:workload => "Workload", :x1 => (x -> x / 1000) => "Throughput (kreq/s)", color=:system => "Datastore", dodge=:system, row=:tmpfs => tmpfs_name)
 	visual_layer = visual(BarPlot)
-	f = draw(data_layer * mapping_layer * visual_layer, figure=figsize_short, legend=legend_bottom)
+	f = draw(data_layer * mapping_layer * visual_layer, figure=(figure_padding=0, resolution=(scaling*800, scaling*600),), legend=legend_bottom)
 	save("plots/ycsb-workloads-throughput-bar.$ext", f)
 	f
 end
@@ -2024,8 +2033,10 @@ version = "3.5.0+0"
 # ╠═d764173e-1f2d-415e-97a8-00d38625291e
 # ╠═b84e83a3-6730-42f2-8010-2726d9d45335
 # ╟─a08e5c82-6db2-4e24-902c-6280b4a28fa6
-# ╠═77e5c97d-bebe-4ba7-a994-7714df9285f5
-# ╠═ae4d74b5-c84d-4ff2-886a-ab9d65ad61cf
+# ╠═75613a19-5be4-4f48-910c-34b842793988
+# ╠═7901288a-ff5b-4f7c-8145-3b8151b304b8
+# ╠═4606970e-ae8a-4842-9827-2c4bac177298
+# ╠═033586be-312d-4807-b2b7-9fee0f9db683
 # ╠═5615e577-45ac-450f-8aa5-ca53cf852152
 # ╟─b28414d1-1b7e-4238-98c2-8a45ea3ec98c
 # ╠═3e64beb8-222b-43f6-ab7e-c4739f32b997
