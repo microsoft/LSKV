@@ -102,6 +102,10 @@ namespace app::watches
               auto* kv = event->mutable_kv();
               kv->set_key(key);
               kv->set_value(value.get_data());
+              kv->set_create_revision(value.create_revision);
+              kv->set_mod_revision(value.mod_revision);
+              kv->set_version(value.version);
+              kv->set_lease(value.lease);
 
               fill_header(*response.mutable_header());
               watch->stream->stream_msg(response);
