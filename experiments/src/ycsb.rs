@@ -132,18 +132,18 @@ impl Experiment for YcsbExperiment {
                 configs.push(config);
             }
         }
-        for store_config in &store_configs {
-            let config = Config {
-                store_config: store_config.clone(),
-                rate,
-                total: rate * 10,
-                workload: YcsbWorkload::AWatch,
-                nodes: 3,
-                tmpfs: false,
-                max_clients: Some(100),
-            };
-            configs.push(config);
-        }
+        // for store_config in &store_configs {
+        //     let config = Config {
+        //         store_config: store_config.clone(),
+        //         rate,
+        //         total: rate * 10,
+        //         workload: YcsbWorkload::AWatch,
+        //         nodes: 3,
+        //         tmpfs: false,
+        //         max_clients: Some(100),
+        //     };
+        //     configs.push(config);
+        // }
         configs
     }
 
