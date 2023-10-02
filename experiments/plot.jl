@@ -5,16 +5,10 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ cb59c6e2-50ad-11ee-3d3b-15d7fe42c267
-using AlgebraOfGraphics, CairoMakie, DataFrames, CSV
+using AlgebraOfGraphics, CairoMakie, DataFrames, CSV, CategoricalArrays
 
 # ╔═╡ 87f8e96e-142a-4cd4-a9c7-1067455e9bf0
 results_path = "results/results.csv"
-
-# ╔═╡ a891b391-ca0f-4de8-a513-67f569b892d5
-# ╠═╡ disabled = true
-#=╠═╡
-set_aog_theme!()
-  ╠═╡ =#
 
 # ╔═╡ 99d2d080-0972-4bc0-9405-25d7304c97a8
 scaling = 0.6
@@ -37,16 +31,26 @@ begin
 	lskv_name = if anon; "CKVS"; else; "LSKV"; end
 end
 
-# ╔═╡ 0e01ca36-9e35-46f4-94a9-7a6f783f9aaa
-df = CSV.read(results_path, DataFrame)
-
 # ╔═╡ 44be5380-5893-4491-9adc-0b9602b6c2a0
-config_cols = ["rate", "total", "workload", "nodes", "tmpfs", "store", "enclave", "worker_threads", "sig_tx_interval", "sig_ms_interval", "ledger_chunk_bytes", "snapshot_tx_interval", "max_clients"]
+config_cols = ["rate", "total", "workload", "nodes", "tmpfs", "store", "enclave", "worker_threads", "sig_tx_interval", "sig_ms_interval", "ledger_chunk_bytes", "snapshot_tx_interval", "max_clients", "repeat"]
+
+# ╔═╡ caee8077-1985-4ef0-9fda-429cdffb12b3
+categorical_cols = filter(x -> x!="tmpfs", vcat(config_cols, ["error", "client", "operation"]))
+
+# ╔═╡ 0e01ca36-9e35-46f4-94a9-7a6f783f9aaa
+begin
+	df = CSV.read(results_path, DataFrame)
+	df = transform(df, categorical_cols .=> x -> categorical(x, compress=true), renamecols=false)
+end
+
+# ╔═╡ 9623569a-b683-41e2-a9dc-8cdac74d4fb9
+Base.summarysize(df)
 
 # ╔═╡ 94d5f343-ccb0-4fb5-a65a-3787b5f43f4f
 begin
 	# normalize start times
 	grouped = groupby(df, config_cols)
+	println("Grouped")
 	function subtract_min(df)
 		min = minimum(df.start_ns)
 		
@@ -63,18 +67,23 @@ begin
 		end
 	end
 	df_normalized = combine(grouped, subtract_min)
+	println("A")
 	# add latency
 	latency_ns = df_normalized.end_ns .- df_normalized.start_ns
 	df_normalized[!, "latency_ns"] = latency_ns
-	df_normalized[!, "start_s"] = df_normalized.start_ns ./ 1_000_000_000
-	df_normalized[!, "latency_ms"] = df_normalized.latency_ns ./ 1_000_000
-	df_normalized[!, "store"] = map(anon_name, df_normalized.store)
-	hyphenate(x) = if isempty(x); return ""; else; return "-$x"; end
-	df_normalized[!, "system"] = string.(df_normalized.store, map(hyphenate, coalesce.(df_normalized.enclave, "")))
-	df_normalized[!, "system_op"] = string.(df_normalized.system, "-", df_normalized.operation)
-	df_normalized.revision .-= 100000
-	df_normalized.committed_revision .-= 100000
+	println("D")
+	hyphenate(x) = if isempty(String(x)); return ""; else; return "-$x"; end
+	df_normalized[!, "system"] = categorical(string.(df_normalized.store, map(hyphenate, coalesce.(df_normalized.enclave, ""))), compress=true)
+	# df_normalized[!, "system_op"] = string.(df_normalized.system, "-", df_normalized.operation)
+	println("G")
+	# df_normalized.revision .-= 100000
+	# println("H")
+	# df_normalized.committed_revision .-= 100000
+	# println("I")
 end
+
+# ╔═╡ 95831631-eeca-4a63-899d-b2284794325a
+Base.summarysize(df_normalized)
 
 # ╔═╡ e450b2de-8bce-4d62-8309-84a19ae41380
 filter(:latency_ns => >=(100000000), filter(:operation => ==("rmw"), filter(:operation => !ismissing, df_normalized)))
@@ -89,17 +98,6 @@ md"""
 ## Scatter plot of workloads
 """
 
-# ╔═╡ b84e83a3-6730-42f2-8010-2726d9d45335
-# ╠═╡ disabled = true
-#=╠═╡
-let
-	data_layer = data(scatter_data)
-	mapping_layer = mapping(:start_s, :latency_ms, layout=:workload => nonnumeric, color=:system)
-	visual_layer = visual(Scatter)
-	draw(data_layer * mapping_layer * visual_layer, axis=(yscale=log10,))
-end
-  ╠═╡ =#
-
 # ╔═╡ a08e5c82-6db2-4e24-902c-6280b4a28fa6
 md"""
 ## Latency CDF per workload
@@ -107,7 +105,7 @@ md"""
 
 # ╔═╡ 75613a19-5be4-4f48-910c-34b842793988
 function tmpfs_name(t)
-	if t
+	if Bool(t)
 		"tmpfs"
 	else
 		"disk"
@@ -116,8 +114,8 @@ end
 
 # ╔═╡ 7901288a-ff5b-4f7c-8145-3b8151b304b8
 function div_max(df)
-	n = length(df.latency_ms)
-	sort!(df, [:latency_ms])
+	n = length(df.latency_ns)
+	sort!(df, [:latency_ns])
 	df[!, :cdf] = (1:n)./n
 	return df
 end
@@ -145,6 +143,8 @@ end
 begin
 	cdf_data = df_normalized
 	cdf_data = filter(:nodes => ==(3), cdf_data)
+	cdf_data = filter(:workload => ==("A"), cdf_data)
+	cdf_data = filter(:tmpfs => ==(false), cdf_data)
 	cdf_data = filter(:sig_ms_interval => (t -> coalesce(t, 1000) == 1000), cdf_data)
 	cdf_data = filter(:worker_threads => (t -> coalesce(t, 2) == 2), cdf_data)
 	cdf_data = filter(:max_clients => ==(100), cdf_data)
@@ -157,8 +157,8 @@ end
 # ╔═╡ 033586be-312d-4807-b2b7-9fee0f9db683
 let 
 	data_layer = data(df_cdf)
-	mapping_layer = mapping(:latency_ms => "Latency (ms)", :cdf => "Proportion", col=:workload => nonnumeric, row=:tmpfs => tmpfs_name, color=:system => "Datastore")
-	visual_layer = visual(Lines)
+	mapping_layer = mapping(:latency_ns => "Latency (ns)", :cdf => "Proportion", col=:workload => nonnumeric, row=:tmpfs => tmpfs_name, color=:system => "Datastore", lower=:cdf => (t -> t - t*0.1), upper=:cdf => (t->t+t*0.05))
+	visual_layer = visual(LinesFill)
 	f = draw(data_layer * mapping_layer * visual_layer, axis=(xscale=log10,), figure=(figure_padding=0, resolution=(1.2*800, 1.2*300),), legend=legend_bottom)
 	save("plots/ycsb-workloads-latency-cdf.$ext", f)
 	f
@@ -173,7 +173,7 @@ md"""
 begin
 	scdf_data = df_normalized
 	scdf_data = filter(:tmpfs => ==(false), scdf_data)
-	scdf_data = filter(:store => ==(lskv_name), scdf_data)
+	scdf_data = filter(:store => ==("lskv"), scdf_data)
 	scdf_data = filter(:workload => ==("A"), scdf_data)
 	scdf_data = filter(:sig_ms_interval => (t -> coalesce(t, 1000) == 1000), scdf_data)
 	scdf_data = filter(:worker_threads => (t -> coalesce(t, 2) == 2), scdf_data)
@@ -188,7 +188,7 @@ end
 # ╔═╡ 0f0f3e68-6610-4e28-97e6-cf65ade564e4
 let 
 	data_layer = data(df_scdf)
-	mapping_layer = mapping(:latency_ms => "Latency (ms)", :cdf => "Proportion", col=:system => nonnumeric, row=:operation => nonnumeric, color=:nodes => nonnumeric => "Nodes")
+	mapping_layer = mapping(:latency_ns => "Latency (ns)", :cdf => "Proportion", col=:system => nonnumeric, row=:operation => nonnumeric, color=:nodes => nonnumeric => "Nodes")
 	visual_layer = visual(Lines)
 	f = draw(data_layer * mapping_layer * visual_layer, axis=(xscale=log10,), figure=figsize, legend=legend_bottom)
 	save("plots/ycsb-a-scalability-cdf.$ext", f)
@@ -205,7 +205,7 @@ begin
 	function cdf_sig_ms_interval_data()
 		scdf_data = df_normalized
 		scdf_data = filter(:tmpfs => ==(false), scdf_data)
-		scdf_data = filter(:store => ==(lskv_name), scdf_data)
+		scdf_data = filter(:store => ==("lskv"), scdf_data)
 		scdf_data = filter(:workload => ==("A"), scdf_data)
 		scdf_data = filter(:worker_threads => ==(2), scdf_data)
 		scdf_data = filter(:nodes => ==(3), scdf_data)
@@ -221,7 +221,7 @@ end
 # ╔═╡ 0516952b-6fd3-49da-be1b-d9456a1f1471
 let 
 	data_layer = data(df_sig_ms_interval)
-	mapping_layer = mapping(:latency_ms => "Latency (ms)", :cdf => "Proportion", col=:system => nonnumeric, row=:operation => nonnumeric, color=:sig_ms_interval => nonnumeric => "Signature interval (ms)")
+	mapping_layer = mapping(:latency_ns => "Latency (ns)", :cdf => "Proportion", col=:system => nonnumeric, row=:operation => nonnumeric, color=:sig_ms_interval => nonnumeric => "Signature interval (ms)")
 	visual_layer = visual(Lines)
 	f = draw(data_layer * mapping_layer * visual_layer, axis=(xscale=log10,), figure=figsize, legend=legend_bottom)
 	save("plots/ycsb-a-siginterval-cdf.$ext", f)
@@ -238,7 +238,7 @@ begin
 	function cdf_worker_threads_data()
 		scdf_data = df_normalized
 		scdf_data = filter(:tmpfs => ==(false), scdf_data)
-		scdf_data = filter(:store => ==(lskv_name), scdf_data)
+		scdf_data = filter(:store => ==("lskv"), scdf_data)
 		scdf_data = filter(:workload => ==("A"), scdf_data)
 		scdf_data = filter(:sig_ms_interval => ==(1000), scdf_data)
 		scdf_data = filter(:nodes => ==(3), scdf_data)
@@ -254,7 +254,7 @@ end
 # ╔═╡ 173ad00d-ce09-4fd8-ad9d-df1d27b32112
 let 
 	data_layer = data(df_worker_threads)
-	mapping_layer = mapping(:latency_ms => "Latency (ms)", :cdf => "Proportion", col=:system => nonnumeric, row=:operation => nonnumeric, color=:worker_threads => nonnumeric => "Worker threads")
+	mapping_layer = mapping(:latency_ns => "Latency (ns)", :cdf => "Proportion", col=:system => nonnumeric, row=:operation => nonnumeric, color=:worker_threads => nonnumeric => "Worker threads")
 	visual_layer = visual(Lines)
 	f = draw(data_layer * mapping_layer * visual_layer, axis=(xscale=log10,), figure=figsize, legend=legend_bottom)
 	save("plots/ycsb-a-workerthreads-cdf.$ext", f)
@@ -272,7 +272,7 @@ begin
 	# group by main variables
 	# calculate throughput on each group in a combine
 	local grouped = groupby(throughput_data, vcat(config_cols, "system"))
-	local function tp(df)
+	function tp(df)
 		s = minimum(df.start_ns) / 1_000_000_000
 		e = maximum(df.end_ns) / 1_000_000_000
 		len = size(df, 1)
@@ -302,7 +302,7 @@ md"""
 begin
 	commit_df = df_normalized
 	commit_df = filter(:tmpfs => ==(false), commit_df)
-	commit_df = filter(:store => ==(lskv_name), commit_df)
+	commit_df = filter(:store => ==("lskv"), commit_df)
 	commit_df = filter(:enclave => ==("virtual"), commit_df)
 	commit_df = filter(:workload => ==("A"), commit_df)
 	commit_df = filter(:worker_threads => ==(2), commit_df)
@@ -311,7 +311,7 @@ begin
 	commit_df = filter(:error => ismissing, commit_df)
 	commit_df.revision ./= 10000
 	commit_df.committed_revision ./= 10000
-	commit_df = sort(commit_df, :start_s)
+	commit_df = sort(commit_df, :start_ns)
 
 	count_configs(commit_df, [])
 end
@@ -319,7 +319,7 @@ end
 # ╔═╡ c853c0eb-fc8a-4ee1-b072-59e05f9399f8
 function plot_commit_latency(df) 
 	data_layer = data(df)
-	mapping_layer = mapping(:start_s => "Time (s)", [:revision, :committed_revision] .=> "Revision (x10k)", color=dims(1) => c -> ["Txn revision", "Committed revision"][c])
+	mapping_layer = mapping(:start_ns => "Time (ns)", [:revision, :committed_revision] .=> "Revision (x10k)", color=dims(1) => c -> ["Txn revision", "Committed revision"][c])
 	visual_layer = visual(Lines)
 	draw(data_layer * mapping_layer * visual_layer, figure=figsize_short, axis=(yticks=0:1:5,), legend=legend_bottom)
 end
@@ -337,12 +337,14 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 
 [compat]
 AlgebraOfGraphics = "~0.6.16"
 CSV = "~0.10.11"
 CairoMakie = "~0.10.8"
+CategoricalArrays = "~0.10.8"
 DataFrames = "~1.6.1"
 """
 
@@ -352,7 +354,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.9.3"
 manifest_format = "2.0"
-project_hash = "23adb28b59efb5daa8ecda0ebd07f6014005aec1"
+project_hash = "4abf3b824985602059c32a48cd70bd66e981ce49"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -502,6 +504,24 @@ deps = ["LinearAlgebra"]
 git-tree-sha1 = "f641eb0a4f00c343bbc32346e1217b86f3ce9dad"
 uuid = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
 version = "0.5.1"
+
+[[deps.CategoricalArrays]]
+deps = ["DataAPI", "Future", "Missings", "Printf", "Requires", "Statistics", "Unicode"]
+git-tree-sha1 = "1568b28f91293458345dabba6a5ea3f183250a61"
+uuid = "324d7699-5711-5eae-9e2f-1d82baa6b597"
+version = "0.10.8"
+
+    [deps.CategoricalArrays.extensions]
+    CategoricalArraysJSONExt = "JSON"
+    CategoricalArraysRecipesBaseExt = "RecipesBase"
+    CategoricalArraysSentinelArraysExt = "SentinelArrays"
+    CategoricalArraysStructTypesExt = "StructTypes"
+
+    [deps.CategoricalArrays.weakdeps]
+    JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+    RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+    SentinelArrays = "91c51154-3ec4-41a3-a24f-3f23e20d615c"
+    StructTypes = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
@@ -2032,21 +2052,22 @@ version = "3.5.0+0"
 # ╔═╡ Cell order:
 # ╠═cb59c6e2-50ad-11ee-3d3b-15d7fe42c267
 # ╠═87f8e96e-142a-4cd4-a9c7-1067455e9bf0
-# ╠═a891b391-ca0f-4de8-a513-67f569b892d5
 # ╠═99d2d080-0972-4bc0-9405-25d7304c97a8
 # ╠═b78a87fc-5e3e-421e-95c1-dfdea7e56e2a
 # ╠═4f625b73-22ff-45ea-ad93-a16996efb0ba
 # ╠═bb727ebb-3e9d-4a2a-8a0a-1b64242dcea7
 # ╠═e0d5c0ab-fd4a-44ec-a7a0-3e553bd6a6f3
 # ╠═cd3ffcf4-e73d-4b62-895b-3174bcb118a2
-# ╠═0e01ca36-9e35-46f4-94a9-7a6f783f9aaa
 # ╠═44be5380-5893-4491-9adc-0b9602b6c2a0
+# ╠═caee8077-1985-4ef0-9fda-429cdffb12b3
+# ╠═0e01ca36-9e35-46f4-94a9-7a6f783f9aaa
+# ╠═9623569a-b683-41e2-a9dc-8cdac74d4fb9
 # ╠═94d5f343-ccb0-4fb5-a65a-3787b5f43f4f
+# ╠═95831631-eeca-4a63-899d-b2284794325a
 # ╠═e450b2de-8bce-4d62-8309-84a19ae41380
 # ╟─4a675a56-e13b-4f91-9e55-b3d6dd86eb32
 # ╟─e924affa-5b2b-46f1-96be-08c813f41c71
 # ╠═d764173e-1f2d-415e-97a8-00d38625291e
-# ╠═b84e83a3-6730-42f2-8010-2726d9d45335
 # ╟─a08e5c82-6db2-4e24-902c-6280b4a28fa6
 # ╠═75613a19-5be4-4f48-910c-34b842793988
 # ╠═7901288a-ff5b-4f7c-8145-3b8151b304b8
