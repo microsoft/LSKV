@@ -5,7 +5,7 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ cb59c6e2-50ad-11ee-3d3b-15d7fe42c267
-using AlgebraOfGraphics, CairoMakie, DataFrames, CSV, CategoricalArrays
+using AlgebraOfGraphics, CairoMakie, DataFrames, CSV, CategoricalArrays, Statistics
 
 # ╔═╡ 87f8e96e-142a-4cd4-a9c7-1067455e9bf0
 results_path = "results/results.csv"
@@ -37,9 +37,33 @@ config_cols = ["rate", "total", "workload", "nodes", "tmpfs", "store", "enclave"
 # ╔═╡ caee8077-1985-4ef0-9fda-429cdffb12b3
 categorical_cols = filter(x -> x!="tmpfs", vcat(config_cols, ["error", "client", "operation"]))
 
+# ╔═╡ 4a675a56-e13b-4f91-9e55-b3d6dd86eb32
+md"""
+# Plotting
+"""
+
+# ╔═╡ 75613a19-5be4-4f48-910c-34b842793988
+function tmpfs_name(t)
+	if Bool(t)
+		"tmpfs"
+	else
+		"disk"
+	end
+end
+
+# ╔═╡ f6b83ac0-66a4-41e2-8a4b-6836da239a18
+function anon_name(name)
+	if name == "lskv" 
+		lskv_name
+	else
+		"etcd"
+	end
+end
+
 # ╔═╡ 0e01ca36-9e35-46f4-94a9-7a6f783f9aaa
 begin
 	df = CSV.read(results_path, DataFrame)
+	df = transform(df, :store => ByRow(anon_name), renamecols=false)
 	df = transform(df, categorical_cols .=> x -> categorical(x, compress=true), renamecols=false)
 end
 
@@ -59,13 +83,7 @@ begin
 	
 	    return df
 	end
-	function anon_name(name)
-		if name == "lskv" 
-			lskv_name
-		else
-			"etcd"
-		end
-	end
+
 	df_normalized = combine(grouped, subtract_min)
 	println("A")
 	# add latency
@@ -88,28 +106,13 @@ Base.summarysize(df_normalized)
 # ╔═╡ e450b2de-8bce-4d62-8309-84a19ae41380
 filter(:latency_ns => >=(100000000), filter(:operation => ==("rmw"), filter(:operation => !ismissing, df_normalized)))
 
-# ╔═╡ 4a675a56-e13b-4f91-9e55-b3d6dd86eb32
-md"""
-# Plotting
-"""
-
-# ╔═╡ e924affa-5b2b-46f1-96be-08c813f41c71
-md"""
-## Scatter plot of workloads
-"""
-
-# ╔═╡ a08e5c82-6db2-4e24-902c-6280b4a28fa6
-md"""
-## Latency CDF per workload
-"""
-
-# ╔═╡ 75613a19-5be4-4f48-910c-34b842793988
-function tmpfs_name(t)
-	if Bool(t)
-		"tmpfs"
-	else
-		"disk"
+# ╔═╡ 5615e577-45ac-450f-8aa5-ca53cf852152
+begin
+	function count_configs(df, ignore_cols)
+		cols = filter(c -> !(c in ignore_cols), config_cols)
+		return combine(groupby(df, cols), first)[:, cols]
 	end
+	count_configs(df_normalized, ["workload"])
 end
 
 # ╔═╡ 7901288a-ff5b-4f7c-8145-3b8151b304b8
@@ -120,14 +123,21 @@ function div_max(df)
 	return df
 end
 
-# ╔═╡ 5615e577-45ac-450f-8aa5-ca53cf852152
-begin
-	function count_configs(df, ignore_cols)
-		cols = filter(c -> !(c in ignore_cols), config_cols)
-		return combine(groupby(df, cols), first)[:, cols]
-	end
-	count_configs(df_normalized, ["workload"])
+# ╔═╡ 61a85fa7-bd36-40ee-a39b-0873420403d3
+function repeats_min_max(df, group_cols)
+	df.latency_ms = df.latency_ns / 1_000_000
+	repeats = groupby(df, vcat(filter(!=("repeat"), group_cols), "cdf"))
+	df = combine(repeats, :latency_ms => median, renamecols=false)
+	df.min = combine(repeats, :latency_ms => minimum, renamecols=false).latency_ms
+	df.max = combine(repeats, :latency_ms => maximum, renamecols=false).latency_ms
+	sort!(df, [:cdf])
+	df
 end
+
+# ╔═╡ e924affa-5b2b-46f1-96be-08c813f41c71
+md"""
+## Scatter plot of workloads
+"""
 
 # ╔═╡ d764173e-1f2d-415e-97a8-00d38625291e
 begin
@@ -139,27 +149,37 @@ begin
 	count_configs(scatter_data, ["workload", "system"])
 end
 
+# ╔═╡ a08e5c82-6db2-4e24-902c-6280b4a28fa6
+md"""
+## Latency CDF per workload
+"""
+
 # ╔═╡ 4606970e-ae8a-4842-9827-2c4bac177298
 begin
 	cdf_data = df_normalized
 	cdf_data = filter(:nodes => ==(3), cdf_data)
-	cdf_data = filter(:workload => ==("A"), cdf_data)
-	cdf_data = filter(:tmpfs => ==(false), cdf_data)
+	# cdf_data = filter(:tmpfs => ==(false), cdf_data)
 	cdf_data = filter(:sig_ms_interval => (t -> coalesce(t, 1000) == 1000), cdf_data)
 	cdf_data = filter(:worker_threads => (t -> coalesce(t, 2) == 2), cdf_data)
 	cdf_data = filter(:max_clients => ==(100), cdf_data)
-	cdf_data = filter(:error => ismissing, cdf_data)
-	cdf_df_grouped = groupby(cdf_data, config_cols)
+	# cdf_data = filter(:error => ismissing, cdf_data)
+	local group_cols = vcat(config_cols, "system")
+	cdf_df_grouped = groupby(cdf_data, group_cols)
 	df_cdf = combine(cdf_df_grouped, div_max)
-	count_configs(df_cdf, ["workload", "system", "tmpfs"])
+	df_cdf = repeats_min_max(df_cdf, group_cols)
+
+	count_configs(df_cdf, ["workload", "system", "tmpfs", "repeat"])
 end
+
+# ╔═╡ c8bde83b-94ad-42c1-b940-792ac60735b7
+size(df_cdf)
 
 # ╔═╡ 033586be-312d-4807-b2b7-9fee0f9db683
 let 
 	data_layer = data(df_cdf)
-	mapping_layer = mapping(:latency_ns => "Latency (ns)", :cdf => "Proportion", col=:workload => nonnumeric, row=:tmpfs => tmpfs_name, color=:system => "Datastore", lower=:cdf => (t -> t - t*0.1), upper=:cdf => (t->t+t*0.05))
+	mapping_layer = mapping(:cdf => "Proportion", :latency_ms => "Latency (ms)", col=:workload => nonnumeric, row=:tmpfs => tmpfs_name, color=:system => "Datastore", lower=:min, upper=:max)
 	visual_layer = visual(LinesFill)
-	f = draw(data_layer * mapping_layer * visual_layer, axis=(xscale=log10,), figure=(figure_padding=0, resolution=(1.2*800, 1.2*300),), legend=legend_bottom)
+	f = draw(data_layer * mapping_layer * visual_layer, axis=(yscale=log10,), figure=(figure_padding=0, resolution=(1.2*800, 1.2*300),), legend=legend_bottom)
 	save("plots/ycsb-workloads-latency-cdf.$ext", f)
 	f
 end
@@ -169,28 +189,73 @@ md"""
 ## Latency CDF scaling
 """
 
+# ╔═╡ dc0b12e3-e110-43fc-9227-0dff69ed9ff5
+begin
+	local scdf_data = df_normalized
+	local scdf_data = filter(:tmpfs => ==(false), scdf_data)
+	local scdf_data = filter(:store => ==(lskv_name), scdf_data)
+	local scdf_data = filter(:workload => ==("A"), scdf_data)
+	local scdf_data = filter(:repeat => ==(1), scdf_data)
+	local scdf_data = filter(:sig_ms_interval => (t -> coalesce(t, 1000) == 1000), scdf_data)
+	local scdf_data = filter(:worker_threads => (t -> coalesce(t, 2) == 2), scdf_data)
+	local scdf_data = filter(:max_clients => ==(100), scdf_data)
+	# scdf_data = filter(:error => ismissing, scdf_data)
+	local group_cols = vcat(config_cols, "operation", "system")
+	local scdf_df_grouped = groupby(scdf_data, group_cols)
+	
+	df_scdf_single = combine(scdf_df_grouped, div_max)
+
+	count_configs(df_scdf_single, ["system", "operation", "nodes", "repeat"])
+end
+
+# ╔═╡ 509dcb50-c4d6-452f-81ca-50f7e1837a7f
+size(df_scdf_single)
+
+# ╔═╡ aa1a54d9-24a2-48d1-9678-74266dc421ac
+let 
+	data_layer = data(df_scdf_single)
+	mapping_layer = mapping(:cdf => "Proportion", :latency_ns => "Latency (ns)", col=:system => nonnumeric, row=:operation => nonnumeric, color=:nodes => nonnumeric => "Nodes")
+	visual_layer = visual(Lines)
+	f = draw(data_layer * mapping_layer * visual_layer, axis=(yscale=log10,), figure=figsize, legend=legend_bottom)
+	save("plots/ycsb-a-scalability-cdf-single.$ext", f)
+	f
+end
+
+# ╔═╡ 78869b97-dc5f-42c4-a415-5391e0ef016d
+md"""
+#### With grouping repeats
+"""
+
 # ╔═╡ 3e64beb8-222b-43f6-ab7e-c4739f32b997
 begin
 	scdf_data = df_normalized
 	scdf_data = filter(:tmpfs => ==(false), scdf_data)
-	scdf_data = filter(:store => ==("lskv"), scdf_data)
+	scdf_data = filter(:store => ==(lskv_name), scdf_data)
 	scdf_data = filter(:workload => ==("A"), scdf_data)
+	scdf_data = filter(:repeat => (r -> r in [2, 3]), scdf_data)
 	scdf_data = filter(:sig_ms_interval => (t -> coalesce(t, 1000) == 1000), scdf_data)
 	scdf_data = filter(:worker_threads => (t -> coalesce(t, 2) == 2), scdf_data)
 	scdf_data = filter(:max_clients => ==(100), scdf_data)
-	scdf_data = filter(:error => ismissing, scdf_data)
-	scdf_df_grouped = groupby(scdf_data, vcat(config_cols, "operation"))
+	# scdf_data = filter(:error => ismissing, scdf_data)
+	# local group_cols = vcat(config_cols, "operation", "system")
+	local group_cols = vcat(config_cols, "system")
+	scdf_df_grouped = groupby(scdf_data, group_cols)
 	
 	df_scdf = combine(scdf_df_grouped, div_max)
-	count_configs(df_scdf, ["system", "nodes"])
+	df_scdf = repeats_min_max(df_scdf, group_cols)
+
+	count_configs(df_scdf, ["system", "operation", "nodes", "repeat"])
 end
+
+# ╔═╡ a743cea4-f90c-499a-92b0-978bd9de9be2
+size(df_scdf)
 
 # ╔═╡ 0f0f3e68-6610-4e28-97e6-cf65ade564e4
 let 
 	data_layer = data(df_scdf)
-	mapping_layer = mapping(:latency_ns => "Latency (ns)", :cdf => "Proportion", col=:system => nonnumeric, row=:operation => nonnumeric, color=:nodes => nonnumeric => "Nodes")
-	visual_layer = visual(Lines)
-	f = draw(data_layer * mapping_layer * visual_layer, axis=(xscale=log10,), figure=figsize, legend=legend_bottom)
+	mapping_layer = mapping(:cdf => "Proportion", :latency_ms => "Latency (ms)", col=:system => nonnumeric, color=:nodes => nonnumeric => "Nodes", lower=:min, upper=:max)
+	visual_layer = visual(LinesFill)
+	f = draw(data_layer * mapping_layer * visual_layer, axis=(yscale=log10,), figure=figsize_short, legend=legend_bottom)
 	save("plots/ycsb-a-scalability-cdf.$ext", f)
 	f
 end
@@ -202,28 +267,65 @@ md"""
 
 # ╔═╡ 070c266c-5102-4efa-8fa3-79d3486c3bc9
 begin
-	function cdf_sig_ms_interval_data()
+	local group_cols = vcat(config_cols, "operation", "system")
+	local function cdf_sig_ms_interval_data_single()
 		scdf_data = df_normalized
 		scdf_data = filter(:tmpfs => ==(false), scdf_data)
-		scdf_data = filter(:store => ==("lskv"), scdf_data)
+		scdf_data = filter(:store => ==(lskv_name), scdf_data)
 		scdf_data = filter(:workload => ==("A"), scdf_data)
+		scdf_data = filter(:repeat => ==(1), scdf_data)
 		scdf_data = filter(:worker_threads => ==(2), scdf_data)
 		scdf_data = filter(:nodes => ==(3), scdf_data)
 		scdf_data = filter(:max_clients => ==(100), scdf_data)
 		scdf_data = filter(:error => ismissing, scdf_data)
-		scdf_df_grouped = groupby(scdf_data, vcat(config_cols, "operation"))
+		scdf_df_grouped = groupby(scdf_data, group_cols)
 		return combine(scdf_df_grouped, div_max)
 	end
-	df_sig_ms_interval = cdf_sig_ms_interval_data()
-	count_configs(df_sig_ms_interval, ["system", "sig_ms_interval"])
+	df_sig_ms_interval_single = cdf_sig_ms_interval_data_single()
+	count_configs(df_sig_ms_interval_single, ["system", "sig_ms_interval", "repeat"])
 end
 
 # ╔═╡ 0516952b-6fd3-49da-be1b-d9456a1f1471
 let 
-	data_layer = data(df_sig_ms_interval)
-	mapping_layer = mapping(:latency_ns => "Latency (ns)", :cdf => "Proportion", col=:system => nonnumeric, row=:operation => nonnumeric, color=:sig_ms_interval => nonnumeric => "Signature interval (ms)")
+	data_layer = data(df_sig_ms_interval_single)
+	mapping_layer = mapping(:cdf => "Proportion", :latency_ns => "Latency (ns)", col=:system => nonnumeric, row=:operation => nonnumeric, color=:sig_ms_interval => nonnumeric => "Signature interval (ms)")
 	visual_layer = visual(Lines)
-	f = draw(data_layer * mapping_layer * visual_layer, axis=(xscale=log10,), figure=figsize, legend=legend_bottom)
+	f = draw(data_layer * mapping_layer * visual_layer, axis=(yscale=log10,), figure=figsize, legend=legend_bottom)
+	save("plots/ycsb-a-siginterval-cdf-single.$ext", f)
+	f
+end
+
+# ╔═╡ e359e3fc-a55c-4b26-a90d-f0574164fa42
+md"""
+#### With grouping repeats
+"""
+
+# ╔═╡ eadd15a9-0ed8-4139-9180-6c0f67c13e54
+begin
+	local group_cols = vcat(config_cols, "system")
+	local function cdf_sig_ms_interval_data()
+		scdf_data = df_normalized
+		scdf_data = filter(:tmpfs => ==(false), scdf_data)
+		scdf_data = filter(:store => ==(lskv_name), scdf_data)
+		scdf_data = filter(:workload => ==("A"), scdf_data)
+		scdf_data = filter(:worker_threads => ==(2), scdf_data)
+		scdf_data = filter(:nodes => ==(3), scdf_data)
+		scdf_data = filter(:max_clients => ==(100), scdf_data)
+		# scdf_data = filter(:error => ismissing, scdf_data)
+		scdf_df_grouped = groupby(scdf_data, group_cols)
+		return combine(scdf_df_grouped, div_max)
+	end
+	df_sig_ms_interval = cdf_sig_ms_interval_data()
+	df_sig_ms_interval = repeats_min_max(df_sig_ms_interval, group_cols)
+	count_configs(df_sig_ms_interval, ["system", "sig_ms_interval", "repeat"])
+end
+
+# ╔═╡ cb3f1af9-9226-4052-9599-fdbdeadcac0f
+let 
+	data_layer = data(df_sig_ms_interval)
+	mapping_layer = mapping(:cdf => "Proportion", :latency_ms => "Latency (ms)", col=:system => nonnumeric, color=:sig_ms_interval => nonnumeric => "Signature interval (ms)", lower=:min, upper=:max)
+	visual_layer = visual(LinesFill)
+	f = draw(data_layer * mapping_layer * visual_layer, axis=(yscale=log10,), figure=figsize_short, legend=legend_bottom)
 	save("plots/ycsb-a-siginterval-cdf.$ext", f)
 	f
 end
@@ -235,28 +337,74 @@ md"""
 
 # ╔═╡ 60608e57-036f-4424-96bc-dd0bee7c15d5
 begin
+	local group_cols = vcat(config_cols, "operation", "system")
+	function cdf_worker_threads_data_single()
+		scdf_data = df_normalized
+		scdf_data = filter(:tmpfs => ==(false), scdf_data)
+		scdf_data = filter(:store => ==(lskv_name), scdf_data)
+		scdf_data = filter(:workload => ==("A"), scdf_data)
+		scdf_data = filter(:repeat => ==(1), scdf_data)
+		scdf_data = filter(:sig_ms_interval => ==(1000), scdf_data)
+		scdf_data = filter(:nodes => ==(3), scdf_data)
+		scdf_data = filter(:max_clients => ==(100), scdf_data)
+		# scdf_data = filter(:error => ismissing, scdf_data)
+		scdf_df_grouped = groupby(scdf_data, group_cols)
+		return combine(scdf_df_grouped, div_max)
+	end
+	df_worker_threads_single = cdf_worker_threads_data_single()
+	# df_worker_threads = repeats_min_max(df_worker_threads, group_cols)
+	count_configs(df_worker_threads_single, ["system", "worker_threads",
+	 "repeat"])
+end
+
+# ╔═╡ 4d769789-442b-4eea-9a12-46f7560dbddb
+size(df_worker_threads_single)
+
+# ╔═╡ 173ad00d-ce09-4fd8-ad9d-df1d27b32112
+let 
+	data_layer = data(df_worker_threads_single)
+	mapping_layer = mapping(:cdf => "Proportion", :latency_ns => "Latency (ns)", col=:system => nonnumeric, row=:operation => nonnumeric, color=:worker_threads => nonnumeric => "Worker threads")
+	visual_layer = visual(Lines)
+	f = draw(data_layer * mapping_layer * visual_layer, axis=(yscale=log10,), figure=figsize, legend=legend_bottom)
+	save("plots/ycsb-a-workerthreads-cdf-single.$ext", f)
+	f
+end
+
+# ╔═╡ 277a43fc-f73a-414f-ad47-a970eb9846d4
+md"""
+#### With grouped repeats
+"""
+
+# ╔═╡ 80e6b067-13c6-4c27-b638-63c410b24dbd
+begin
+	local group_cols = vcat(config_cols, "system")
 	function cdf_worker_threads_data()
 		scdf_data = df_normalized
 		scdf_data = filter(:tmpfs => ==(false), scdf_data)
-		scdf_data = filter(:store => ==("lskv"), scdf_data)
+		scdf_data = filter(:store => ==(lskv_name), scdf_data)
 		scdf_data = filter(:workload => ==("A"), scdf_data)
 		scdf_data = filter(:sig_ms_interval => ==(1000), scdf_data)
 		scdf_data = filter(:nodes => ==(3), scdf_data)
 		scdf_data = filter(:max_clients => ==(100), scdf_data)
-		scdf_data = filter(:error => ismissing, scdf_data)
-		scdf_df_grouped = groupby(scdf_data, vcat(config_cols, "operation"))
+		# scdf_data = filter(:error => ismissing, scdf_data)
+		scdf_df_grouped = groupby(scdf_data, group_cols)
 		return combine(scdf_df_grouped, div_max)
 	end
 	df_worker_threads = cdf_worker_threads_data()
-	count_configs(df_worker_threads, ["system", "worker_threads"])
+	df_worker_threads = repeats_min_max(df_worker_threads, group_cols)
+	count_configs(df_worker_threads, ["system", "worker_threads",
+	 "repeat"])
 end
 
-# ╔═╡ 173ad00d-ce09-4fd8-ad9d-df1d27b32112
+# ╔═╡ e75d836a-a3c6-4074-b425-53c3003935b8
+size(df_worker_threads)
+
+# ╔═╡ 272842ce-0920-4223-898d-ce0b22d70cbd
 let 
 	data_layer = data(df_worker_threads)
-	mapping_layer = mapping(:latency_ns => "Latency (ns)", :cdf => "Proportion", col=:system => nonnumeric, row=:operation => nonnumeric, color=:worker_threads => nonnumeric => "Worker threads")
-	visual_layer = visual(Lines)
-	f = draw(data_layer * mapping_layer * visual_layer, axis=(xscale=log10,), figure=figsize, legend=legend_bottom)
+	mapping_layer = mapping(:cdf => "Proportion", :latency_ms => "Latency (ms)", col=:system => nonnumeric, color=:worker_threads => nonnumeric => "Worker threads", lower=:min, upper=:max)
+	visual_layer = visual(LinesFill)
+	f = draw(data_layer * mapping_layer * visual_layer, axis=(yscale=log10,), figure=figsize_short, legend=legend_bottom)
 	save("plots/ycsb-a-workerthreads-cdf.$ext", f)
 	f
 end
@@ -266,9 +414,12 @@ md"""
 ## Max throughput per run
 """
 
-# ╔═╡ 20e39c65-9bd4-41ef-8c0e-2147ae0c86de
+# ╔═╡ f4436917-015b-4f2e-a1ed-83eeb7410cc9
 begin
 	throughput_data = df_normalized
+	throughput_data = filter(:nodes => ==(3), throughput_data)
+	throughput_data = filter(:worker_threads => (t -> coalesce(t, 2) == 2), throughput_data)
+	throughput_data = filter(:sig_ms_interval => (t -> coalesce(t, 1000) == 1000), throughput_data)
 	# group by main variables
 	# calculate throughput on each group in a combine
 	local grouped = groupby(throughput_data, vcat(config_cols, "system"))
@@ -279,17 +430,25 @@ begin
 	
 	    return len/(e-s)
 	end
+
 	throughput_data = combine(grouped, tp)
-	count_configs(throughput_data, ["workload", "system"])
+	# throughput_data = repeats_min_max_tp(throughput_data, vcat(config_cols, "system"))
 end
 
-# ╔═╡ 895e5b61-421b-4ca1-84a4-587862994a92
+# ╔═╡ 4bb194bd-8acc-496b-a722-87c303a6c6e8
+count_configs(throughput_data, ["workload", "system", "tmpfs", "repeat"])
+
+# ╔═╡ 97686498-d99e-4fff-8198-f9e202449a84
+size(throughput_data)
+
+# ╔═╡ 5ace1bf9-ed69-4a0f-952c-e4655f19aab9
 let
 	data_layer = data(throughput_data)
 	mapping_layer = mapping(:workload => "Workload", :x1 => (x -> x / 1000) => "Throughput (kreq/s)", color=:system => "Datastore", dodge=:system, row=:tmpfs => tmpfs_name)
-	visual_layer = visual(BarPlot)
-	f = draw(data_layer * mapping_layer * visual_layer, figure=(figure_padding=0, resolution=(scaling*800, scaling*600),), legend=legend_bottom)
-	save("plots/ycsb-workloads-throughput-bar.$ext", f)
+	visual_layer = visual(BoxPlot)
+	plot = data_layer * mapping_layer * visual_layer
+	f = draw(plot, figure=(figure_padding=0, resolution=(scaling*800, scaling*600),), legend=legend_bottom)
+	save("plots/ycsb-workloads-throughput-box.$ext", f)
 	f
 end
 
@@ -302,15 +461,19 @@ md"""
 begin
 	commit_df = df_normalized
 	commit_df = filter(:tmpfs => ==(false), commit_df)
-	commit_df = filter(:store => ==("lskv"), commit_df)
+	commit_df = filter(:store => ==(lskv_name), commit_df)
 	commit_df = filter(:enclave => ==("virtual"), commit_df)
 	commit_df = filter(:workload => ==("A"), commit_df)
 	commit_df = filter(:worker_threads => ==(2), commit_df)
+	commit_df = filter(:sig_ms_interval => ==(1000), commit_df)
+	commit_df = filter(:repeat => ==(1), commit_df)
 	commit_df = filter(:nodes => ==(3), commit_df)
 	commit_df = filter(:max_clients => ==(100), commit_df)
 	commit_df = filter(:error => ismissing, commit_df)
-	commit_df.revision ./= 10000
-	commit_df.committed_revision ./= 10000
+	commit_df.revision .-= 100_000
+	commit_df.revision ./= 10_000
+	commit_df.committed_revision .-= 100_000
+	commit_df.committed_revision ./= 10_000
 	commit_df = sort(commit_df, :start_ns)
 
 	count_configs(commit_df, [])
@@ -319,9 +482,9 @@ end
 # ╔═╡ c853c0eb-fc8a-4ee1-b072-59e05f9399f8
 function plot_commit_latency(df) 
 	data_layer = data(df)
-	mapping_layer = mapping(:start_ns => "Time (ns)", [:revision, :committed_revision] .=> "Revision (x10k)", color=dims(1) => c -> ["Txn revision", "Committed revision"][c])
+	mapping_layer = mapping(:start_ns => (t -> t / 1_000_000_000) => "Time (s)", [:revision, :committed_revision] .=> "Revision (x10k)", color=dims(1) => c -> ["Txn revision", "Committed revision"][c])
 	visual_layer = visual(Lines)
-	draw(data_layer * mapping_layer * visual_layer, figure=figsize_short, axis=(yticks=0:1:5,), legend=legend_bottom)
+	draw(data_layer * mapping_layer * visual_layer, figure=figsize_short, legend=legend_bottom)
 end
 
 # ╔═╡ f4a79c6f-bd16-48d7-bc89-efc883b5a760
@@ -339,6 +502,7 @@ CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
 AlgebraOfGraphics = "~0.6.16"
@@ -354,7 +518,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.9.3"
 manifest_format = "2.0"
-project_hash = "4abf3b824985602059c32a48cd70bd66e981ce49"
+project_hash = "a9448795d6c5527bbf6828d04486f3ad3e5b64ce"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -2066,26 +2230,44 @@ version = "3.5.0+0"
 # ╠═95831631-eeca-4a63-899d-b2284794325a
 # ╠═e450b2de-8bce-4d62-8309-84a19ae41380
 # ╟─4a675a56-e13b-4f91-9e55-b3d6dd86eb32
+# ╠═5615e577-45ac-450f-8aa5-ca53cf852152
+# ╠═75613a19-5be4-4f48-910c-34b842793988
+# ╠═f6b83ac0-66a4-41e2-8a4b-6836da239a18
+# ╠═7901288a-ff5b-4f7c-8145-3b8151b304b8
+# ╠═61a85fa7-bd36-40ee-a39b-0873420403d3
 # ╟─e924affa-5b2b-46f1-96be-08c813f41c71
 # ╠═d764173e-1f2d-415e-97a8-00d38625291e
 # ╟─a08e5c82-6db2-4e24-902c-6280b4a28fa6
-# ╠═75613a19-5be4-4f48-910c-34b842793988
-# ╠═7901288a-ff5b-4f7c-8145-3b8151b304b8
 # ╠═4606970e-ae8a-4842-9827-2c4bac177298
+# ╠═c8bde83b-94ad-42c1-b940-792ac60735b7
 # ╠═033586be-312d-4807-b2b7-9fee0f9db683
-# ╠═5615e577-45ac-450f-8aa5-ca53cf852152
 # ╟─b28414d1-1b7e-4238-98c2-8a45ea3ec98c
+# ╠═dc0b12e3-e110-43fc-9227-0dff69ed9ff5
+# ╠═509dcb50-c4d6-452f-81ca-50f7e1837a7f
+# ╠═aa1a54d9-24a2-48d1-9678-74266dc421ac
+# ╟─78869b97-dc5f-42c4-a415-5391e0ef016d
 # ╠═3e64beb8-222b-43f6-ab7e-c4739f32b997
+# ╠═a743cea4-f90c-499a-92b0-978bd9de9be2
 # ╠═0f0f3e68-6610-4e28-97e6-cf65ade564e4
 # ╟─a5a7c01e-a2db-4ebe-b0be-e2f7336072b2
 # ╠═070c266c-5102-4efa-8fa3-79d3486c3bc9
 # ╠═0516952b-6fd3-49da-be1b-d9456a1f1471
+# ╟─e359e3fc-a55c-4b26-a90d-f0574164fa42
+# ╠═eadd15a9-0ed8-4139-9180-6c0f67c13e54
+# ╠═cb3f1af9-9226-4052-9599-fdbdeadcac0f
 # ╟─93355000-91f9-4310-9ac2-558703286fd4
 # ╠═60608e57-036f-4424-96bc-dd0bee7c15d5
+# ╠═4d769789-442b-4eea-9a12-46f7560dbddb
 # ╠═173ad00d-ce09-4fd8-ad9d-df1d27b32112
+# ╟─277a43fc-f73a-414f-ad47-a970eb9846d4
+# ╠═80e6b067-13c6-4c27-b638-63c410b24dbd
+# ╠═e75d836a-a3c6-4074-b425-53c3003935b8
+# ╠═272842ce-0920-4223-898d-ce0b22d70cbd
 # ╟─bfea43ed-5f1e-4fb4-9282-3c579cebcf5c
-# ╠═20e39c65-9bd4-41ef-8c0e-2147ae0c86de
-# ╠═895e5b61-421b-4ca1-84a4-587862994a92
+# ╠═f4436917-015b-4f2e-a1ed-83eeb7410cc9
+# ╠═4bb194bd-8acc-496b-a722-87c303a6c6e8
+# ╠═97686498-d99e-4fff-8198-f9e202449a84
+# ╠═5ace1bf9-ed69-4a0f-952c-e4655f19aab9
 # ╟─1e952e1d-0379-4d72-8851-3ae46bd43f93
 # ╠═b399b22f-946f-47af-a7b8-bb6d66b78b6c
 # ╠═c853c0eb-fc8a-4ee1-b072-59e05f9399f8
