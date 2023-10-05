@@ -177,6 +177,10 @@ $(BIN_DIR)/k6: patched-k6
 	python3 -m venv .venv
 	. .venv/bin/activate && pip3 install -r requirements.txt
 
+.PHONY: receipt-benchmark
+receipt-benchmark: .venv
+	. .venv/bin/activate && python3 benchmark/receipt_verify.py
+
 .PHONY: notebook
 notebook: .venv
 	. .venv/bin/activate && jupyter notebook

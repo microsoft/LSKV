@@ -34,7 +34,7 @@ After running, copy the results back to the host: `rsync -rv <user>@$(head -n 1 
 ## Receipt verification
 
 The receipt verification benchmark (`benchmark/receipt_verify.py`) uses a hard-coded receipt so can be run standalone without a running datastore.
-It can be run with `python benchmark/receipt_verify.py`.
+It can be run with `make receipt-benchmark`.
 
 ## Plotting
 
