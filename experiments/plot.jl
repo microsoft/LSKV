@@ -177,7 +177,7 @@ size(df_cdf)
 # ╔═╡ 033586be-312d-4807-b2b7-9fee0f9db683
 let 
 	data_layer = data(df_cdf)
-	mapping_layer = mapping(:cdf => "Proportion", :latency_ms => "Latency (ms)", col=:workload => nonnumeric, row=:tmpfs => tmpfs_name, color=:system => "Datastore", lower=:min, upper=:max)
+	mapping_layer = mapping(:cdf => "Proportion", :latency_ms => "Latency (ms)", col=:workload => nonnumeric, row=:tmpfs => tmpfs_name, color=:system => "Datastore", linestyle=:system => "Datastore", lower=:min, upper=:max)
 	visual_layer = visual(LinesFill)
 	f = draw(data_layer * mapping_layer * visual_layer, axis=(yscale=log10,), figure=(figure_padding=0, resolution=(1.2*800, 1.2*300),), legend=legend_bottom)
 	save("plots/ycsb-workloads-latency-cdf.$ext", f)
@@ -214,7 +214,7 @@ size(df_scdf_single)
 # ╔═╡ aa1a54d9-24a2-48d1-9678-74266dc421ac
 let 
 	data_layer = data(df_scdf_single)
-	mapping_layer = mapping(:cdf => "Proportion", :latency_ns => "Latency (ns)", col=:system => nonnumeric, row=:operation => nonnumeric, color=:nodes => nonnumeric => "Nodes")
+	mapping_layer = mapping(:cdf => "Proportion", :latency_ns => "Latency (ns)", col=:system => nonnumeric, row=:operation => nonnumeric, color=:nodes => nonnumeric => "Nodes", linestyle=:nodes => nonnumeric => "Nodes")
 	visual_layer = visual(Lines)
 	f = draw(data_layer * mapping_layer * visual_layer, axis=(yscale=log10,), figure=figsize, legend=legend_bottom)
 	save("plots/ycsb-a-scalability-cdf-single.$ext", f)
@@ -253,7 +253,7 @@ size(df_scdf)
 # ╔═╡ 0f0f3e68-6610-4e28-97e6-cf65ade564e4
 let 
 	data_layer = data(df_scdf)
-	mapping_layer = mapping(:cdf => "Proportion", :latency_ms => "Latency (ms)", col=:system => nonnumeric, color=:nodes => nonnumeric => "Nodes", lower=:min, upper=:max)
+	mapping_layer = mapping(:cdf => "Proportion", :latency_ms => "Latency (ms)", col=:system => nonnumeric, color=:nodes => nonnumeric => "Nodes", linestyle=:nodes => nonnumeric => "Nodes", lower=:min, upper=:max)
 	visual_layer = visual(LinesFill)
 	f = draw(data_layer * mapping_layer * visual_layer, axis=(yscale=log10,), figure=figsize_short, legend=legend_bottom)
 	save("plots/ycsb-a-scalability-cdf.$ext", f)
@@ -268,7 +268,7 @@ md"""
 # ╔═╡ 070c266c-5102-4efa-8fa3-79d3486c3bc9
 begin
 	local group_cols = vcat(config_cols, "operation", "system")
-	local function cdf_sig_ms_interval_data_single()
+	function cdf_sig_ms_interval_data_single()
 		scdf_data = df_normalized
 		scdf_data = filter(:tmpfs => ==(false), scdf_data)
 		scdf_data = filter(:store => ==(lskv_name), scdf_data)
@@ -288,7 +288,7 @@ end
 # ╔═╡ 0516952b-6fd3-49da-be1b-d9456a1f1471
 let 
 	data_layer = data(df_sig_ms_interval_single)
-	mapping_layer = mapping(:cdf => "Proportion", :latency_ns => "Latency (ns)", col=:system => nonnumeric, row=:operation => nonnumeric, color=:sig_ms_interval => nonnumeric => "Signature interval (ms)")
+	mapping_layer = mapping(:cdf => "Proportion", :latency_ns => "Latency (ns)", col=:system => nonnumeric, row=:operation => nonnumeric, color=:sig_ms_interval => nonnumeric => "Signature interval (ms)", linestyle=:sig_ms_interval => nonnumeric => "Signature interval (ms)")
 	visual_layer = visual(Lines)
 	f = draw(data_layer * mapping_layer * visual_layer, axis=(yscale=log10,), figure=figsize, legend=legend_bottom)
 	save("plots/ycsb-a-siginterval-cdf-single.$ext", f)
@@ -303,7 +303,7 @@ md"""
 # ╔═╡ eadd15a9-0ed8-4139-9180-6c0f67c13e54
 begin
 	local group_cols = vcat(config_cols, "system")
-	local function cdf_sig_ms_interval_data()
+	function cdf_sig_ms_interval_data()
 		scdf_data = df_normalized
 		scdf_data = filter(:tmpfs => ==(false), scdf_data)
 		scdf_data = filter(:store => ==(lskv_name), scdf_data)
@@ -323,7 +323,7 @@ end
 # ╔═╡ cb3f1af9-9226-4052-9599-fdbdeadcac0f
 let 
 	data_layer = data(df_sig_ms_interval)
-	mapping_layer = mapping(:cdf => "Proportion", :latency_ms => "Latency (ms)", col=:system => nonnumeric, color=:sig_ms_interval => nonnumeric => "Signature interval (ms)", lower=:min, upper=:max)
+	mapping_layer = mapping(:cdf => "Proportion", :latency_ms => "Latency (ms)", col=:system => nonnumeric, color=:sig_ms_interval => nonnumeric => "Signature interval (ms)", linestyle=:sig_ms_interval => nonnumeric => "Signature interval (ms)", lower=:min, upper=:max)
 	visual_layer = visual(LinesFill)
 	f = draw(data_layer * mapping_layer * visual_layer, axis=(yscale=log10,), figure=figsize_short, legend=legend_bottom)
 	save("plots/ycsb-a-siginterval-cdf.$ext", f)
@@ -363,7 +363,7 @@ size(df_worker_threads_single)
 # ╔═╡ 173ad00d-ce09-4fd8-ad9d-df1d27b32112
 let 
 	data_layer = data(df_worker_threads_single)
-	mapping_layer = mapping(:cdf => "Proportion", :latency_ns => "Latency (ns)", col=:system => nonnumeric, row=:operation => nonnumeric, color=:worker_threads => nonnumeric => "Worker threads")
+	mapping_layer = mapping(:cdf => "Proportion", :latency_ns => "Latency (ns)", col=:system => nonnumeric, row=:operation => nonnumeric, color=:worker_threads => nonnumeric => "Worker threads", linestyle=:worker_threads => nonnumeric => "Worker threads")
 	visual_layer = visual(Lines)
 	f = draw(data_layer * mapping_layer * visual_layer, axis=(yscale=log10,), figure=figsize, legend=legend_bottom)
 	save("plots/ycsb-a-workerthreads-cdf-single.$ext", f)
@@ -402,7 +402,7 @@ size(df_worker_threads)
 # ╔═╡ 272842ce-0920-4223-898d-ce0b22d70cbd
 let 
 	data_layer = data(df_worker_threads)
-	mapping_layer = mapping(:cdf => "Proportion", :latency_ms => "Latency (ms)", col=:system => nonnumeric, color=:worker_threads => nonnumeric => "Worker threads", lower=:min, upper=:max)
+	mapping_layer = mapping(:cdf => "Proportion", :latency_ms => "Latency (ms)", col=:system => nonnumeric, color=:worker_threads => nonnumeric => "Worker threads", linestyle=:worker_threads => nonnumeric => "Worker threads", lower=:min, upper=:max)
 	visual_layer = visual(LinesFill)
 	f = draw(data_layer * mapping_layer * visual_layer, axis=(yscale=log10,), figure=figsize_short, legend=legend_bottom)
 	save("plots/ycsb-a-workerthreads-cdf.$ext", f)
