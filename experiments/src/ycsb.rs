@@ -52,6 +52,7 @@ impl Experiment for YcsbExperiment {
         store_configs.push(lskv_sgx_config.clone());
         let rate = 10_000;
         let repeats = 10;
+        let value_length = 256;
         for nodes in [3] {
             for workload in [
                 YcsbWorkload::A,
@@ -73,6 +74,7 @@ impl Experiment for YcsbExperiment {
                                 tmpfs,
                                 max_clients: Some(100),
                                 repeat,
+                                value_length,
                             };
                             configs.push(config);
                         }
@@ -92,6 +94,7 @@ impl Experiment for YcsbExperiment {
                         tmpfs: false,
                         max_clients: Some(100),
                         repeat,
+                        value_length,
                     };
                     configs.push(config);
                 }
@@ -116,6 +119,7 @@ impl Experiment for YcsbExperiment {
                         tmpfs: false,
                         max_clients: Some(100),
                         repeat,
+                        value_length,
                     };
                     configs.push(config);
                 }
@@ -140,6 +144,7 @@ impl Experiment for YcsbExperiment {
                         tmpfs: false,
                         max_clients: Some(100),
                         repeat,
+                        value_length,
                     };
                     configs.push(config);
                 }
@@ -413,6 +418,7 @@ pub struct Config {
     nodes: usize,
     tmpfs: bool,
     repeat: usize,
+    value_length: usize,
     #[serde(flatten)]
     store_config: StoreConfig,
 }
@@ -436,6 +442,8 @@ impl Config {
             self.rate.to_string(),
             "--total".to_owned(),
             self.total.to_string(),
+            "--field-value-length".to_owned(),
+            self.value_length.to_string(),
         ];
         if let Some(max_clients) = self.max_clients {
             cmd.extend(["--max-clients".to_owned(), max_clients.to_string()]);
@@ -460,6 +468,8 @@ impl Config {
             self.rate.to_string(),
             "--total".to_owned(),
             self.total.to_string(),
+            "--field-value-length".to_owned(),
+            self.value_length.to_string(),
             "--insert-weight".to_owned(),
             "1".to_owned(),
         ]
