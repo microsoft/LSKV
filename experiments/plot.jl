@@ -447,7 +447,7 @@ let
 	mapping_layer = mapping(:workload => "Workload", :x1 => (x -> x / 1000) => "Throughput (kreq/s)", color=:system => "Datastore", dodge=:system, row=:tmpfs => tmpfs_name)
 	visual_layer = visual(BoxPlot)
 	plot = data_layer * mapping_layer * visual_layer
-	f = draw(plot, figure=(figure_padding=0, resolution=(scaling*800, scaling*600),), legend=legend_bottom)
+	f = draw(plot, figure=(figure_padding=0, resolution=(scaling*800, scaling*600),), legend=legend_bottom, axis=(limits=(nothing, (0, 11)),))
 	save("plots/ycsb-workloads-throughput-box.$ext", f)
 	f
 end
