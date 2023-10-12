@@ -100,7 +100,7 @@ impl Experiment for YcsbExperiment {
                 }
             }
         }
-        for sig_ms_interval in [100, 1000] {
+        for sig_ms_interval in [10, 100, 1000] {
             for store_config in &[lskv_virtual_config.clone(), lskv_sgx_config.clone()] {
                 for repeat in 1..=repeats {
                     let store_config = match store_config.clone() {
