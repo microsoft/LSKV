@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.28
+# v0.19.29
 
 using Markdown
 using InteractiveUtils
@@ -30,6 +30,9 @@ begin
 	anon = true
 	lskv_name = if anon; "CKVS"; else; "LSKV"; end
 end
+
+# ╔═╡ fc8109d7-b421-4f7a-aa1f-c66c69b32111
+rate = 20_000
 
 # ╔═╡ 44be5380-5893-4491-9adc-0b9602b6c2a0
 config_cols = ["rate", "total", "workload", "nodes", "tmpfs", "store", "enclave", "worker_threads", "sig_tx_interval", "sig_ms_interval", "ledger_chunk_bytes", "snapshot_tx_interval", "max_clients", "repeat"]
@@ -157,6 +160,7 @@ md"""
 # ╔═╡ 4606970e-ae8a-4842-9827-2c4bac177298
 begin
 	cdf_data = df_normalized
+	cdf_data = filter(:rate => ==(rate), cdf_data)
 	cdf_data = filter(:nodes => ==(3), cdf_data)
 	# cdf_data = filter(:tmpfs => ==(false), cdf_data)
 	cdf_data = filter(:sig_ms_interval => (t -> coalesce(t, 1000) == 1000), cdf_data)
@@ -192,6 +196,7 @@ md"""
 # ╔═╡ dc0b12e3-e110-43fc-9227-0dff69ed9ff5
 begin
 	local scdf_data = df_normalized
+	local scdf_data = filter(:rate => ==(rate), scdf_data)
 	local scdf_data = filter(:tmpfs => ==(false), scdf_data)
 	local scdf_data = filter(:store => ==(lskv_name), scdf_data)
 	local scdf_data = filter(:workload => ==("A"), scdf_data)
@@ -229,6 +234,7 @@ md"""
 # ╔═╡ 3e64beb8-222b-43f6-ab7e-c4739f32b997
 begin
 	scdf_data = df_normalized
+	scdf_data = filter(:rate => ==(rate), scdf_data)
 	scdf_data = filter(:tmpfs => ==(false), scdf_data)
 	scdf_data = filter(:store => ==(lskv_name), scdf_data)
 	scdf_data = filter(:workload => ==("A"), scdf_data)
@@ -270,6 +276,7 @@ begin
 	local group_cols = vcat(config_cols, "operation", "system")
 	function cdf_sig_ms_interval_data_single()
 		scdf_data = df_normalized
+		scdf_data = filter(:rate => ==(rate), scdf_data)
 		scdf_data = filter(:tmpfs => ==(false), scdf_data)
 		scdf_data = filter(:store => ==(lskv_name), scdf_data)
 		scdf_data = filter(:workload => ==("A"), scdf_data)
@@ -305,6 +312,7 @@ begin
 	local group_cols = vcat(config_cols, "system")
 	function cdf_sig_ms_interval_data()
 		scdf_data = df_normalized
+		scdf_data = filter(:rate => ==(rate), scdf_data)
 		scdf_data = filter(:tmpfs => ==(false), scdf_data)
 		scdf_data = filter(:store => ==(lskv_name), scdf_data)
 		scdf_data = filter(:workload => ==("A"), scdf_data)
@@ -340,6 +348,7 @@ begin
 	local group_cols = vcat(config_cols, "operation", "system")
 	function cdf_worker_threads_data_single()
 		scdf_data = df_normalized
+		scdf_data = filter(:rate => ==(rate), scdf_data)
 		scdf_data = filter(:tmpfs => ==(false), scdf_data)
 		scdf_data = filter(:store => ==(lskv_name), scdf_data)
 		scdf_data = filter(:workload => ==("A"), scdf_data)
@@ -380,6 +389,7 @@ begin
 	local group_cols = vcat(config_cols, "system")
 	function cdf_worker_threads_data()
 		scdf_data = df_normalized
+		scdf_data = filter(:rate => ==(rate), scdf_data)
 		scdf_data = filter(:tmpfs => ==(false), scdf_data)
 		scdf_data = filter(:store => ==(lskv_name), scdf_data)
 		scdf_data = filter(:workload => ==("A"), scdf_data)
@@ -417,6 +427,7 @@ md"""
 # ╔═╡ f4436917-015b-4f2e-a1ed-83eeb7410cc9
 begin
 	throughput_data = df_normalized
+	throughput_data = filter(:rate => ==(rate), throughput_data)
 	throughput_data = filter(:nodes => ==(3), throughput_data)
 	throughput_data = filter(:worker_threads => (t -> coalesce(t, 2) == 2), throughput_data)
 	throughput_data = filter(:sig_ms_interval => (t -> coalesce(t, 1000) == 1000), throughput_data)
@@ -444,10 +455,10 @@ size(throughput_data)
 # ╔═╡ 5ace1bf9-ed69-4a0f-952c-e4655f19aab9
 let
 	data_layer = data(throughput_data)
-	mapping_layer = mapping(:workload => "Workload", :x1 => (x -> x / 1000) => "Throughput (kreq/s)", color=:system => "Datastore", dodge=:system, row=:tmpfs => tmpfs_name)
+	mapping_layer = mapping(:workload => "Workload", :x1 => (x -> x / 1000) => "Achieved throughput (kreq/s)", color=:system => "Datastore", dodge=:system, row=:tmpfs => tmpfs_name)
 	visual_layer = visual(BoxPlot)
 	plot = data_layer * mapping_layer * visual_layer
-	f = draw(plot, figure=(figure_padding=0, resolution=(scaling*800, scaling*600),), legend=legend_bottom, axis=(limits=(nothing, (0, 11)),))
+	f = draw(plot, figure=(figure_padding=0, resolution=(scaling*800, scaling*600),), legend=legend_bottom, axis=(limits=(nothing, (0, 22)),))
 	save("plots/ycsb-workloads-throughput-box.$ext", f)
 	f
 end
@@ -460,6 +471,7 @@ md"""
 # ╔═╡ b399b22f-946f-47af-a7b8-bb6d66b78b6c
 begin
 	commit_df = df_normalized
+	commit_df = filter(:rate => ==(rate), commit_df)
 	commit_df = filter(:tmpfs => ==(false), commit_df)
 	commit_df = filter(:store => ==(lskv_name), commit_df)
 	commit_df = filter(:enclave => ==("virtual"), commit_df)
@@ -2222,6 +2234,7 @@ version = "3.5.0+0"
 # ╠═bb727ebb-3e9d-4a2a-8a0a-1b64242dcea7
 # ╠═e0d5c0ab-fd4a-44ec-a7a0-3e553bd6a6f3
 # ╠═cd3ffcf4-e73d-4b62-895b-3174bcb118a2
+# ╠═fc8109d7-b421-4f7a-aa1f-c66c69b32111
 # ╠═44be5380-5893-4491-9adc-0b9602b6c2a0
 # ╠═caee8077-1985-4ef0-9fda-429cdffb12b3
 # ╠═0e01ca36-9e35-46f4-94a9-7a6f783f9aaa

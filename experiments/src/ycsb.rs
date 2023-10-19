@@ -6,6 +6,7 @@ use exp::Environment;
 use exp::Experiment;
 use futures_util::StreamExt;
 use polars::prelude::*;
+use polars::functions::diag_concat_df;
 use std::fs;
 use std::fs::File;
 use std::io::Read;
@@ -64,19 +65,21 @@ impl Experiment for YcsbExperiment {
             ] {
                 for store_config in &store_configs {
                     for tmpfs in [false, true] {
-                        for repeat in 1..=repeats {
-                            let config = Config {
-                                store_config: store_config.clone(),
-                                rate,
-                                total: rate * 10,
-                                workload,
-                                nodes,
-                                tmpfs,
-                                max_clients: Some(100),
-                                repeat,
-                                value_length,
-                            };
-                            configs.push(config);
+                        for rate in [10_000, 20_000] {
+                            for repeat in 1..=repeats {
+                                let config = Config {
+                                    store_config: store_config.clone(),
+                                    rate,
+                                    total: rate * 10,
+                                    workload,
+                                    nodes,
+                                    tmpfs,
+                                    max_clients: Some(100),
+                                    repeat,
+                                    value_length,
+                                };
+                                configs.push(config);
+                            }
                         }
                     }
                 }
@@ -100,7 +103,7 @@ impl Experiment for YcsbExperiment {
                 }
             }
         }
-        for sig_ms_interval in [10, 100, 1000] {
+        for sig_ms_interval in [100, 1000] {
             for store_config in &[lskv_virtual_config.clone(), lskv_sgx_config.clone()] {
                 for repeat in 1..=repeats {
                     let store_config = match store_config.clone() {
@@ -392,19 +395,21 @@ impl Experiment for YcsbExperiment {
 
                 if let Some(all_data) = all_data_opt {
                     all_data_opt = Some(
-                        diag_concat_lf([all_data, config_and_results_data.lazy()], true, true)
+                        diag_concat_df(&[all_data, config_and_results_data])
                             .unwrap(),
                     );
                 } else {
-                    all_data_opt = Some(config_and_results_data.lazy());
+                    all_data_opt = Some(config_and_results_data);
                 }
             }
         }
-        let mut csv_file = File::create(all_results_file).unwrap();
-        if let Some(all_data) = all_data_opt {
-            CsvWriter::new(&mut csv_file)
-                .finish(&mut all_data.collect().unwrap())
-                .unwrap();
+        let mut csv_file = File::create(&all_results_file).unwrap();
+        if let Some(mut all_data) = all_data_opt {
+            info!(?all_results_file, "Writing all results out");
+            let mut c = CsvWriter::new(&mut csv_file);
+            let res = c.finish(&mut all_data);
+            res.unwrap();
+            info!(?all_results_file, "finished");
         }
     }
 }
