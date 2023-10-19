@@ -724,7 +724,7 @@ checksum = "57bcfdad1b858c2db7c38303a6d2ad4dfaf5eb53dfeb0910128b2c26d6158503"
 [[package]]
 name = "loadbench"
 version = "0.1.0"
-source = "git+https://github.com/jeffa5/loadbench?branch=main#dcb27a54a8f18f2670e5e0ca3513ab377308f5f8"
+source = "git+https://github.com/jeffa5/loadbench?branch=main#b398a100f039f63f1664bb54c03a38fbdc11325d"
 dependencies = [
  "async-channel",
  "async-trait",

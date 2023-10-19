@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::time::Duration;
+use tokio::time::timeout;
 
 use crate::protos::etcdserverpb::kv_client::KvClient;
 use crate::protos::etcdserverpb::request_op::Request;
@@ -216,6 +217,7 @@ pub struct YcsbDispatcherGenerator {
     write_client: KvClient<Channel>,
     read_client: KvClient<Channel>,
     watch_client: WatchClient<Channel>,
+    timeout_s: u64,
 }
 
 impl YcsbDispatcherGenerator {
@@ -223,6 +225,7 @@ impl YcsbDispatcherGenerator {
         write_endpoints: Vec<String>,
         read_endpoints: Vec<String>,
         common_dir: &Path,
+        timeout_s: u64,
     ) -> Self {
         let server_root_ca_cert =
             std::fs::read_to_string(common_dir.join("service_cert.pem")).unwrap();
@@ -241,6 +244,7 @@ impl YcsbDispatcherGenerator {
                 .tls_config(tls.clone())
                 .unwrap()
                 .timeout(Duration::from_secs(1))
+                .connect_timeout(Duration::from_secs(10))
         });
         let write_channel = Channel::balance_list(write_endpoints);
 
@@ -252,6 +256,7 @@ impl YcsbDispatcherGenerator {
                 .tls_config(tls.clone())
                 .unwrap()
                 .timeout(Duration::from_secs(1))
+                .connect_timeout(Duration::from_secs(10))
         });
         let read_channel = Channel::balance_list(read_endpoints);
 
@@ -261,6 +266,7 @@ impl YcsbDispatcherGenerator {
             write_client,
             read_client,
             watch_client,
+            timeout_s,
         }
     }
 }
@@ -273,6 +279,7 @@ impl DispatcherGenerator for YcsbDispatcherGenerator {
             write_client: self.write_client.clone(),
             read_client: self.read_client.clone(),
             watch_client: self.watch_client.clone(),
+            timeout_s: self.timeout_s,
         }
     }
 }
@@ -281,6 +288,7 @@ pub struct YcsbDispatcher {
     write_client: KvClient<Channel>,
     read_client: KvClient<Channel>,
     watch_client: WatchClient<Channel>,
+    timeout_s: u64,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -302,17 +310,19 @@ impl Dispatcher for YcsbDispatcher {
             YcsbInput::Insert { record_key, fields } => {
                 let mut header = None;
                 for (field_key, field_value) in fields {
-                    match self
-                        .write_client
-                        .put(PutRequest {
+                    match timeout(
+                        Duration::from_secs(self.timeout_s),
+                        self.write_client.put(PutRequest {
                             key: format!("{record_key}/{field_key}").into(),
                             value: field_value.into(),
                             ..Default::default()
-                        })
-                        .await
+                        }),
+                    )
+                    .await
                     {
-                        Ok(res) => header = res.into_inner().header,
-                        Err(err) => return Err(err.to_string()),
+                        Ok(Ok(res)) => header = res.into_inner().header,
+                        Ok(Err(err)) => return Err(err.to_string()),
+                        Err(_) => return Err("timed out".to_owned()),
                     }
                 }
                 header
@@ -322,17 +332,19 @@ impl Dispatcher for YcsbDispatcher {
                 field_key,
                 field_value,
             } => {
-                match self
-                    .write_client
-                    .put(PutRequest {
+                match timeout(
+                    Duration::from_secs(self.timeout_s),
+                    self.write_client.put(PutRequest {
                         key: format!("{record_key}/{field_key}").into(),
                         value: field_value.into(),
                         ..Default::default()
-                    })
-                    .await
+                    }),
+                )
+                .await
                 {
-                    Ok(res) => res.into_inner().header,
-                    Err(err) => return Err(err.to_string()),
+                    Ok(Ok(res)) => res.into_inner().header,
+                    Ok(Err(err)) => return Err(err.to_string()),
+                    Err(_) => return Err("timed out".to_owned()),
                 }
             }
             YcsbInput::ReadModifyWrite {
@@ -340,9 +352,9 @@ impl Dispatcher for YcsbDispatcher {
                 field_key,
                 field_value,
             } => {
-                match self
-                    .write_client
-                    .txn(TxnRequest {
+                match timeout(
+                    Duration::from_secs(self.timeout_s),
+                    self.write_client.txn(TxnRequest {
                         compare: vec![],
                         success: vec![
                             RequestOp {
@@ -362,61 +374,69 @@ impl Dispatcher for YcsbDispatcher {
                             },
                         ],
                         failure: vec![],
-                    })
-                    .await
+                    }),
+                )
+                .await
                 {
-                    Ok(res) => res.into_inner().header,
-                    Err(err) => return Err(err.to_string()),
+                    Ok(Ok(res)) => res.into_inner().header,
+                    Ok(Err(err)) => return Err(err.to_string()),
+                    Err(_) => return Err("timed out".to_owned()),
                 }
             }
             YcsbInput::ReadSingle {
                 record_key,
                 field_key,
             } => {
-                match self
-                    .read_client
-                    .range(RangeRequest {
+                match timeout(
+                    Duration::from_secs(self.timeout_s),
+                    self.read_client.range(RangeRequest {
                         key: format!("{record_key}/{field_key}").into(),
                         range_end: vec![],
                         serializable: true,
                         ..Default::default()
-                    })
-                    .await
+                    }),
+                )
+                .await
                 {
-                    Ok(res) => res.into_inner().header,
-                    Err(err) => return Err(err.to_string()),
+                    Ok(Ok(res)) => res.into_inner().header,
+                    Ok(Err(err)) => return Err(err.to_string()),
+                    Err(_) => return Err("timed out".to_owned()),
                 }
             }
             YcsbInput::ReadAll { record_key } => {
-                match self
-                    .read_client
-                    .range(RangeRequest {
+                match timeout(
+                    Duration::from_secs(self.timeout_s),
+                    self.read_client.range(RangeRequest {
                         key: format!("{record_key}/").into(),
                         range_end: format!("{record_key}0").into(),
                         serializable: true,
                         ..Default::default()
-                    })
-                    .await
+                    }),
+                )
+                .await
                 {
-                    Ok(res) => res.into_inner().header,
-                    Err(err) => return Err(err.to_string()),
+                    Ok(Ok(res)) => res.into_inner().header,
+                    Ok(Err(err)) => return Err(err.to_string()),
+                    Err(_) => return Err("timed out".to_owned()),
                 }
             }
             YcsbInput::Scan { start_key, end_key } => {
                 let key = start_key;
                 let range_end = end_key;
-                match self
-                    .read_client
-                    .range(RangeRequest {
+                match timeout(
+                    Duration::from_secs(self.timeout_s),
+                    self.read_client.range(RangeRequest {
                         key: key.as_bytes().to_vec(),
                         range_end: range_end.as_bytes().to_vec(),
                         serializable: true,
                         ..Default::default()
-                    })
-                    .await
+                    }),
+                )
+                .await
                 {
-                    Ok(res) => res.into_inner().header,
-                    Err(err) => return Err(err.to_string()),
+                    Ok(Ok(res)) => res.into_inner().header,
+                    Ok(Err(err)) => return Err(err.to_string()),
+                    Err(_) => return Err("timed out".to_owned()),
                 }
             }
             YcsbInput::Watch { start_key, end_key } => {

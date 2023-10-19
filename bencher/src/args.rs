@@ -20,6 +20,9 @@ pub struct CommonArgs {
     #[clap(long)]
     pub common_dir: PathBuf,
 
+    #[clap(long, default_value = "1")]
+    pub timeout_s: u64,
+
     #[clap(long)]
     pub out_file: PathBuf,
 }
