@@ -13,5 +13,6 @@
 - /*.deb
 - /result/
 - /experiments/plots/
+- /experiments/results.*/
 - /bench.*/
 - target/
